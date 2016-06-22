@@ -13,7 +13,7 @@ TODO
 
 Ideas
 -----
-* 
+* See also <http://drivendata.github.io/cookiecutter-data-science> for project organization ideas
 
 
 

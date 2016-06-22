@@ -1,7 +1,7 @@
 *.pyc
-Data/*/*
+Data/
 !README.md
-Test/*
+Test/
 .RData
 .Rhistory
 .Rproj.user
