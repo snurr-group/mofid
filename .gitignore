@@ -1,0 +1,8 @@
+*.pyc
+Data/*/*
+!README.md
+Test/*
+.RData
+.Rhistory
+.Rproj.user
+Notebooks/
