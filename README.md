@@ -16,6 +16,11 @@ Ideas
 * See also <http://drivendata.github.io/cookiecutter-data-science> for project organization ideas
 
 
+Notes
+-----
+Generated the eclipse code hinting by running `cmake -G "Eclipse CDT4 - Unix Makefiles" ../src` from within bin/ based on a [helpful post](http://stackoverflow.com/questions/11645575/importing-a-cmake-project-into-eclipse-cdt).  Another [website](http://www.badprog.com/c-eclipse-installation-of-c-c-development-tools-cdt-and-cygwin-for-windows) might be useful if I try to get the "Run" button working later.
+
+
 
 
 Table of contents
