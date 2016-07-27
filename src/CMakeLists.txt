@@ -1,0 +1,8 @@
+set(CMAKE_LEGACY_CYGWIN_WIN32 0)
+cmake_minimum_required(VERSION 2.6)
+add_executable(example example.cpp)
+add_executable(sbu sbu.cpp)
+#target_link_libraries(example openbabel)
+target_link_libraries(example /usr/local/lib/libopenbabel.dll.a)
+target_link_libraries(sbu /usr/local/lib/libopenbabel.dll.a)
+include_directories(/usr/local/include/openbabel-2.0)

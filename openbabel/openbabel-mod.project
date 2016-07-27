@@ -1,0 +1,764 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeLite_Project Name="openbabel-mod" InternalType="">
+  <VirtualDirectory Name="src">
+    <VirtualDirectory Name="formats">
+      <VirtualDirectory Name="json">
+        <File Name="src/formats/json/chemdoodlejsonformat.cpp"/>
+        <File Name="src/formats/json/customwriter.cpp"/>
+        <File Name="src/formats/json/jsoncpp.cpp"/>
+        <File Name="src/formats/json/pubchemjsonformat.cpp"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="libinchi">
+        <File Name="src/formats/libinchi/ichican2.c"/>
+        <File Name="src/formats/libinchi/ichicano.c"/>
+        <File Name="src/formats/libinchi/ichicans.c"/>
+        <File Name="src/formats/libinchi/ichiisot.c"/>
+        <File Name="src/formats/libinchi/ichilnct.c"/>
+        <File Name="src/formats/libinchi/ichimak2.c"/>
+        <File Name="src/formats/libinchi/ichimake.c"/>
+        <File Name="src/formats/libinchi/ichimap1.c"/>
+        <File Name="src/formats/libinchi/ichimap2.c"/>
+        <File Name="src/formats/libinchi/ichimap4.c"/>
+        <File Name="src/formats/libinchi/ichinorm.c"/>
+        <File Name="src/formats/libinchi/ichiparm.c"/>
+        <File Name="src/formats/libinchi/ichiprt1.c"/>
+        <File Name="src/formats/libinchi/ichiprt2.c"/>
+        <File Name="src/formats/libinchi/ichiprt3.c"/>
+        <File Name="src/formats/libinchi/ichiqueu.c"/>
+        <File Name="src/formats/libinchi/ichiread.c"/>
+        <File Name="src/formats/libinchi/ichiring.c"/>
+        <File Name="src/formats/libinchi/ichirvr1.c"/>
+        <File Name="src/formats/libinchi/ichirvr2.c"/>
+        <File Name="src/formats/libinchi/ichirvr3.c"/>
+        <File Name="src/formats/libinchi/ichirvr4.c"/>
+        <File Name="src/formats/libinchi/ichirvr5.c"/>
+        <File Name="src/formats/libinchi/ichirvr6.c"/>
+        <File Name="src/formats/libinchi/ichirvr7.c"/>
+        <File Name="src/formats/libinchi/ichisort.c"/>
+        <File Name="src/formats/libinchi/ichister.c"/>
+        <File Name="src/formats/libinchi/ichitaut.c"/>
+        <File Name="src/formats/libinchi/ichi_bns.c"/>
+        <File Name="src/formats/libinchi/ichi_io.c"/>
+        <File Name="src/formats/libinchi/ikey_base26.c"/>
+        <File Name="src/formats/libinchi/ikey_dll.c"/>
+        <File Name="src/formats/libinchi/inchi_dll.c"/>
+        <File Name="src/formats/libinchi/inchi_dll_a.c"/>
+        <File Name="src/formats/libinchi/inchi_dll_a2.c"/>
+        <File Name="src/formats/libinchi/inchi_dll_main.c"/>
+        <File Name="src/formats/libinchi/runichi.c"/>
+        <File Name="src/formats/libinchi/sha2.c"/>
+        <File Name="src/formats/libinchi/strutil.c"/>
+        <File Name="src/formats/libinchi/util.c"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="xml">
+        <File Name="src/formats/xml/cdxmlformat.cpp"/>
+        <File Name="src/formats/xml/cmlformat.cpp"/>
+        <File Name="src/formats/xml/cmlreactformat.cpp"/>
+        <File Name="src/formats/xml/iconv.h"/>
+        <File Name="src/formats/xml/pubchem.cpp"/>
+        <File Name="src/formats/xml/xml.cpp"/>
+        <File Name="src/formats/xml/xmlformat.cpp"/>
+      </VirtualDirectory>
+      <File Name="src/formats/abinitformat.cpp"/>
+      <File Name="src/formats/acesformat.cpp"/>
+      <File Name="src/formats/acrformat.cpp"/>
+      <File Name="src/formats/adfformat.cpp"/>
+      <File Name="src/formats/alchemyformat.cpp"/>
+      <File Name="src/formats/amberformat.cpp"/>
+      <File Name="src/formats/aoforceformat.cpp"/>
+      <File Name="src/formats/APIInterface.cpp"/>
+      <File Name="src/formats/ArrayList.c"/>
+      <File Name="src/formats/ArrayList.h"/>
+      <File Name="src/formats/asciiformat.cpp"/>
+      <File Name="src/formats/balstformat.cpp"/>
+      <File Name="src/formats/bgfformat.cpp"/>
+      <File Name="src/formats/boxformat.cpp"/>
+      <File Name="src/formats/cacaoformat.cpp"/>
+      <File Name="src/formats/cacheformat.cpp"/>
+      <File Name="src/formats/carformat.cpp"/>
+      <File Name="src/formats/castepformat.cpp"/>
+      <File Name="src/formats/cccformat.cpp"/>
+      <File Name="src/formats/chem3dformat.cpp"/>
+      <File Name="src/formats/chemdrawcdx.cpp"/>
+      <File Name="src/formats/chemdrawct.cpp"/>
+      <File Name="src/formats/chemkinformat.cpp"/>
+      <File Name="src/formats/chemtoolformat.cpp"/>
+      <File Name="src/formats/cifformat.cpp"/>
+      <File Name="src/formats/confabreport.cpp"/>
+      <File Name="src/formats/copyformat.cpp"/>
+      <File Name="src/formats/crkformat.cpp"/>
+      <File Name="src/formats/crystal09format.cpp"/>
+      <File Name="src/formats/CSRformat.cpp"/>
+      <File Name="src/formats/cssrformat.cpp"/>
+      <File Name="src/formats/daltonformat.cpp"/>
+      <File Name="src/formats/dlpolyformat.cpp"/>
+      <File Name="src/formats/dmolformat.cpp"/>
+      <File Name="src/formats/exampleformat.cpp"/>
+      <File Name="src/formats/exyzformat.cpp"/>
+      <File Name="src/formats/fastaformat.cpp"/>
+      <File Name="src/formats/fastsearchformat.cpp"/>
+      <File Name="src/formats/fchkformat.cpp"/>
+      <File Name="src/formats/featformat.cpp"/>
+      <File Name="src/formats/fhformat.cpp"/>
+      <File Name="src/formats/fhiaimsformat.cpp"/>
+      <File Name="src/formats/fingerprintformat.cpp"/>
+      <File Name="src/formats/fpsformat.cpp"/>
+      <File Name="src/formats/freefracformat.cpp"/>
+      <File Name="src/formats/gamessformat.cpp"/>
+      <File Name="src/formats/gamessukformat.cpp"/>
+      <File Name="src/formats/gausscubeformat.cpp"/>
+      <File Name="src/formats/gaussformat.cpp"/>
+      <File Name="src/formats/gausszmatformat.cpp"/>
+      <File Name="src/formats/genbankformat.cpp"/>
+      <File Name="src/formats/getinchi.cpp"/>
+      <File Name="src/formats/ghemicalformat.cpp"/>
+      <File Name="src/formats/groformat.cpp"/>
+      <File Name="src/formats/gromos96format.cpp"/>
+      <File Name="src/formats/gulpformat.cpp"/>
+      <File Name="src/formats/hinformat.cpp"/>
+      <File Name="src/formats/inchiformat.cpp"/>
+      <File Name="src/formats/jaguarformat.cpp"/>
+      <File Name="src/formats/lmpdatformat.cpp"/>
+      <File Name="src/formats/lpmdformat.cpp"/>
+      <File Name="src/formats/MCDLformat.cpp"/>
+      <File Name="src/formats/mdffformat.cpp"/>
+      <File Name="src/formats/mdlformat.cpp"/>
+      <File Name="src/formats/mdlvalence.h"/>
+      <File Name="src/formats/mmcifformat.cpp"/>
+      <File Name="src/formats/mmodformat.cpp"/>
+      <File Name="src/formats/MNAformat.cpp"/>
+      <File Name="src/formats/mol2format.cpp"/>
+      <File Name="src/formats/moldenformat.cpp"/>
+      <File Name="src/formats/molproformat.cpp"/>
+      <File Name="src/formats/molreport.cpp"/>
+      <File Name="src/formats/mopacformat.cpp"/>
+      <File Name="src/formats/mpdformat.cpp"/>
+      <File Name="src/formats/mpqcformat.cpp"/>
+      <File Name="src/formats/msiformat.cpp"/>
+      <File Name="src/formats/msmsformat.cpp"/>
+      <File Name="src/formats/nulformat.cpp"/>
+      <File Name="src/formats/nwchemformat.cpp"/>
+      <File Name="src/formats/opendxformat.cpp"/>
+      <File Name="src/formats/orcaformat.cpp"/>
+      <File Name="src/formats/outformat.cpp"/>
+      <File Name="src/formats/painterformat.cpp"/>
+      <File Name="src/formats/pcmodelformat.cpp"/>
+      <File Name="src/formats/pdbformat.cpp"/>
+      <File Name="src/formats/pdbqtformat.cpp"/>
+      <File Name="src/formats/png2format.cpp"/>
+      <File Name="src/formats/pngformat.cpp"/>
+      <File Name="src/formats/pointcloudformat.cpp"/>
+      <File Name="src/formats/posformat.cpp"/>
+      <File Name="src/formats/povrayformat.cpp"/>
+      <File Name="src/formats/pqrformat.cpp"/>
+      <File Name="src/formats/PQSformat.cpp"/>
+      <File Name="src/formats/pwscfformat.cpp"/>
+      <File Name="src/formats/qchemformat.cpp"/>
+      <File Name="src/formats/reportformat.cpp"/>
+      <File Name="src/formats/rsmiformat.cpp"/>
+      <File Name="src/formats/rxnformat.cpp"/>
+      <File Name="src/formats/shelxformat.cpp"/>
+      <File Name="src/formats/siestaformat.cpp"/>
+      <File Name="src/formats/smilesformat.cpp"/>
+      <File Name="src/formats/smiley.h"/>
+      <File Name="src/formats/smileyformat.cpp"/>
+      <File Name="src/formats/stlformat.cpp"/>
+      <File Name="src/formats/svgformat.cpp"/>
+      <File Name="src/formats/textformat.cpp"/>
+      <File Name="src/formats/thermoformat.cpp"/>
+      <File Name="src/formats/tinkerformat.cpp"/>
+      <File Name="src/formats/titleformat.cpp"/>
+      <File Name="src/formats/turbomoleformat.cpp"/>
+      <File Name="src/formats/unichemformat.cpp"/>
+      <File Name="src/formats/vaspformat.cpp"/>
+      <File Name="src/formats/viewmolformat.cpp"/>
+      <File Name="src/formats/xedformat.cpp"/>
+      <File Name="src/formats/xsfformat.cpp"/>
+      <File Name="src/formats/xtcformat.cpp"/>
+      <File Name="src/formats/xyzformat.cpp"/>
+      <File Name="src/formats/yasaraformat.cpp"/>
+      <File Name="src/formats/zindoformat.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="charges">
+      <File Name="src/charges/eem.cpp"/>
+      <File Name="src/charges/eqeq.cpp"/>
+      <File Name="src/charges/eqeq.h"/>
+      <File Name="src/charges/fromfile.cpp"/>
+      <File Name="src/charges/gasteiger.cpp"/>
+      <File Name="src/charges/mmff94.cpp"/>
+      <File Name="src/charges/none.cpp"/>
+      <File Name="src/charges/qeq.cpp"/>
+      <File Name="src/charges/qeq.h"/>
+      <File Name="src/charges/qtpie.cpp"/>
+      <File Name="src/charges/qtpie.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="depict">
+      <File Name="src/depict/asciipainter.cpp"/>
+      <File Name="src/depict/cairopainter.cpp"/>
+      <File Name="src/depict/commandpainter.cpp"/>
+      <File Name="src/depict/depict.cpp"/>
+      <File Name="src/depict/svgpainter.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="descriptors">
+      <File Name="src/descriptors/cansmidescriptor.cpp"/>
+      <File Name="src/descriptors/cmpdfilter.cpp"/>
+      <File Name="src/descriptors/filters.cpp"/>
+      <File Name="src/descriptors/groupcontrib.cpp"/>
+      <File Name="src/descriptors/inchidescriptor.cpp"/>
+      <File Name="src/descriptors/smartsdescriptors.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="fingerprints">
+      <File Name="src/fingerprints/finger2.cpp"/>
+      <File Name="src/fingerprints/finger3.cpp"/>
+      <File Name="src/fingerprints/fingerecfp.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="forcefields">
+      <File Name="src/forcefields/forcefieldgaff.cpp"/>
+      <File Name="src/forcefields/forcefieldgaff.h"/>
+      <File Name="src/forcefields/forcefieldghemical.cpp"/>
+      <File Name="src/forcefields/forcefieldghemical.h"/>
+      <File Name="src/forcefields/forcefieldmm2.cpp"/>
+      <File Name="src/forcefields/forcefieldmm2.h"/>
+      <File Name="src/forcefields/forcefieldmmff94.cpp"/>
+      <File Name="src/forcefields/forcefieldmmff94.h"/>
+      <File Name="src/forcefields/forcefielduff.cpp"/>
+      <File Name="src/forcefields/forcefielduff.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="GUI">
+      <File Name="src/GUI/OBGUI.cpp"/>
+      <File Name="src/GUI/OBGUI.h"/>
+      <File Name="src/GUI/optswx.cpp"/>
+      <File Name="src/GUI/optswx.h"/>
+      <File Name="src/GUI/selformats.h"/>
+      <File Name="src/GUI/stdwx.cpp"/>
+      <File Name="src/GUI/stdwx.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="math">
+      <File Name="src/math/align.cpp"/>
+      <File Name="src/math/matrix3x3.cpp"/>
+      <File Name="src/math/spacegroup.cpp"/>
+      <File Name="src/math/transform3d.cpp"/>
+      <File Name="src/math/vector3.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ops">
+      <File Name="src/ops/addfilename.cpp"/>
+      <File Name="src/ops/addinindex.cpp"/>
+      <File Name="src/ops/addnonpolarh.cpp"/>
+      <File Name="src/ops/addpolarh.cpp"/>
+      <File Name="src/ops/canonical.cpp"/>
+      <File Name="src/ops/changecell.cpp"/>
+      <File Name="src/ops/conformer.cpp"/>
+      <File Name="src/ops/deferred.h"/>
+      <File Name="src/ops/delnonpolarh.cpp"/>
+      <File Name="src/ops/delpolarh.cpp"/>
+      <File Name="src/ops/fillUC.cpp"/>
+      <File Name="src/ops/forcefield.cpp"/>
+      <File Name="src/ops/gen2D.cpp"/>
+      <File Name="src/ops/gen3d.cpp"/>
+      <File Name="src/ops/largest.cpp"/>
+      <File Name="src/ops/loader.cpp"/>
+      <File Name="src/ops/op2d.cpp"/>
+      <File Name="src/ops/opalign.cpp"/>
+      <File Name="src/ops/opconfab.cpp"/>
+      <File Name="src/ops/ophighlight.cpp"/>
+      <File Name="src/ops/opisomorph.cpp"/>
+      <File Name="src/ops/opisomorph.h"/>
+      <File Name="src/ops/opsplit.cpp"/>
+      <File Name="src/ops/optransform.cpp"/>
+      <File Name="src/ops/partialcharges.cpp"/>
+      <File Name="src/ops/readconformers.cpp"/>
+      <File Name="src/ops/sort.cpp"/>
+      <File Name="src/ops/unique.cpp"/>
+      <File Name="src/ops/xout.cpp"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="stereo">
+      <File Name="src/stereo/cistrans.cpp"/>
+      <File Name="src/stereo/facade.cpp"/>
+      <File Name="src/stereo/perception.cpp"/>
+      <File Name="src/stereo/squareplanar.cpp"/>
+      <File Name="src/stereo/stereo.cpp"/>
+      <File Name="src/stereo/stereoutil.h"/>
+      <File Name="src/stereo/tetrahedral.cpp"/>
+      <File Name="src/stereo/tetranonplanar.cpp"/>
+      <File Name="src/stereo/tetraplanar.cpp"/>
+    </VirtualDirectory>
+    <File Name="src/alias.cpp"/>
+    <File Name="src/atom.cpp"/>
+    <File Name="src/base.cpp"/>
+    <File Name="src/bitvec.cpp"/>
+    <File Name="src/bond.cpp"/>
+    <File Name="src/bondtyper.cpp"/>
+    <File Name="src/builder.cpp"/>
+    <File Name="src/canon.cpp"/>
+    <File Name="src/chains.cpp"/>
+    <File Name="src/chargemodel.cpp"/>
+    <File Name="src/chiral.cpp"/>
+    <File Name="src/conformersearch.cpp"/>
+    <File Name="src/confsearch.cpp"/>
+    <File Name="src/data.cpp"/>
+    <File Name="src/data_utilities.cpp"/>
+    <File Name="src/descriptor.cpp"/>
+    <File Name="src/distgeom.cpp"/>
+    <File Name="src/dlhandler_unix.cpp"/>
+    <File Name="src/dlhandler_win32.cpp"/>
+    <File Name="src/doxygen_pages.cpp"/>
+    <File Name="src/fingerprint.cpp"/>
+    <File Name="src/forcefield.cpp"/>
+    <File Name="src/format.cpp"/>
+    <File Name="src/generic.cpp"/>
+    <File Name="src/graphsym.cpp"/>
+    <File Name="src/grid.cpp"/>
+    <File Name="src/griddata.cpp"/>
+    <File Name="src/isomorphism.cpp"/>
+    <File Name="src/kekulize.cpp"/>
+    <File Name="src/locale.cpp"/>
+    <File Name="src/matrix.cpp"/>
+    <File Name="src/mcdlutil.cpp"/>
+    <File Name="src/memcpy.c"/>
+    <File Name="src/mol.cpp"/>
+    <File Name="src/molchrg.cpp"/>
+    <File Name="src/obconversion.cpp"/>
+    <File Name="src/oberror.cpp"/>
+    <File Name="src/obiter.cpp"/>
+    <File Name="src/obmolecformat.cpp"/>
+    <File Name="src/obutil.cpp"/>
+    <File Name="src/op.cpp"/>
+    <File Name="src/parsmart.cpp"/>
+    <File Name="src/patty.cpp"/>
+    <File Name="src/phmodel.cpp"/>
+    <File Name="src/plugin.cpp"/>
+    <File Name="src/pointgroup.cpp"/>
+    <File Name="src/query.cpp"/>
+    <File Name="src/rand.cpp"/>
+    <File Name="src/RDKitConv.cpp"/>
+    <File Name="src/residue.cpp"/>
+    <File Name="src/ring.cpp"/>
+    <File Name="src/rotamer.cpp"/>
+    <File Name="src/rotor.cpp"/>
+    <File Name="src/snprintf.c"/>
+    <File Name="src/snprintf.h"/>
+    <File Name="src/spectrophore.cpp"/>
+    <File Name="src/strncasecmp.c"/>
+    <File Name="src/tautomer.cpp"/>
+    <File Name="src/tokenst.cpp"/>
+    <File Name="src/transform.cpp"/>
+    <File Name="src/typer.cpp"/>
+    <File Name="src/zipstream.h"/>
+    <File Name="src/zipstreamimpl.h"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="scripts">
+    <VirtualDirectory Name="R">
+      <VirtualDirectory Name="examples">
+        <VirtualDirectory Name="openbabelR">
+          <VirtualDirectory Name="src">
+            <File Name="scripts/R/examples/openbabelR/src/openbabel-R.cpp"/>
+          </VirtualDirectory>
+        </VirtualDirectory>
+      </VirtualDirectory>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <VirtualDirectory Name="include">
+    <VirtualDirectory Name="openbabel">
+      <VirtualDirectory Name="depict">
+        <File Name="include/openbabel/depict/asciipainter.h"/>
+        <File Name="include/openbabel/depict/cairopainter.h"/>
+        <File Name="include/openbabel/depict/commandpainter.h"/>
+        <File Name="include/openbabel/depict/depict.h"/>
+        <File Name="include/openbabel/depict/painter.h"/>
+        <File Name="include/openbabel/depict/svgpainter.h"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="json">
+        <File Name="include/openbabel/json/customwriter.h"/>
+        <File Name="include/openbabel/json/json-forwards.h"/>
+        <File Name="include/openbabel/json/json.h"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="math">
+        <File Name="include/openbabel/math/align.h"/>
+        <File Name="include/openbabel/math/erf.h"/>
+        <File Name="include/openbabel/math/matrix3x3.h"/>
+        <File Name="include/openbabel/math/spacegroup.h"/>
+        <File Name="include/openbabel/math/transform3d.h"/>
+        <File Name="include/openbabel/math/vector3.h"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="stereo">
+        <File Name="include/openbabel/stereo/bindings.h"/>
+        <File Name="include/openbabel/stereo/cistrans.h"/>
+        <File Name="include/openbabel/stereo/squareplanar.h"/>
+        <File Name="include/openbabel/stereo/stereo.h"/>
+        <File Name="include/openbabel/stereo/tetrahedral.h"/>
+        <File Name="include/openbabel/stereo/tetranonplanar.h"/>
+        <File Name="include/openbabel/stereo/tetraplanar.h"/>
+      </VirtualDirectory>
+      <File Name="include/openbabel/alias.h"/>
+      <File Name="include/openbabel/atom.h"/>
+      <File Name="include/openbabel/atomclass.h"/>
+      <File Name="include/openbabel/base.h"/>
+      <File Name="include/openbabel/bitvec.h"/>
+      <File Name="include/openbabel/bond.h"/>
+      <File Name="include/openbabel/bondtyper.h"/>
+      <File Name="include/openbabel/builder.h"/>
+      <File Name="include/openbabel/canon.h"/>
+      <File Name="include/openbabel/chains.h"/>
+      <File Name="include/openbabel/chargemodel.h"/>
+      <File Name="include/openbabel/chiral.h"/>
+      <File Name="include/openbabel/conformersearch.h"/>
+      <File Name="include/openbabel/data.h"/>
+      <File Name="include/openbabel/data_utilities.h"/>
+      <File Name="include/openbabel/descriptor.h"/>
+      <File Name="include/openbabel/distgeom.h"/>
+      <File Name="include/openbabel/dlhandler.h"/>
+      <File Name="include/openbabel/fingerprint.h"/>
+      <File Name="include/openbabel/forcefield.h"/>
+      <File Name="include/openbabel/format.h"/>
+      <File Name="include/openbabel/generic.h"/>
+      <File Name="include/openbabel/graphsym.h"/>
+      <File Name="include/openbabel/grid.h"/>
+      <File Name="include/openbabel/griddata.h"/>
+      <File Name="include/openbabel/groupcontrib.h"/>
+      <File Name="include/openbabel/inchiformat.h"/>
+      <File Name="include/openbabel/internalcoord.h"/>
+      <File Name="include/openbabel/isomorphism.h"/>
+      <File Name="include/openbabel/kinetics.h"/>
+      <File Name="include/openbabel/lineend.h"/>
+      <File Name="include/openbabel/locale.h"/>
+      <File Name="include/openbabel/matrix.h"/>
+      <File Name="include/openbabel/mcdlutil.h"/>
+      <File Name="include/openbabel/mol.h"/>
+      <File Name="include/openbabel/molchrg.h"/>
+      <File Name="include/openbabel/obconversion.h"/>
+      <File Name="include/openbabel/oberror.h"/>
+      <File Name="include/openbabel/obiter.h"/>
+      <File Name="include/openbabel/obmolecformat.h"/>
+      <File Name="include/openbabel/obutil.h"/>
+      <File Name="include/openbabel/op.h"/>
+      <File Name="include/openbabel/optransform.h"/>
+      <File Name="include/openbabel/parsmart.h"/>
+      <File Name="include/openbabel/patty.h"/>
+      <File Name="include/openbabel/phmodel.h"/>
+      <File Name="include/openbabel/plugin.h"/>
+      <File Name="include/openbabel/pointgroup.h"/>
+      <File Name="include/openbabel/query.h"/>
+      <File Name="include/openbabel/rand.h"/>
+      <File Name="include/openbabel/reaction.h"/>
+      <File Name="include/openbabel/residue.h"/>
+      <File Name="include/openbabel/ring.h"/>
+      <File Name="include/openbabel/rotamer.h"/>
+      <File Name="include/openbabel/rotor.h"/>
+      <File Name="include/openbabel/shared_ptr.h"/>
+      <File Name="include/openbabel/spectrophore.h"/>
+      <File Name="include/openbabel/tautomer.h"/>
+      <File Name="include/openbabel/text.h"/>
+      <File Name="include/openbabel/tokenst.h"/>
+      <File Name="include/openbabel/typer.h"/>
+      <File Name="include/openbabel/xml.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="inchi">
+      <File Name="include/inchi/aux2atom.h"/>
+      <File Name="include/inchi/extr_ct.h"/>
+      <File Name="include/inchi/ichi.h"/>
+      <File Name="include/inchi/ichicano.h"/>
+      <File Name="include/inchi/ichicant.h"/>
+      <File Name="include/inchi/ichicomn.h"/>
+      <File Name="include/inchi/ichicomp.h"/>
+      <File Name="include/inchi/ichidrp.h"/>
+      <File Name="include/inchi/ichierr.h"/>
+      <File Name="include/inchi/ichimain.h"/>
+      <File Name="include/inchi/ichimake.h"/>
+      <File Name="include/inchi/ichinorm.h"/>
+      <File Name="include/inchi/ichiparm.h"/>
+      <File Name="include/inchi/ichiring.h"/>
+      <File Name="include/inchi/ichirvrs.h"/>
+      <File Name="include/inchi/ichisize.h"/>
+      <File Name="include/inchi/ichister.h"/>
+      <File Name="include/inchi/ichitaut.h"/>
+      <File Name="include/inchi/ichitime.h"/>
+      <File Name="include/inchi/ichi_bns.h"/>
+      <File Name="include/inchi/ichi_io.h"/>
+      <File Name="include/inchi/ikey_base26.h"/>
+      <File Name="include/inchi/inchicmp.h"/>
+      <File Name="include/inchi/inchi_api.h"/>
+      <File Name="include/inchi/inchi_dll_a.h"/>
+      <File Name="include/inchi/inchi_dll_main.h"/>
+      <File Name="include/inchi/incomdef.h"/>
+      <File Name="include/inchi/inpdef.h"/>
+      <File Name="include/inchi/lreadmol.h"/>
+      <File Name="include/inchi/mode.h"/>
+      <File Name="include/inchi/sha2.h"/>
+      <File Name="include/inchi/strutil.h"/>
+      <File Name="include/inchi/util.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="libxml">
+      <File Name="include/libxml/c14n.h"/>
+      <File Name="include/libxml/catalog.h"/>
+      <File Name="include/libxml/chvalid.h"/>
+      <File Name="include/libxml/debugXML.h"/>
+      <File Name="include/libxml/dict.h"/>
+      <File Name="include/libxml/DOCBparser.h"/>
+      <File Name="include/libxml/encoding.h"/>
+      <File Name="include/libxml/entities.h"/>
+      <File Name="include/libxml/globals.h"/>
+      <File Name="include/libxml/hash.h"/>
+      <File Name="include/libxml/HTMLparser.h"/>
+      <File Name="include/libxml/HTMLtree.h"/>
+      <File Name="include/libxml/list.h"/>
+      <File Name="include/libxml/nanoftp.h"/>
+      <File Name="include/libxml/nanohttp.h"/>
+      <File Name="include/libxml/parser.h"/>
+      <File Name="include/libxml/parserInternals.h"/>
+      <File Name="include/libxml/pattern.h"/>
+      <File Name="include/libxml/relaxng.h"/>
+      <File Name="include/libxml/SAX.h"/>
+      <File Name="include/libxml/SAX2.h"/>
+      <File Name="include/libxml/schemasInternals.h"/>
+      <File Name="include/libxml/threads.h"/>
+      <File Name="include/libxml/tree.h"/>
+      <File Name="include/libxml/uri.h"/>
+      <File Name="include/libxml/valid.h"/>
+      <File Name="include/libxml/xinclude.h"/>
+      <File Name="include/libxml/xlink.h"/>
+      <File Name="include/libxml/xmlautomata.h"/>
+      <File Name="include/libxml/xmlerror.h"/>
+      <File Name="include/libxml/xmlexports.h"/>
+      <File Name="include/libxml/xmlIO.h"/>
+      <File Name="include/libxml/xmlmemory.h"/>
+      <File Name="include/libxml/xmlmodule.h"/>
+      <File Name="include/libxml/xmlreader.h"/>
+      <File Name="include/libxml/xmlregexp.h"/>
+      <File Name="include/libxml/xmlsave.h"/>
+      <File Name="include/libxml/xmlschemas.h"/>
+      <File Name="include/libxml/xmlschemastypes.h"/>
+      <File Name="include/libxml/xmlstring.h"/>
+      <File Name="include/libxml/xmlunicode.h"/>
+      <File Name="include/libxml/xmlversion.h"/>
+      <File Name="include/libxml/xmlwin32version.h"/>
+      <File Name="include/libxml/xmlwriter.h"/>
+      <File Name="include/libxml/xpath.h"/>
+      <File Name="include/libxml/xpathInternals.h"/>
+      <File Name="include/libxml/xpointer.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="OB-BGL">
+      <File Name="include/OB-BGL/example.cpp"/>
+      <File Name="include/OB-BGL/mol_graph.h"/>
+      <File Name="include/OB-BGL/verbose_visitors.h"/>
+    </VirtualDirectory>
+    <File Name="include/chemdrawcdx.h"/>
+    <File Name="include/iconv.h"/>
+    <File Name="include/inchi_api.h"/>
+    <File Name="include/RDKitConv.h"/>
+    <File Name="include/zconf.h"/>
+    <File Name="include/zlib.h"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="doc">
+    <VirtualDirectory Name="examples">
+      <VirtualDirectory Name="static_executable">
+        <File Name="doc/examples/static_executable/myexe.cpp"/>
+      </VirtualDirectory>
+      <File Name="doc/examples/obconformersearch_default.cpp"/>
+      <File Name="doc/examples/obconversion_readstring.cpp"/>
+      <File Name="doc/examples/obfingerprint_getfingerprint.cpp"/>
+      <File Name="doc/examples/obforcefield_energy.cpp"/>
+    </VirtualDirectory>
+    <File Name="doc/modules.h"/>
+  </VirtualDirectory>
+  <Description/>
+  <Dependencies/>
+  <Settings Type="Dynamic Library">
+    <GlobalSettings>
+      <Compiler Options="" C_Options="" Assembler="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="">
+        <LibraryPath Value="."/>
+      </Linker>
+      <ResourceCompiler Options=""/>
+    </GlobalSettings>
+    <Configuration Name="Debug" CompilerType="MinGW ( Code::Blocks )" DebuggerType="GNU gdb debugger" Type="Dynamic Library" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="-g" C_Options="-g" Assembler="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" PCHFlags="" PCHFlagsPolicy="0">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="" IntermediateDirectory="./Debug" Command="$(WorkspacePath)\cmake-build-$(WorkspaceConfiguration)\bin\$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="CMake"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="" IsExtended="no">
+        <DebuggerSearchPaths/>
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="yes">
+        <RebuildCommand/>
+        <CleanCommand>make clean</CleanCommand>
+        <BuildCommand>make</BuildCommand>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName>None</ThirdPartyToolName>
+        <WorkingDirectory>$(WorkspacePath)</WorkingDirectory>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion EnableCpp11="no" EnableCpp14="no">
+        <ClangCmpFlagsC/>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+    <Configuration Name="Release" CompilerType="MinGW ( Code::Blocks )" DebuggerType="GNU gdb debugger" Type="Dynamic Library" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="" C_Options="" Assembler="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" PCHFlags="" PCHFlagsPolicy="0">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="-O2" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="" IntermediateDirectory="./Release" Command="$(WorkspacePath)\cmake-build-$(WorkspaceConfiguration)\bin\$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="CMake"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="" IsExtended="no">
+        <DebuggerSearchPaths/>
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="yes">
+        <RebuildCommand/>
+        <CleanCommand>make clean</CleanCommand>
+        <BuildCommand>make</BuildCommand>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName>None</ThirdPartyToolName>
+        <WorkingDirectory>$(WorkspacePath)</WorkingDirectory>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion EnableCpp11="no" EnableCpp14="no">
+        <ClangCmpFlagsC/>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+  </Settings>
+  <VirtualDirectory Name="data">
+    <File Name="data/aromatic.h"/>
+    <File Name="data/atomtyp.h"/>
+    <File Name="data/bondtyp.h"/>
+    <File Name="data/chemdrawcdx.h"/>
+    <File Name="data/element.h"/>
+    <File Name="data/isotope.h"/>
+    <File Name="data/phmodeldata.h"/>
+    <File Name="data/resdata.h"/>
+    <File Name="data/torlib.h"/>
+    <File Name="data/types.h"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="test">
+    <File Name="test/aligntest.cpp"/>
+    <File Name="test/aromatest.cpp"/>
+    <File Name="test/atom.cpp"/>
+    <File Name="test/automorphismtest.cpp"/>
+    <File Name="test/bond.cpp"/>
+    <File Name="test/buildertest.cpp"/>
+    <File Name="test/canonconsistenttest.cpp"/>
+    <File Name="test/canonstabletest.cpp"/>
+    <File Name="test/cansmi.cpp"/>
+    <File Name="test/carspacegrouptest.cpp"/>
+    <File Name="test/charge_gasteiger.cpp"/>
+    <File Name="test/charge_mmff94.cpp"/>
+    <File Name="test/cifspacegrouptest.cpp"/>
+    <File Name="test/cistranstest.cpp"/>
+    <File Name="test/cmlreadfile.cpp"/>
+    <File Name="test/conversion.cpp"/>
+    <File Name="test/datatest.cpp"/>
+    <File Name="test/ffgaff.cpp"/>
+    <File Name="test/ffghemical.cpp"/>
+    <File Name="test/ffmmff94.cpp"/>
+    <File Name="test/ffuff.cpp"/>
+    <File Name="test/formalcharge.cpp"/>
+    <File Name="test/format.cpp"/>
+    <File Name="test/formula.cpp"/>
+    <File Name="test/graphsymtest.cpp"/>
+    <File Name="test/gziptest.cpp"/>
+    <File Name="test/implicitHtest.cpp"/>
+    <File Name="test/inchiwrite.cpp"/>
+    <File Name="test/internalcoord.cpp"/>
+    <File Name="test/invalidsmarts.cpp"/>
+    <File Name="test/invalidsmiles.cpp"/>
+    <File Name="test/isomorphismtest.cpp"/>
+    <File Name="test/iterators.cpp"/>
+    <File Name="test/logp_psa.cpp"/>
+    <File Name="test/lssrtest.cpp"/>
+    <File Name="test/math.cpp"/>
+    <File Name="test/mmff94validate.cpp"/>
+    <File Name="test/mol.cpp"/>
+    <File Name="test/multicmltest.cpp"/>
+    <File Name="test/obbench.h"/>
+    <File Name="test/obmolbenchmark.cpp"/>
+    <File Name="test/obtest.cpp"/>
+    <File Name="test/obtest.h"/>
+    <File Name="test/phmodel.cpp"/>
+    <File Name="test/regressionstest.cpp"/>
+    <File Name="test/residue.cpp"/>
+    <File Name="test/ringtest.cpp"/>
+    <File Name="test/rotortest.cpp"/>
+    <File Name="test/roundtrip.cpp"/>
+    <File Name="test/shuffletest.cpp"/>
+    <File Name="test/smartsparse.cpp"/>
+    <File Name="test/smartstest.cpp"/>
+    <File Name="test/smilesmatch.cpp"/>
+    <File Name="test/smilestest.cpp"/>
+    <File Name="test/smileytest.cpp"/>
+    <File Name="test/spectrophoretest.cpp"/>
+    <File Name="test/squareplanartest.cpp"/>
+    <File Name="test/stereoperceptiontest.cpp"/>
+    <File Name="test/stereotest.cpp"/>
+    <File Name="test/strip.cpp"/>
+    <File Name="test/tautomertest.cpp"/>
+    <File Name="test/tetrahedraltest.cpp"/>
+    <File Name="test/tetranonplanartest.cpp"/>
+    <File Name="test/tetraplanartest.cpp"/>
+    <File Name="test/uniqueidtest.cpp"/>
+    <File Name="test/unitcell.cpp"/>
+    <File Name="test/zipstream.cpp"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="tools">
+    <File Name="tools/babel.cpp"/>
+    <File Name="tools/getopt.c"/>
+    <File Name="tools/getopt.h"/>
+    <File Name="tools/obabel.cpp"/>
+    <File Name="tools/obchiral.cpp"/>
+    <File Name="tools/obconformer.cpp"/>
+    <File Name="tools/obdistgen.cpp"/>
+    <File Name="tools/obdoc.cpp"/>
+    <File Name="tools/obenergy.cpp"/>
+    <File Name="tools/obfit.cpp"/>
+    <File Name="tools/obfragment.cpp"/>
+    <File Name="tools/obgen.cpp"/>
+    <File Name="tools/obgrep.cpp"/>
+    <File Name="tools/obminimize.cpp"/>
+    <File Name="tools/obmm.cpp"/>
+    <File Name="tools/obprobe.cpp"/>
+    <File Name="tools/obprop.cpp"/>
+    <File Name="tools/obrms.cpp"/>
+    <File Name="tools/obrotamer.cpp"/>
+    <File Name="tools/obrotate.cpp"/>
+    <File Name="tools/obseq.cpp"/>
+    <File Name="tools/obspectrophore.cpp"/>
+    <File Name="tools/obsym.cpp"/>
+    <File Name="tools/obtautomer.cpp"/>
+    <File Name="tools/obthermo.cpp"/>
+    <File Name="tools/obxyz.cpp"/>
+    <File Name="tools/svgdepict.cpp"/>
+  </VirtualDirectory>
+</CodeLite_Project>
