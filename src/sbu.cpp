@@ -28,16 +28,33 @@ int main(int argc, char* argv[])
 	fragments = mol.Separate();
 
 	OBConversion obconv;
-	obconv.SetOutFormat("SMI");
+	obconv.SetOutFormat("can");
+	std::vector<std::string> unique_smiles;
+
+	// Print out each fragment and get a list of unique SMILES code
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		// Based on http://openbabel.org/dev-api/group__main.shtml
 		printf("%d\t", it->NumAtoms());
-		printf("%s\n", obconv.WriteString(&*it).c_str());
+		std::string mol_smiles = obconv.WriteString(&*it);
+		printf("%s", mol_smiles.c_str());  // WriteString already outputs a newline
+		bool new_flag = true;
+		for (std::vector<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
+			if (*i2 == mol_smiles) {
+				new_flag = false;
+				break;
+			}
+		}
+		if (new_flag) {
+			printf("(New!)\n");
+			unique_smiles.push_back(mol_smiles);
+		} else {
+			printf("(Already defined)\n");
+		}
 	}
-
-	// Get a list of unique SMILES codes
-	//std::vector<std::string> unique_smiles;
-	// TODO: etc.....
+	printf("\n\nFound %d fragments:\n", unique_smiles.size());
+	for (std::vector<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
+		printf(" %s", i2->c_str());
+	}
 
 	return(0);
 }
