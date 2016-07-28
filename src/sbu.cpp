@@ -45,7 +45,13 @@ int main(int argc, char* argv[])
 			}
 		}
 		if (new_flag) {
-			printf("(New!)\n");
+			std::string chirality_flag;
+			if (it->IsChiral()) {
+				chirality_flag = "Chiral fragment";
+			} else {
+				chirality_flag = "Achiral fragment";
+			}  // It looks like the porphyrinic ADARAA defines the carboxylate as chiral
+			printf("(New! %s)\n", chirality_flag.c_str());
 			unique_smiles.push_back(mol_smiles);
 		} else {
 			printf("(Already defined)\n");
