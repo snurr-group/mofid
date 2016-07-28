@@ -567,7 +567,7 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     //! Aligns atom a on p1 and atom b along p1->p2 vector
     void Align(OBAtom*,OBAtom*,vector3&,vector3&);
     //! Adds single bonds based on atom proximity
-    void ConnectTheDots();
+    virtual void ConnectTheDots();
     //! Attempts to perceive multiple bonds based on geometries
     void PerceiveBondOrders();
     //! Fills out an OBAngleData with angles from the molecule

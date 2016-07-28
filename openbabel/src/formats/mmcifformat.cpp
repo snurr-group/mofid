@@ -23,6 +23,8 @@ GNU General Public License for more details.
 #include <algorithm>
 #include <ctype.h>
 
+#include <openbabel/crystal.h>
+
 using namespace std;
 namespace OpenBabel
 {
@@ -40,6 +42,7 @@ namespace OpenBabel
      // OBConversion::RegisterFormat("cif", this, "chemical/x-cif");
 
      OBConversion::RegisterOptionParam("s", this);
+     OBConversion::RegisterOptionParam("p", this);
      OBConversion::RegisterOptionParam("b", this);
    }
 
@@ -49,6 +52,7 @@ namespace OpenBabel
        "Macromolecular Crystallographic Info\n "
        "Read Options e.g. -as\n"
        "  s  Output single bonds only\n"
+       "  p  Apply periodic boundary conditions\n"
        "  b  Disable bonding entirely\n\n";
    };
 
@@ -483,6 +487,7 @@ namespace OpenBabel
  bool mmCIFFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
  {
    OBMol* pmol = pOb->CastAndClear<OBMol>();
+   // Not sure how to add the OBCryst here!
    if(pmol==NULL)
      return false;
 

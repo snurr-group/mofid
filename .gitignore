@@ -9,3 +9,4 @@ Notebooks/
 .idea/
 .codelite/
 bin/
+!openbabel/data/

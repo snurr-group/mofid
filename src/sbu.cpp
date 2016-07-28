@@ -15,6 +15,7 @@ bool readCIF(OBMol* molp, std::string filepath);
 
 int main(int argc, char* argv[])
 {
+	// obErrorLog.SetOutputLevel(obDebug);  // See http://openbabel.org/wiki/Errors
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
 
 	OBConversion obconv;
 	obconv.SetOutFormat("can");
+	obconv.AddOption("i");  // Ignore SMILES chirality for now
 	std::vector<std::string> unique_smiles;
 
 	// Print out each fragment and get a list of unique SMILES code
