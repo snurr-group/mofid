@@ -1079,6 +1079,17 @@ namespace OpenBabel
     return (Trim(f_str));
   }
 
+  void OBMol::SetPeriodicLattice(OBUnitCell* pCell)
+  {
+    if (pCell)
+      {
+        if (_unitCell == NULL)  // Have we already allocated a lattice?
+          _unitCell = new OBUnitCell;
+        *_unitCell = *pCell;  // Copy data from pCell into our allocation
+      }
+    SetFlag(OB_PERIODIC_MOL);
+  }
+
   //! Stochoimetric formula (e.g., C4H6O).
   //!   This is either set by OBMol::SetFormula() or generated on-the-fly
   //!   using the "Hill order" -- i.e., C first if present, then H if present
@@ -1238,6 +1249,7 @@ namespace OpenBabel
     this->_dimension = src.GetDimension();
     this->SetTotalCharge(src.GetTotalCharge()); //also sets a flag
     this->SetTotalSpinMultiplicity(src.GetTotalSpinMultiplicity()); //also sets a flag
+    this->SetPeriodicLattice(src.GetPeriodicLattice());
 
     EndModify(); //zeros flags!
 
@@ -1249,6 +1261,8 @@ namespace OpenBabel
       this->SetFlag(OB_TCHARGE_MOL);
     if (src.HasFlag(OB_PCHARGE_MOL))
       this->SetFlag(OB_PCHARGE_MOL);
+    if (src.HasFlag(OB_PERIODIC_MOL))
+      this->SetFlag(OB_PERIODIC_MOL);
 
     //this->_flags = src.GetFlags(); //Copy all flags. Perhaps too drastic a change
 
@@ -1408,6 +1422,9 @@ namespace OpenBabel
     // We should do something to update the src coordinates if they're not 3D
     if(src.GetDimension()<_dimension)
       _dimension = src.GetDimension();
+    // TODO: Periodicity is similarly weird (e.g., adding nonperiodic data to
+    // a crystal, or two incompatible lattice parameters).  For now, just assume
+    // we intend to keep the lattice of the source (no updates necessary)
 
     EndModify();
 
@@ -1455,6 +1472,7 @@ namespace OpenBabel
 
     _c = (double*) NULL;
     _mod = 0;
+    DestroyPeriodicLattice();
 
     // Clean up generic data via the base class
     return(OBBase::Clear());
@@ -1592,6 +1610,15 @@ namespace OpenBabel
       {
         delete residue;
         residue = NULL;
+      }
+  }
+
+  void OBMol::DestroyPeriodicLattice(void)
+  {
+    if (_unitCell)
+      {
+        delete _unitCell;
+        _unitCell = NULL;
       }
   }
 
@@ -3245,6 +3272,7 @@ namespace OpenBabel
     _vdata.clear();
     _title = "";
     _c = (double*)NULL;
+    _unitCell = (OBUnitCell*)NULL;
     _flags = 0;
     _vconf.clear();
     _autoPartialCharge = true;
@@ -3265,6 +3293,7 @@ namespace OpenBabel
     _vdata.clear();
     _title = "";
     _c = (double*)NULL;
+    _unitCell = (OBUnitCell*)NULL;
     _flags = 0;
     _vconf.clear();
     _autoPartialCharge = true;
@@ -3288,6 +3317,7 @@ namespace OpenBabel
       DestroyBond(bond);
     for (residue = BeginResidue(r);residue;residue = NextResidue(r))
       DestroyResidue(residue);
+    DestroyPeriodicLattice();
 
     //clear out the multiconformer data
     vector<double*>::iterator k;
@@ -3364,7 +3394,6 @@ namespace OpenBabel
 
     return(false);
   }
-
 
   void OBMol::SetCoordinates(double *newCoords)
   {
@@ -3483,8 +3512,14 @@ namespace OpenBabel
       return;
     if (_dimension != 3) return; // not useful on non-3D structures
 
-    obErrorLog.ThrowError(__FUNCTION__,
-                          "Ran OpenBabel::ConnectTheDots", obAuditMsg);
+    if (IsPeriodic())
+      obErrorLog.ThrowError(__FUNCTION__,
+                            "Ran OpenBabel::ConnectTheDots -- using periodic boundary conditions",
+                            obAuditMsg);
+    else
+      obErrorLog.ThrowError(__FUNCTION__,
+                            "Ran OpenBabel::ConnectTheDots", obAuditMsg);
+
 
     int j,k,max;
     double maxrad = 0;
@@ -3520,6 +3555,7 @@ namespace OpenBabel
 
     int idx1, idx2;
     double d2,cutoff,zd;
+    // Implement periodicity here  if periodic, need to also track the bonding properties
     for (j = 0 ; j < max ; ++j)
       {
     	double maxcutoff = SQUARE(rad[j]+maxrad+0.45);

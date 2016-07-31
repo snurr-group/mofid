@@ -60,7 +60,9 @@ namespace OpenBabel
 #define OB_KTRIPLE_BOND   (1<<9)
   //! A bond which "closes" a ring when walking the molecular graph
 #define OB_CLOSURE_BOND   (1<<10)
-  // 11-16 currently unused
+  //! A bond that crosses periodic boundaries
+#define OB_PERIODIC_BOND  (1<<13)
+  // 14-16 currently unused
 
 #define OB_WEDGE_OR_HASH_BOND     (1<<11)
 #define OB_CIS_OR_TRANS_BOND     (1<<12)
@@ -73,6 +75,7 @@ namespace OpenBabel
       OBMol                      *_parent;//!< The molecule which contains me (if any)
       OBAtom                     *_bgn;   //!< I connect one node
       OBAtom                     *_end;   //!< to another node
+      //vector3                     _direction; //!< Direction of unit cells from start to end atom for periodicity
       char                        _order; //!< Bond order (1, 2, 3, 5=aromatic)
       unsigned short int          _flags; //!< Any flags for this bond
       unsigned long                 _id;        //!< unique id
@@ -171,6 +174,8 @@ namespace OpenBabel
           automatically by lazy evaluation when requesting
           OBBond::IsClosure() **/
       void SetClosure()     { SetFlag(OB_CLOSURE_BOND);  }
+      //! Mark that this bond crosses periodic unit cell boundaries
+      void SetPeriodic()    { SetFlag(OB_PERIODIC_BOND);}
       //! Clear any indication of 2D "hash" notation from SetHash()
       void UnsetHash()      { UnsetFlag(OB_HASH_BOND);    }
       //! Clear any indication of 2D "wedge" notation from SetWedge()
@@ -186,6 +191,8 @@ namespace OpenBabel
         {
           _flags &= (~(OB_KSINGLE_BOND|OB_KDOUBLE_BOND|OB_KTRIPLE_BOND));
         }
+      //! Clear all periodicity information for the bond
+      void UnsetPeriodic()  { UnsetFlag(OB_PERIODIC_BOND);}
       //@}
 
       //! \name Bond data request methods

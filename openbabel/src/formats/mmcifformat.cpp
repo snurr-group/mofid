@@ -23,8 +23,6 @@ GNU General Public License for more details.
 #include <algorithm>
 #include <ctype.h>
 
-#include <openbabel/crystal.h>
-
 using namespace std;
 namespace OpenBabel
 {
@@ -52,7 +50,7 @@ namespace OpenBabel
        "Macromolecular Crystallographic Info\n "
        "Read Options e.g. -as\n"
        "  s  Output single bonds only\n"
-       "  p  Apply periodic boundary conditions\n"
+       "  p  Apply periodic boundary conditions for bonds\n"
        "  b  Disable bonding entirely\n\n";
    };
 
@@ -487,7 +485,6 @@ namespace OpenBabel
  bool mmCIFFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
  {
    OBMol* pmol = pOb->CastAndClear<OBMol>();
-   // Not sure how to add the OBCryst here!
    if(pmol==NULL)
      return false;
 
@@ -949,7 +946,7 @@ namespace OpenBabel
        {
        if (use_cell >= 6)
          {
-         OBUnitCell * pCell = new OBUnitCell;
+         OBUnitCell * pCell = new OBUnitCell;  // No matching "delete" because it's saved in pmol->SetData
          pCell->SetOrigin(fileformatInput);
          pCell->SetData(cell_a, cell_b, cell_c,
                         cell_alpha,
@@ -972,6 +969,8 @@ namespace OpenBabel
                              pCell->WrapFractionalCoordinate(atom->GetVector())));
              }
            }
+         if (pConv->IsOption("p",OBConversion::INOPTIONS))
+           pmol->SetPeriodicLattice(pCell);  // Make the molecule periodic
          }
        for (OBAtomIterator atom_x = pmol->BeginAtoms(), atom_y = pmol->EndAtoms(); atom_x != atom_y; ++atom_x )
        {

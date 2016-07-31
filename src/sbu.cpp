@@ -15,7 +15,7 @@ bool readCIF(OBMol* molp, std::string filepath);
 
 int main(int argc, char* argv[])
 {
-	// obErrorLog.SetOutputLevel(obDebug);  // See http://openbabel.org/wiki/Errors
+	obErrorLog.SetOutputLevel(obDebug);  // See http://openbabel.org/wiki/Errors
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -73,5 +73,6 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
+	obconversion.AddOption("p", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);
 }
