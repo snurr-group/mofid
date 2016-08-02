@@ -10,7 +10,7 @@ TODO
 ----
 * OpenBabel does not currently handle PBC in bond perception.  Would need to make a new ConnectTheBonds with periodic boundaries for CIFs (see mol.cpp:3534).
 	* See about adding/modifying a distance method within OBAtom/Bond.
-	* Could also modify the FractionalWrapping type methods in OBUnitCell (generic.cpp).  Then could define distances based on wrapping, etc.
+	* Consider using the new OBUnitCell methods (generic.cpp) to define angles as well.
 	* Also see GetAngle in mol.h as a generic distance, etc.
 	* Consider editing the BeginModify and EndModify methods (as well as constructors/destructors) of OBMol to add UC data to the atoms and/or bonds.  This seems idiomatic (see mol.cpp:1500ish).
 * Modifying bonds
@@ -30,7 +30,7 @@ Generated the eclipse code hinting by running `cmake -G "Eclipse CDT4 - Unix Mak
 
 It looks like there's a OBDistanceGeometry class, but in hindsight it's implementing bond distance/angle constraints, not really periodic boundaries.  However, there is already a mechanism for storing unit cell data within OBMol: see distgeom.cpp:163, which uses GetData (which in turn saves an OBUnitCell class within mol._vdata).
 
-The [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.
+The [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.  Also see the [installation instructions](https://openbabel.org/docs/dev/Installation/install.html#local-build).  With the new makefile configurations, run `make openbabel/fast` to make a quick local build, and the new sbu Makefile will automatically compile against the local directory.
 
 ### OpenBabel listserv
 

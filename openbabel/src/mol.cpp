@@ -3555,7 +3555,7 @@ namespace OpenBabel
 
     int idx1, idx2;
     double d2,cutoff,zd;
-    // Implement periodicity here  if periodic, need to also track the bonding properties
+    vector3 atom1, atom2, wrapped_coords;  // Only used for periodic coords
     for (j = 0 ; j < max ; ++j)
       {
     	double maxcutoff = SQUARE(rad[j]+maxrad+0.45);
@@ -3567,20 +3567,37 @@ namespace OpenBabel
             // bonded if closer than elemental Rcov + tolerance
             cutoff = SQUARE(rad[j] + rad[k] + 0.45);
 
-            zd  = SQUARE(c[idx1*3+2] - c[idx2*3+2]);
-            // bigger than max cutoff, which is determined using largest radius,
-            // not the radius of k (which might be small, ie H, and cause an early  termination)
-            // since we sort by z, anything beyond k will also fail
-            if (zd > maxcutoff )
-              break;
+            // Use minimum image convention if the unit cell is periodic
+            // Otherwise, use a simpler (faster) distance calculation based on raw coordinates
+            if (IsPeriodic())
+              {
+                atom1 = vector3(c[idx1*3], c[idx1*3+1], c[idx1*3+2]);
+                atom2 = vector3(c[idx2*3], c[idx2*3+1], c[idx2*3+2]);
+                wrapped_coords = _unitCell->PBCCartesianDifference(atom2, atom1);
+                d2 = wrapped_coords.length_2();  // TODO: GET DISTANCE HERE, THEN JUST FIX THE BOND PERCEPTION.  NOT TOO BAD
+                if (false)
+                  {
+                    std::cout << atom1 << atom2 << d2 << std::endl;
+                    std::cout << "Difference: " << wrapped_coords << std::endl;
+                  }
+              }
+            else
+              {
+                zd  = SQUARE(c[idx1*3+2] - c[idx2*3+2]);
+                // bigger than max cutoff, which is determined using largest radius,
+                // not the radius of k (which might be small, ie H, and cause an early  termination)
+                // since we sort by z, anything beyond k will also fail
+                if (zd > maxcutoff )
+                  break;
 
-            d2  = SQUARE(c[idx1*3]   - c[idx2*3]);
-            if (d2 > cutoff)
-              continue; // x's bigger than cutoff
-            d2 += SQUARE(c[idx1*3+1] - c[idx2*3+1]);
-            if (d2 > cutoff)
-              continue; // x^2 + y^2 bigger than cutoff
-            d2 += zd;
+                d2  = SQUARE(c[idx1*3]   - c[idx2*3]);
+                if (d2 > cutoff)
+                  continue; // x's bigger than cutoff
+                d2 += SQUARE(c[idx1*3+1] - c[idx2*3+1]);
+                if (d2 > cutoff)
+                  continue; // x^2 + y^2 bigger than cutoff
+                d2 += zd;
+              }
 
             if (d2 > cutoff)
               continue;
@@ -3612,6 +3629,10 @@ namespace OpenBabel
     // Cleanup -- delete long bonds that exceed max valence
     OBBond *maxbond, *bond;
     double maxlength;
+    // TODO: Again, long bonds will have to be defined based on PBC
+    // Probably fix this at the end once I figure out how periodicity should be
+    // generally implemented in the code, since I don't want max bonds for my
+    // purposes at this time.
     vector<OBBond*>::iterator l, m;
     int valCount;
     bool changed;
@@ -3619,7 +3640,7 @@ namespace OpenBabel
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
         while (atom->BOSum() > static_cast<unsigned int>(etab.GetMaxBonds(atom->GetAtomicNum()))
-               || atom->SmallestBondAngle() < 45.0)
+               /*|| atom->SmallestBondAngle() < 45.0)*/)//FIXME: Parenthesis added to comment out bond angle
           {
             bond = atom->BeginBond(l);
             maxbond = bond;
@@ -3726,7 +3747,7 @@ namespace OpenBabel
     // Pass 1: Assign estimated hybridization based on avg. angles
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
-        angle = atom->AverageBondAngle();
+        angle = atom->AverageBondAngle();  // FIXME with correct lengths
 
         //        cout << atom->GetAtomicNum() << " " << angle << endl;
 
