@@ -966,7 +966,7 @@ namespace OpenBabel
              {
              OBAtom * atom = (* atom_x);
              atom->SetVector(pCell->FractionalToCartesian(
-                             pCell->WrapFractionalCoordinate(atom->GetVector())));
+                             pCell->WrapFractionalCoordinate(atom->GetVector())));  // TODO: this is where we could copy Cartesian to fractional
              }
            }
          if (pConv->IsOption("p",OBConversion::INOPTIONS))

@@ -8,20 +8,17 @@ Decompose a MOF into its nodes, linkers, and topology to perform additional anal
 
 TODO
 ----
-* OpenBabel does not currently handle PBC in bond perception.  Would need to make a new ConnectTheBonds with periodic boundaries for CIFs (see mol.cpp:3534).
-	* See about adding/modifying a distance method within OBAtom/Bond.
-	* Consider using the new OBUnitCell methods (generic.cpp) to define angles as well.
-	* Also see GetAngle in mol.h as a generic distance, etc.
-	* Consider editing the BeginModify and EndModify methods (as well as constructors/destructors) of OBMol to add UC data to the atoms and/or bonds.  This seems idiomatic (see mol.cpp:1500ish).
+* Consider editing the BeginModify and EndModify methods (as well as constructors/destructors) of OBMol to add UC data to the atoms and/or bonds.  This seems idiomatic (see mol.cpp:1500ish).
+* Need to update the bond length and torsion calculations, which are used for the bond order detection (bondtyper.cpp:159 and mol.cpp:3811, respectively, as examples)
 * Modifying bonds
 	* Vector3 is based on doubles.  Is there an integer version for _direction or something similar?
-	* Within the atom class, consider referring to the parent OBMol to determine PBC.  Might need to use the IsPeriodic or similar as a flag.
 * Also need to modify elements.txt (and maxbonds) to keep the oxygen with tetrahedral bonding, etc, probably as an option to the CIF parser.  One idea would be to allow BABEL_DATADIR to accept multiple directories (though there may need to be an audit or debug message about that)
 
 
 Ideas
 -----
 * See also <http://drivendata.github.io/cookiecutter-data-science> for project organization ideas
+* Which design patterns would help organize my code?
 
 
 Notes
@@ -33,7 +30,11 @@ It looks like there's a OBDistanceGeometry class, but in hindsight it's implemen
 The [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.  Also see the [installation instructions](https://openbabel.org/docs/dev/Installation/install.html#local-build).  With the new makefile configurations, run `make openbabel/fast` to make a quick local build, and the new sbu Makefile will automatically compile against the local directory.
 
 ### OpenBabel listserv
+Listserv entries discussing periodic boundary conditions.
 
+* [Periodic boundaries and atom typing large systems (UFF)](https://www.mail-archive.com/openbabel-discuss@lists.sourceforge.net/msg02002.html)
+* [OpenBabel and Periodic Systems (multiple molecules per OBMol)](https://sourceforge.net/p/openbabel/mailman/message/7048390/)
+* [Crystallography help (fractional-cartesian conversion matrix)](https://sourceforge.net/p/openbabel/mailman/message/7049196/)
 
 
 Table of contents

@@ -886,6 +886,12 @@ namespace OpenBabel
     return stereoFacade.HasTetrahedralStereo(_id);
   }
 
+  bool OBAtom::IsPeriodic()
+  {
+    OBMol *mol = (OBMol*)((OBAtom*)this)->GetParent();
+    return mol->IsPeriodic();
+  }
+
   bool OBAtom::IsInRingSize(int size) const
   {
     vector<OBRing*> rlist;
@@ -982,9 +988,7 @@ namespace OpenBabel
         k = j;
         for (c = NextNbrAtom(k); c; c = NextNbrAtom(k))
           {
-            v1 = b->GetVector() - GetVector();
-            v2 = c->GetVector() - GetVector();
-            degrees = vectorAngle(v1, v2);
+            degrees = b->GetAngle((OBAtom*)this, c);
             if (degrees < minDegrees)
               minDegrees = degrees;
           }
@@ -1008,9 +1012,7 @@ namespace OpenBabel
         k = j;
         for (c = NextNbrAtom(k); c; c = NextNbrAtom(k))
           {
-            v1 = b->GetVector() - GetVector();
-            v2 = c->GetVector() - GetVector();
-            degrees = vectorAngle(v1, v2);
+            degrees = b->GetAngle((OBAtom*)this, c);
             avgDegrees += degrees;
             n++;
           }
@@ -1245,8 +1247,19 @@ namespace OpenBabel
   {
     vector3 v1,v2;
 
-    v1 = this->GetVector() - b->GetVector();
-    v2 = c->GetVector() - b->GetVector();
+    if (!IsPeriodic())
+      {
+        v1 = this->GetVector() - b->GetVector();
+        v2 = c->GetVector() - b->GetVector();
+      }
+    else
+      {
+        OBMol *mol = (OBMol*)GetParent();
+        OBUnitCell *box = (OBUnitCell*)mol->GetPeriodicLattice();
+        v1 = box->PBCCartesianDifference(this->GetVector(), b->GetVector());
+        v2 = box->PBCCartesianDifference(c->GetVector(), b->GetVector());
+      }
+
     if (IsNearZero(v1.length(), 1.0e-3)
       || IsNearZero(v2.length(), 1.0e-3)) {
         return(0.0);
@@ -1257,6 +1270,7 @@ namespace OpenBabel
 
   double OBAtom::GetAngle(int b, int c)
   {
+    // TODO: Update this method to call the other one
     OBMol *mol = (OBMol*)GetParent();
     vector3 v1,v2;
 

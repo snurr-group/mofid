@@ -3573,7 +3573,7 @@ namespace OpenBabel
               {
                 atom1 = vector3(c[idx1*3], c[idx1*3+1], c[idx1*3+2]);
                 atom2 = vector3(c[idx2*3], c[idx2*3+1], c[idx2*3+2]);
-                wrapped_coords = _unitCell->PBCCartesianDifference(atom2, atom1);
+                wrapped_coords = _unitCell->PBCCartesianDifference(atom1, atom2);
                 d2 = wrapped_coords.length_2();  // TODO: GET DISTANCE HERE, THEN JUST FIX THE BOND PERCEPTION.  NOT TOO BAD
                 if (false)
                   {
@@ -3640,7 +3640,7 @@ namespace OpenBabel
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
         while (atom->BOSum() > static_cast<unsigned int>(etab.GetMaxBonds(atom->GetAtomicNum()))
-               /*|| atom->SmallestBondAngle() < 45.0)*/)//FIXME: Parenthesis added to comment out bond angle
+               || atom->SmallestBondAngle() < 45.0)
           {
             bond = atom->BeginBond(l);
             maxbond = bond;

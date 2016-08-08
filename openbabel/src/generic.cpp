@@ -412,7 +412,7 @@ namespace OpenBabel
 
   vector3 OBUnitCell::PBCFractionalDifference(vector3 frac1, vector3 frac2) const
   {
-    vector3 frac = frac2 - frac1;
+    vector3 frac = frac1 - frac2;
     double x = frac.x() - round(frac.x());
     double y = frac.y() - round(frac.y());
     double z = frac.z() - round(frac.z());

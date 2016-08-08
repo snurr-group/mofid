@@ -496,14 +496,14 @@ namespace OpenBabel
     vector3 WrapFractionalCoordinate(vector3 frac) const;
     //! Calculates the difference of two Cartesian coordinates accounting for periodic boundaries.
     //! \param cart1 First vector of cartesian coordinates
-    //! \param cart2 Second vector of cartesian coordinates
+    //! \param cart2 Second vector of cartesian coordinates to be subtracted
     //! \return Cartesian difference accounting for cell boundaries
     //! \todo Consider adding a method to give the direction between unit cells
     vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2);
     vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2) const;
     //! Calculates the difference of two fractional coordinates accounting for periodic boundaries.
     //! \param cart1 First vector of fractional coordinates
-    //! \param cart2 Second vector of fractional coordinates
+    //! \param cart2 Second vector of fractional coordinates to be subtracted
     //! \return Fractional difference within half the unit cell (-0.5 to 0.5)
     vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2);
     vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2) const;

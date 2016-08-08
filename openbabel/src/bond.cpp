@@ -746,6 +746,7 @@ namespace OpenBabel
 
   double OBBond::GetLength() const
   {
+    // TODO: Use periodic boundary conditions based on the two atoms
     double	d2;
     const OBAtom *begin, *end;
     begin = GetBeginAtom();

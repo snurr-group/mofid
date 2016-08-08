@@ -16,6 +16,8 @@ bool readCIF(OBMol* molp, std::string filepath);
 int main(int argc, char* argv[])
 {
 	// obErrorLog.SetOutputLevel(obDebug);  // See http://openbabel.org/wiki/Errors
+	const bool display_full_smiles = false;
+	const bool display_number_of_fragments = false;
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -33,8 +35,10 @@ int main(int argc, char* argv[])
 	obconv.AddOption("i");  // Ignore SMILES chirality for now
 	std::vector<std::string> unique_smiles;
 
-	std::string whole_smiles = obconv.WriteString(&mol);
-	printf("Whole molecule: %s", whole_smiles.c_str());
+	if (display_full_smiles) {
+		std::string whole_smiles = obconv.WriteString(&mol);
+		printf("Whole molecule: %s", whole_smiles.c_str());
+	}
 
 	// Print out each fragment and get a list of unique SMILES code
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
@@ -64,7 +68,12 @@ int main(int argc, char* argv[])
 		}
 
 	}
-	printf("\n\nFound %d fragments:\n", unique_smiles.size());
+
+	if (display_number_of_fragments) {
+		printf("\n\nFound %d fragments:\n", unique_smiles.size());
+	}
+
+
 	for (std::vector<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		printf(" %s", i2->c_str());
 	}
