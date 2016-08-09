@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 
 
 	for (std::vector<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
-		printf(" %s", i2->c_str());
+		printf("%s", i2->c_str());
 	}
 
 	return(0);
