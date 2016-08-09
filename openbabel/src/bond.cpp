@@ -118,6 +118,7 @@ namespace OpenBabel
       }
   }
 
+  // TODO: Figure out how to consider periodicity, etc.
   void OBBond::SetLength(OBAtom *fixed, double length)
   {
     unsigned int i;
@@ -201,6 +202,11 @@ namespace OpenBabel
     //    rotatable = rotatable && ((_bgn->IsHeteroatom() || _bgn->GetHvyValence() > 1)
     //                               && (_end->IsHeteroatom() || _end->GetHvyValence() > 1) );
     return (_bgn->GetHvyValence() > 1 && _end->GetHvyValence() > 1);
+  }
+
+  bool OBBond::IsPeriodic()
+  {
+    return ((OBMol*)GetParent())->IsPeriodic();
   }
 
    bool OBBond::IsAmide()
@@ -744,19 +750,24 @@ namespace OpenBabel
     return(length);
   }
 
-  double OBBond::GetLength() const
+  double OBBond::GetLength()
   {
-    // TODO: Use periodic boundary conditions based on the two atoms
     double	d2;
-    const OBAtom *begin, *end;
+    OBAtom *begin, *end;
     begin = GetBeginAtom();
     end = GetEndAtom();
 
-    d2 = SQUARE(begin->GetX() - end->GetX());
-    d2 += SQUARE(begin->GetY() - end->GetY());
-    d2 += SQUARE(begin->GetZ() - end->GetZ());
-
-    return(sqrt(d2));
+    if (!IsPeriodic())
+      {
+        d2 = SQUARE(begin->GetX() - end->GetX());
+        d2 += SQUARE(begin->GetY() - end->GetY());
+        d2 += SQUARE(begin->GetZ() - end->GetZ());
+        return(sqrt(d2));
+      }
+    else
+      {
+        return(begin->GetDistance(end));
+      }
   }
 
   /*Now in OBBase

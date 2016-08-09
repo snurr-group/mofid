@@ -234,7 +234,8 @@ namespace OpenBabel
       /** Length is given in Angstroms **/
       double  GetEquibLength() const;
       //! \return The current length of this bond in Angstroms
-      double  GetLength() const;
+      //! \todo What is the effect of removing the "const" declaration?
+      double  GetLength();
       //! \return The index to the neighboring atom of @p ptr (i.e., the end if @p ptr is the start)
       /** \warning If @p ptr is not part of the bond, the beginning atom
           index will always be returned **/
@@ -264,6 +265,8 @@ namespace OpenBabel
            For more detailed rotor detection, check the OBRotorList and
            OBRotorRules classes **/
       bool IsRotor();
+      //! \return Is the bond within a periodic unit cell?
+      bool IsPeriodic();
       /** \return Is the bond an amide link (i.e., between a carbonyl C and a N)?
            No distinction is made between primary, secondary, and tertiary amides. **/
       bool IsAmide();

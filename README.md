@@ -9,7 +9,6 @@ Decompose a MOF into its nodes, linkers, and topology to perform additional anal
 TODO
 ----
 * Consider editing the BeginModify and EndModify methods (as well as constructors/destructors) of OBMol to add UC data to the atoms and/or bonds.  This seems idiomatic (see mol.cpp:1500ish).
-* Need to update the bond length and torsion calculations, which are used for the bond order detection (bondtyper.cpp:159 and mol.cpp:3811, respectively, as examples)
 * Modifying bonds
 	* Vector3 is based on doubles.  Is there an integer version for _direction or something similar?
 * Also need to modify elements.txt (and maxbonds) to keep the oxygen with tetrahedral bonding, etc, probably as an option to the CIF parser.  One idea would be to allow BABEL_DATADIR to accept multiple directories (though there may need to be an audit or debug message about that)

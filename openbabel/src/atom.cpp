@@ -1229,7 +1229,15 @@ namespace OpenBabel
 
   double OBAtom::GetDistance(OBAtom *b)
   {
-    return(( this->GetVector() - b->GetVector() ).length());
+    if (!IsPeriodic())
+      {
+        return(( this->GetVector() - b->GetVector() ).length());
+      }
+    else
+      {
+        OBUnitCell *box = ((OBMol*)GetParent())->GetPeriodicLattice();
+        return (box->PBCCartesianDifference(this->GetVector(), b->GetVector())).length();
+      }
   }
 
   double OBAtom::GetDistance(int b)

@@ -208,10 +208,10 @@ namespace OpenBabel
 
   double OBMol::GetTorsion(int a,int b,int c,int d)
   {
-    return(CalcTorsionAngle(((OBAtom*)_vatom[a-1])->GetVector(),
-                            ((OBAtom*)_vatom[b-1])->GetVector(),
-                            ((OBAtom*)_vatom[c-1])->GetVector(),
-                            ((OBAtom*)_vatom[d-1])->GetVector()));
+    return(GetTorsion((OBAtom*)_vatom[a-1],
+                      (OBAtom*)_vatom[b-1],
+                      (OBAtom*)_vatom[c-1],
+                      (OBAtom*)_vatom[d-1]));
   }
 
   void OBMol::SetTorsion(OBAtom *a,OBAtom *b,OBAtom *c, OBAtom *d, double ang)
@@ -302,10 +302,35 @@ namespace OpenBabel
 
   double OBMol::GetTorsion(OBAtom *a,OBAtom *b,OBAtom *c,OBAtom *d)
   {
-    return(CalcTorsionAngle(a->GetVector(),
-                            b->GetVector(),
-                            c->GetVector(),
-                            d->GetVector()));
+    if (!IsPeriodic())
+      {
+        return(CalcTorsionAngle(a->GetVector(),
+                                b->GetVector(),
+                                c->GetVector(),
+                                d->GetVector()));
+      }
+    else
+      {
+        vector3 v1, v2, v3, v4;
+        // Wrap the atomic positions in a continuous chain that makes sense based on the unit cell
+        // Consider redefining this as a "wrap nonperiodic molecule" function based on an array vector
+        // Start by extracting the absolute Cartesian coordinates
+        v1 = a->GetVector();
+        v2 = b->GetVector();
+        v3 = c->GetVector();
+        v4 = d->GetVector();
+        // Then redefine the positions as a series of vector differences
+        // Work backwards so that all differences are based on original coordinates
+        v4 = _unitCell->PBCCartesianDifference(v4, v3);
+        v3 = _unitCell->PBCCartesianDifference(v3, v2);
+        v2 = _unitCell->PBCCartesianDifference(v2, v1);
+        // Finally, apply these "diffs" going forwards to build a continuous chain
+        // of expanded Cartesian coordinates
+        v2 += v1;
+        v3 += v2;
+        v4 += v3;
+        return(CalcTorsionAngle(v1, v2, v3, v4));
+      }
   }
 
   void OBMol::ContigFragList(std::vector<std::vector<int> >&cfl)
@@ -1249,7 +1274,7 @@ namespace OpenBabel
     this->_dimension = src.GetDimension();
     this->SetTotalCharge(src.GetTotalCharge()); //also sets a flag
     this->SetTotalSpinMultiplicity(src.GetTotalSpinMultiplicity()); //also sets a flag
-    this->SetPeriodicLattice(src.GetPeriodicLattice());
+    this->SetPeriodicLattice(src.GetPeriodicLattice());  // FIXME: probably needs to be based on the internal GetData pointer, not a reference to the old object
 
     EndModify(); //zeros flags!
 
@@ -1472,7 +1497,7 @@ namespace OpenBabel
 
     _c = (double*) NULL;
     _mod = 0;
-    DestroyPeriodicLattice();
+    DestroyPeriodicLattice(); // FIXME: check how it's allocated first.  Double "free" with SetData?
 
     // Clean up generic data via the base class
     return(OBBase::Clear());
@@ -3574,12 +3599,7 @@ namespace OpenBabel
                 atom1 = vector3(c[idx1*3], c[idx1*3+1], c[idx1*3+2]);
                 atom2 = vector3(c[idx2*3], c[idx2*3+1], c[idx2*3+2]);
                 wrapped_coords = _unitCell->PBCCartesianDifference(atom1, atom2);
-                d2 = wrapped_coords.length_2();  // TODO: GET DISTANCE HERE, THEN JUST FIX THE BOND PERCEPTION.  NOT TOO BAD
-                if (false)
-                  {
-                    std::cout << atom1 << atom2 << d2 << std::endl;
-                    std::cout << "Difference: " << wrapped_coords << std::endl;
-                  }
+                d2 = wrapped_coords.length_2();
               }
             else
               {
@@ -3629,10 +3649,6 @@ namespace OpenBabel
     // Cleanup -- delete long bonds that exceed max valence
     OBBond *maxbond, *bond;
     double maxlength;
-    // TODO: Again, long bonds will have to be defined based on PBC
-    // Probably fix this at the end once I figure out how periodicity should be
-    // generally implemented in the code, since I don't want max bonds for my
-    // purposes at this time.
     vector<OBBond*>::iterator l, m;
     int valCount;
     bool changed;
