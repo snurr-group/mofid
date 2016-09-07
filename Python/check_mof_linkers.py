@@ -14,6 +14,7 @@ import subprocess
 import glob
 import json
 # import re
+import openbabel  # for visualization only, since my changes aren't backported to the python library
 
 SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 CIF_DIR = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
@@ -51,6 +52,17 @@ def load_hmof_components(db_file):
 		hmof_db = json.load(inp)
 	return hmof_db
 
+def extract_db_smiles(db_dict):
+	# Save all the nodes and linker definitions to the current directory
+	# Then, convert to a big svg with
+	# obabel linkers.can -O linkers.svg -xe -xC
+	# Note: this function and the json file will be deprecated by the metal+linker
+	# split paradigm suggested at group meeting ("molecule subtraction")
+	linkers = db_dict["linkers"]
+	for id in linkers:
+		print(linkers[id] + " " + id)
+
+
 if __name__ == "__main__":
 	hmof_db = load_hmof_components(HMOF_DB)
 	# print hmof_db["nodes"]["0"][1]
@@ -65,3 +77,5 @@ if __name__ == "__main__":
 			print fragment
 		new_linkers.append(id["j"])
 		print "\n"
+	extract_db_smiles(hmof_db)
+
