@@ -1,7 +1,7 @@
 // See https://openbabel.org/docs/dev/UseTheLibrary/CppExamples.html
 // Get iterator help from http://openbabel.org/dev-api/group__main.shtml
 // TODO: This works as a proof-of-concept, so then I'll need to fix the linker bonding,
-// tweak the element table for Zn4O connections, run tests, then analysis time!
+// run tests, then analysis time!
 
 #include <iostream>
 #include <sstream>
@@ -38,7 +38,7 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 int main(int argc, char* argv[])
 {
 	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
-	const bool display_full_smiles = true;
+	const bool display_full_smiles = false;
 	const bool SAVE_NODES = true;
 	bool DELETE_BONDS = true;
 	char* filename;
@@ -100,21 +100,26 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	printFragments(unique_smiles);
+	printFragments(unique_smiles);  // Prints individual fragments from deleting bonds to metals
 
 	// Now try extracting the nonmetal components
 	// FIXME: currently a lot of copy-paste from the previous loop as proof-of-concept
 	OBMol nodes = orig_mol;  // TODO: consider renaming, or having separate fragments vars for SMILES
+	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
 	nodes.BeginModify();
+	linkers.BeginModify();
+	std::stringstream nonmetalMsg;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		std::string mol_smiles = obconv.WriteString(&*it);
 		if (it->NumAtoms() == 1) {
 			// std::cout << "Found an oxygen!\n";
-			std::cout << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
+			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
+			subtractMols(&linkers, &*it);
 		//} else if () {
 		//	std::cout << "Hydroxyl group" << std::endl;
 		} else {
-			std::cout << "Deleting linker " << mol_smiles;
+			nonmetalMsg << "Deleting linker " << mol_smiles;
+			// linkers += *it;
 			subtractMols(&nodes, &*it);
 		}
 		// Check for metal, single oxygens, etc
@@ -123,21 +128,29 @@ int main(int argc, char* argv[])
 		// If it's not a linker, loop over atoms of the *it molecule and delete them from nodes.
 		// Then just extract nodes as what's left, as suggested in group meeting
 	}
+	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
 	nodes.EndModify();
+	linkers.EndModify();
 
+	std::string whole_smiles = obconv.WriteString(&orig_mol);
 	if (display_full_smiles) {
-		std::string whole_smiles = obconv.WriteString(&orig_mol);
 		printf("Original molecule: %s", whole_smiles.c_str());
 		whole_smiles = obconv.WriteString(&mol);
 		printf("New molecule: %s", whole_smiles.c_str());  // WriteString already outputs a newline
 		whole_smiles = obconv.WriteString(&nodes);
 		printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
 	}
+	whole_smiles = obconv.WriteString(&nodes);
+	printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
+	// ALSO LINKERS HERE
 
 	if (SAVE_NODES) {
 		OBConversion node_conv;
 		node_conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
-		node_conv.WriteFile(&nodes, "test.cif");
+		node_conv.WriteFile(&nodes, "Test/nodes.cif");
+		OBConversion linker_conv;
+		linker_conv.SetOutFormat("cif");
+		linker_conv.WriteFile(&linkers, "Test/linkers.cif");
 	}
 
 	return(0);
