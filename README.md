@@ -18,6 +18,7 @@ Ideas
 -----
 * See also <http://drivendata.github.io/cookiecutter-data-science> for project organization ideas
 * Which design patterns would help organize my code?
+* See proposal, slides, and zhao_multivariable_2016 for complicated cases to diagnose my "naming" code.
 
 
 Notes
