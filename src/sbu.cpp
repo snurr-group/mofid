@@ -68,11 +68,15 @@ int main(int argc, char* argv[])
 
 	// Get a list of unique SMILES code
 	std::vector<std::string> unique_smiles = uniqueSMILES(fragments, obconv);
-	printFragments(unique_smiles);  // Prints individual fragments from deleting bonds to metals
+	std::stringstream fragmentMsg;
+	fragmentMsg << "Unique fragments detected:" << std::endl;
+	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
+		fragmentMsg << *i2;
+	}
+	obErrorLog.ThrowError(__FUNCTION__, fragmentMsg.str(), obDebug);
 
 	// Now try extracting the nonmetal components
-	// FIXME: currently a lot of copy-paste from the previous loop as proof-of-concept
-	OBMol nodes = orig_mol;  // TODO: consider renaming, or having separate fragments vars for SMILES
+	OBMol nodes = orig_mol;
 	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
 	nodes.BeginModify();
 	linkers.BeginModify();
@@ -83,11 +87,10 @@ int main(int argc, char* argv[])
 			// std::cout << "Found an oxygen!\n";
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
 			subtractMols(&linkers, &*it);
-		//} else if () {
+		//} else if () {  // Test if num atoms <=3 and compare to oxygen cases?
 		//	std::cout << "Hydroxyl group" << std::endl;
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			// linkers += *it;
 			subtractMols(&nodes, &*it);
 		}
 		// FIXME:
@@ -102,9 +105,9 @@ int main(int argc, char* argv[])
 	nodes.EndModify();
 	linkers.EndModify();
 
-	printf("Now with fragment-based implementation:\n");
+	// For now, just print the SMILES of the nodes and linkers.
+	// Eventually, this may become the basis for MOFFLES.
 	printFragments(uniqueSMILES(nodes.Separate(), obconv));
-	printf("And linkers!:\n");
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
 	if (EXPORT_NODES) {
@@ -170,18 +173,17 @@ bool isMetal(const OBAtom* atom) {
 
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
-	// FIXME: consider destroying all the bonds and starting from scratch
+
+	// TODO: consider destroying all the bonds and starting from scratch
 	// Also see https://sourceforge.net/p/openbabel/mailman/message/6229244/
-	// ALSO need to figure out why N aromatics are failing for hypotheticalMOF_5071180_i_2_j_25_k_1_m_0.  But this predates the current commit
-	// On that note, it also appears to be a problem with the aromaticity model (radicals not combining), so it's not as worrisome.
-	// This is the same problem we see with the nitrogn ring in the ic101935f structure
-	// deleteBonds(mol, false);  // For whatever reason, deleting all the bonds doesn't work out (disconnected fragments, etc.).  Need to diagnose why that's the case
-	// deleteBonds fails for porphyrins.  I am guessing the cause is that Separate() does not copy over UC information, which is causing problems with PBC.
+	// For whatever reason, deleting all the bonds doesn't work out (disconnected fragments, etc.).  Need to diagnose why that's the case.
+	// It fails for porphyrins.  I am guessing the cause is that Separate() does not copy over UC information, which is causing problems with PBC.
+	// deleteBonds(mol, false);
+
 	mol->BeginModify();
 	FOR_ATOMS_OF_MOL(a, *mol) {
-		a->SetFormalCharge(0);  // CAN'T HURT TO DO THIS
-		a->SetSpinMultiplicity(0);  // RESET RADICALS.  THIS WAS THE MISSING LINK!!!
-		// a->SetHyb(0);  // this didn't fix anything either
+		a->SetFormalCharge(0);  // Not a specific reason for doing this, but it doesn't seem to make a difference.
+		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
 	}
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
@@ -194,7 +196,7 @@ bool subtractMols(OBMol *mol, OBMol *subtracted) {
 	// Modifies *mol if true, reverts back to original *mol if false
 	// This code assumes that the molecule is well-defined (no multiply-defined atoms)
 
-	std::vector<OBAtom*> deleted;  // TODO: consider implementing as a queue
+	std::vector<OBAtom*> deleted;  // Consider implementing as a queue
 	FOR_ATOMS_OF_MOL(a2, *subtracted) {
 		bool matched = false;
 		FOR_ATOMS_OF_MOL(a1, *mol) {
@@ -242,9 +244,7 @@ int deleteBonds(OBMol *mol, bool only_metals) {
 		deletionMsg << (*itb)->GetBeginAtom()->GetAtomicNum() << " and ";
 		deletionMsg << (*itb)->GetEndAtom()->GetAtomicNum();
 		deletionMsg << " (OBBond * " << static_cast<void *>(&*itb) << ")\n";
-		mol->DeleteBond(*itb);  // FIXME: this correctly deletes the bonds, but the atomic valencies are messed up like my original version.
-		// IDEA: Maybe just need to rerun the ConnectTheDots type bond perception on the new fragments?
-		// That approach most works, though we should also consider preserving the connection point instead of outright deleting the bond
+		mol->DeleteBond(*itb);  // We should also consider preserving the connection point instead of outright deleting the bond
 	}
 	obErrorLog.ThrowError(__FUNCTION__, deletionMsg.str(), obDebug);
 	mol->EndModify();
