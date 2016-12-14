@@ -1,7 +1,9 @@
 // See https://openbabel.org/docs/dev/UseTheLibrary/CppExamples.html
 // Get iterator help from http://openbabel.org/dev-api/group__main.shtml
-// TODO: This works as a proof-of-concept, so then I'll need to fix the linker bonding,
-// run tests, then analysis time!
+// Visualize with http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
+
+// Instead of including code to display the full MOF SMILES, just use openbabel natively:
+// obabel CIFFILE -ap -ocan
 
 #include <iostream>
 #include <sstream>
@@ -17,10 +19,12 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
-void printFragments(const std::vector<std::string> &unique_smiles, bool display_number_of_fragments = false);
+void printFragments(const std::vector<std::string> &unique_smiles);
+std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
+int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 
 
@@ -35,12 +39,14 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 }
 
 
+/* Constants */
+const bool EXPORT_NODES = true;
+//std::string connection = "No";  // for now, use Nobelium (102) as an indicator for MOF connections
+
+
 int main(int argc, char* argv[])
 {
 	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
-	const bool display_full_smiles = false;
-	const bool SAVE_NODES = true;
-	bool DELETE_BONDS = true;
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -53,36 +59,7 @@ int main(int argc, char* argv[])
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
-	if (DELETE_BONDS) {
-		obErrorLog.ThrowError(__FUNCTION__, "Bond deletion enabled", obDebug);
-		// Same spirit as OBMol::DeleteHydrogens()
-		std::vector<OBBond*> delbonds;
-		FOR_ATOMS_OF_MOL(a, mol) {
-			if (isMetal(&*a)) {
-				FOR_BONDS_OF_ATOM(b, *a) {
-					if (!inVector(&*b, delbonds)) {
-						// avoid double deletion in the case of metal-metal bonds
-						delbonds.push_back(&*b);
-					}
-				}
-			}
-		}
-		mol.BeginModify();
-		std::stringstream deletionMsg;
-		for (std::vector<OBBond*>::iterator itb = delbonds.begin(); itb != delbonds.end(); ++itb) {
-			deletionMsg << "Deleting bond with atomic numbers ";
-			deletionMsg << (*itb)->GetBeginAtom()->GetAtomicNum() << " and ";
-			deletionMsg << (*itb)->GetEndAtom()->GetAtomicNum();
-			deletionMsg << " (OBBond * " << static_cast<void *>(&*itb) << ")\n";
-			mol.DeleteBond(*itb);  // FIXME: this correctly deletes the bonds, but the atomic valencies are messed up like my original version.
-			// IDEA: Maybe just need to rerun the ConnectTheDots type bond perception on the new fragments?
-			// That approach most works, though we should also consider preserving the connection point instead of outright deleting the bond
-		}
-		obErrorLog.ThrowError(__FUNCTION__, deletionMsg.str(), obDebug);
-		mol.EndModify();
-	}
-
-
+	deleteBonds(&mol, true);
 	fragments = mol.Separate();
 
 	OBConversion obconv;
@@ -90,21 +67,16 @@ int main(int argc, char* argv[])
 	obconv.AddOption("i");  // Ignore SMILES chirality for now
 
 	// Get a list of unique SMILES code
-	std::vector<std::string> unique_smiles;
-	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		OBMol canon = *it;
-		resetBonds(&canon);
-		std::string mol_smiles = obconv.WriteString(&canon);
-		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
-			unique_smiles.push_back(mol_smiles);
-		}
+	std::vector<std::string> unique_smiles = uniqueSMILES(fragments, obconv);
+	std::stringstream fragmentMsg;
+	fragmentMsg << "Unique fragments detected:" << std::endl;
+	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
+		fragmentMsg << *i2;
 	}
-
-	printFragments(unique_smiles);  // Prints individual fragments from deleting bonds to metals
+	obErrorLog.ThrowError(__FUNCTION__, fragmentMsg.str(), obDebug);
 
 	// Now try extracting the nonmetal components
-	// FIXME: currently a lot of copy-paste from the previous loop as proof-of-concept
-	OBMol nodes = orig_mol;  // TODO: consider renaming, or having separate fragments vars for SMILES
+	OBMol nodes = orig_mol;
 	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
 	nodes.BeginModify();
 	linkers.BeginModify();
@@ -115,36 +87,30 @@ int main(int argc, char* argv[])
 			// std::cout << "Found an oxygen!\n";
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
 			subtractMols(&linkers, &*it);
-		//} else if () {
+		//} else if () {  // Test if num atoms <=3 and compare to oxygen cases?
 		//	std::cout << "Hydroxyl group" << std::endl;
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			// linkers += *it;
 			subtractMols(&nodes, &*it);
 		}
+		// FIXME:
 		// Check for metal, single oxygens, etc
 		// For starters, this could probably be done with strings, then use actual atom types later
 		// Even better, try considering all single atoms and hydroxyl species as nodes.
 		// If it's not a linker, loop over atoms of the *it molecule and delete them from nodes.
 		// Then just extract nodes as what's left, as suggested in group meeting
+		// Without doing this, currently the code will extract the wrong node (no -OH) for NU-1000, etc.
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
 	nodes.EndModify();
 	linkers.EndModify();
 
-	std::string whole_smiles = obconv.WriteString(&orig_mol);
-	if (display_full_smiles) {
-		printf("Original molecule: %s", whole_smiles.c_str());
-		whole_smiles = obconv.WriteString(&mol);
-		printf("New molecule: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-		whole_smiles = obconv.WriteString(&nodes);
-		printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-	}
-	whole_smiles = obconv.WriteString(&nodes);
-	printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-	// ALSO LINKERS HERE
+	// For now, just print the SMILES of the nodes and linkers.
+	// Eventually, this may become the basis for MOFFLES.
+	printFragments(uniqueSMILES(nodes.Separate(), obconv));
+	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
-	if (SAVE_NODES) {
+	if (EXPORT_NODES) {
 		OBConversion node_conv;
 		node_conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
 		node_conv.WriteFile(&nodes, "Test/nodes.cif");
@@ -168,16 +134,26 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	return obconversion.ReadFile(molp, filepath);
 }
 
-void printFragments(const std::vector<std::string> &unique_smiles, bool display_number_of_fragments) {
-	// Print a list of fragments, optionally with a count
-	if (display_number_of_fragments) {
-		printf("\n\nFound %d fragments:\n", unique_smiles.size());
-	}
-
+void printFragments(const std::vector<std::string> &unique_smiles) {
+	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
 	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		printf("%s", i2->c_str());
 	}
+}
+
+std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv) {
+	// Extracts list of SMILES for unique fragments
+	std::vector<std::string> unique_smiles;
+	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
+		OBMol canon = *it;
+		resetBonds(&canon);
+		std::string mol_smiles = obconv.WriteString(&canon);
+		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
+			unique_smiles.push_back(mol_smiles);
+		}
+	}
+	return unique_smiles;
 }
 
 bool isMetal(const OBAtom* atom) {
@@ -197,10 +173,21 @@ bool isMetal(const OBAtom* atom) {
 
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
-	// FIXME: consider destroying all the bonds and starting from scratch
+
+	// TODO: consider destroying all the bonds and starting from scratch
 	// Also see https://sourceforge.net/p/openbabel/mailman/message/6229244/
+	// For whatever reason, deleting all the bonds doesn't work out (disconnected fragments, etc.).  Need to diagnose why that's the case.
+	// It fails for porphyrins.  I am guessing the cause is that Separate() does not copy over UC information, which is causing problems with PBC.
+	// deleteBonds(mol, false);
+
+	mol->BeginModify();
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		a->SetFormalCharge(0);  // Not a specific reason for doing this, but it doesn't seem to make a difference.
+		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
+	}
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
+	mol->EndModify();
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
@@ -209,7 +196,7 @@ bool subtractMols(OBMol *mol, OBMol *subtracted) {
 	// Modifies *mol if true, reverts back to original *mol if false
 	// This code assumes that the molecule is well-defined (no multiply-defined atoms)
 
-	std::vector<OBAtom*> deleted;  // TODO: consider implementing as a queue
+	std::vector<OBAtom*> deleted;  // Consider implementing as a queue
 	FOR_ATOMS_OF_MOL(a2, *subtracted) {
 		bool matched = false;
 		FOR_ATOMS_OF_MOL(a1, *mol) {
@@ -231,6 +218,37 @@ bool subtractMols(OBMol *mol, OBMol *subtracted) {
 	}
 	mol->EndModify();
 	return true;
+}
+
+int deleteBonds(OBMol *mol, bool only_metals) {
+	// Deletes bonds in a molecule, optionally only deleting bonds to metal atoms.
+	// Returns the number of bond deletions.
+	std::vector<OBMol> fragments;
+	obErrorLog.ThrowError(__FUNCTION__, "Bond deletion enabled", obDebug);
+	// Same spirit as OBMol::DeleteHydrogens()
+	std::vector<OBBond*> delbonds;
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		if (isMetal(&*a) || !only_metals) {
+			FOR_BONDS_OF_ATOM(b, *a) {
+				if (!inVector(&*b, delbonds)) {
+					// avoid double deletion in the case of metal-metal bonds
+					delbonds.push_back(&*b);
+				}
+			}
+		}
+	}
+	mol->BeginModify();
+	std::stringstream deletionMsg;
+	for (std::vector<OBBond*>::iterator itb = delbonds.begin(); itb != delbonds.end(); ++itb) {
+		deletionMsg << "Deleting bond with atomic numbers ";
+		deletionMsg << (*itb)->GetBeginAtom()->GetAtomicNum() << " and ";
+		deletionMsg << (*itb)->GetEndAtom()->GetAtomicNum();
+		deletionMsg << " (OBBond * " << static_cast<void *>(&*itb) << ")\n";
+		mol->DeleteBond(*itb);  // We should also consider preserving the connection point instead of outright deleting the bond
+	}
+	obErrorLog.ThrowError(__FUNCTION__, deletionMsg.str(), obDebug);
+	mol->EndModify();
+	return delbonds.size();
 }
 
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2) {
