@@ -1,10 +1,9 @@
 // See https://openbabel.org/docs/dev/UseTheLibrary/CppExamples.html
 // Get iterator help from http://openbabel.org/dev-api/group__main.shtml
-// TODO: This works as a proof-of-concept, so then I'll need to fix the linker bonding,
-// run tests, then analysis time!
-
-// TODO: Need to think about how to handle globals here, too
 // Visualize with http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
+
+// Instead of including code to display the full MOF SMILES, just use openbabel natively:
+// obabel CIFFILE -ap -ocan
 
 #include <iostream>
 #include <sstream>
@@ -20,7 +19,8 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
-void printFragments(const std::vector<std::string> &unique_smiles, bool display_number_of_fragments = false, bool print_metals = false);
+void printFragments(const std::vector<std::string> &unique_smiles);
+std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
@@ -39,12 +39,14 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 }
 
 
+/* Constants */
+const bool EXPORT_NODES = true;
+//std::string connection = "No";  // for now, use Nobelium (102) as an indicator for MOF connections
+
+
 int main(int argc, char* argv[])
 {
 	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
-	const bool display_full_smiles = false;
-	const bool SAVE_NODES = true;
-	//std::string connection = "No";  // for now, use Nobelium (102) as an indicator for MOF connections
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -65,16 +67,7 @@ int main(int argc, char* argv[])
 	obconv.AddOption("i");  // Ignore SMILES chirality for now
 
 	// Get a list of unique SMILES code
-	std::vector<std::string> unique_smiles;
-	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		OBMol canon = *it;
-		resetBonds(&canon);
-		std::string mol_smiles = obconv.WriteString(&canon);
-		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
-			unique_smiles.push_back(mol_smiles);
-		}
-	}
-
+	std::vector<std::string> unique_smiles = uniqueSMILES(fragments, obconv);
 	printFragments(unique_smiles);  // Prints individual fragments from deleting bonds to metals
 
 	// Now try extracting the nonmetal components
@@ -97,29 +90,24 @@ int main(int argc, char* argv[])
 			// linkers += *it;
 			subtractMols(&nodes, &*it);
 		}
+		// FIXME:
 		// Check for metal, single oxygens, etc
 		// For starters, this could probably be done with strings, then use actual atom types later
 		// Even better, try considering all single atoms and hydroxyl species as nodes.
 		// If it's not a linker, loop over atoms of the *it molecule and delete them from nodes.
 		// Then just extract nodes as what's left, as suggested in group meeting
+		// Without doing this, currently the code will extract the wrong node (no -OH) for NU-1000, etc.
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
 	nodes.EndModify();
 	linkers.EndModify();
 
-	std::string whole_smiles = obconv.WriteString(&orig_mol);
-	if (display_full_smiles) {
-		printf("Original molecule: %s", whole_smiles.c_str());
-		whole_smiles = obconv.WriteString(&mol);
-		printf("New molecule: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-		whole_smiles = obconv.WriteString(&nodes);
-		printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-	}
-	whole_smiles = obconv.WriteString(&nodes);
-	printf("Nodes: %s", whole_smiles.c_str());  // WriteString already outputs a newline
-	// ALSO LINKERS HERE
+	printf("Now with fragment-based implementation:\n");
+	printFragments(uniqueSMILES(nodes.Separate(), obconv));
+	printf("And linkers!:\n");
+	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
-	if (SAVE_NODES) {
+	if (EXPORT_NODES) {
 		OBConversion node_conv;
 		node_conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
 		node_conv.WriteFile(&nodes, "Test/nodes.cif");
@@ -143,21 +131,26 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	return obconversion.ReadFile(molp, filepath);
 }
 
-void printFragments(const std::vector<std::string> &unique_smiles, bool display_number_of_fragments, bool print_metals) {
-	// Print a list of fragments, optionally with a count
-	if (display_number_of_fragments) {
-		printf("\n\nFound %d fragments:\n", unique_smiles.size());
-	}
-
+void printFragments(const std::vector<std::string> &unique_smiles) {
+	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
 	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
-		if (!print_metals) {
-			if (*i2 == ("[TODO: ELEMENT GOES HERE]\t\n")) {  // FIXME: stub; incomplete
-				continue;
-			}
-		}
 		printf("%s", i2->c_str());
 	}
+}
+
+std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv) {
+	// Extracts list of SMILES for unique fragments
+	std::vector<std::string> unique_smiles;
+	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
+		OBMol canon = *it;
+		resetBonds(&canon);
+		std::string mol_smiles = obconv.WriteString(&canon);
+		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
+			unique_smiles.push_back(mol_smiles);
+		}
+	}
+	return unique_smiles;
 }
 
 bool isMetal(const OBAtom* atom) {
