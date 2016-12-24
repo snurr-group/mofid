@@ -117,6 +117,7 @@ int main(int argc, char* argv[])
 		node_conv.WriteFile(&nodes, "Test/nodes.cif");
 		OBConversion linker_conv;
 		linker_conv.SetOutFormat("cif");
+		linker_conv.AddOption("g");
 		linker_conv.WriteFile(&linkers, "Test/linkers.cif");
 	}
 

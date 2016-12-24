@@ -68,7 +68,10 @@ namespace OpenBabel
         "Read Options e.g. -ab:\n"
         "  s  Output single bonds only\n"
         "  b  Disable bonding entirely\n"
-        "  B  Use bonds listed in CIF file from _geom_bond_etc records (overrides option b) \n\n";
+        "  B  Use bonds listed in CIF file from _geom_bond_etc records (overrides option b)\n\n"
+
+        "Write Options e.g. -xg:\n"
+        "  g  Write bonds using _geom_bond_etc fields \n\n";
     };
 
     virtual const char* SpecificationURL()
@@ -1598,6 +1601,7 @@ namespace OpenBabel
         << "    _atom_site_fract_y"     << endl
         << "    _atom_site_fract_z"     << endl
         << "    _atom_site_occupancy"   << endl;
+    std::map<OBAtom*,std::string> label_table;
     unsigned int i = 0;
     FOR_ATOMS_OF_MOL(atom, *pmol)
       {
@@ -1629,12 +1633,28 @@ namespace OpenBabel
              label_str = etab.GetSymbol(atom->GetAtomicNum()) + to_string(i);
              i++;
            }
+         label_table[&*atom] = label_str;
 
          snprintf(buffer, BUFF_SIZE, "    %-8s%-5s%.5f%10.5f%10.5f%8.3f\n",
                   label_str.c_str(), etab.GetSymbol(atom->GetAtomicNum()),
                   X, Y, Z, occup);
 
          ofs << buffer;
+      }
+
+    if (pConv->IsOption("g", OBConversion::OUTOPTIONS))
+      {
+        ofs << "loop_"                            << endl
+            << "    _geom_bond_atom_site_label_1" << endl
+            << "    _geom_bond_atom_site_label_2" << endl
+            << "    _geom_bond_distance"          << endl
+            << "    _geom_bond_site_symmetry_2"   << endl
+            << "    _ccdc_geom_bond_type"         << endl;
+        // Temporary: check that the map/dict is working (important for exporting bonds)
+        FOR_ATOMS_OF_MOL(atom, *pmol)
+        {
+          printf("%p: %s\n", &*atom, label_table[&*atom].c_str());
+        }
       }
     return true;
   }//WriteMolecule
