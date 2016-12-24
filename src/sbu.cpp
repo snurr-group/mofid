@@ -75,14 +75,17 @@ int main(int argc, char* argv[])
 	}
 	obErrorLog.ThrowError(__FUNCTION__, fragmentMsg.str(), obDebug);
 
-	// Now try extracting the nonmetal components
+	// Classify nodes and linkers based on composition.
+	// Consider all single atoms and hydroxyl species as node building materials.
 	OBMol nodes = orig_mol;
 	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
 	nodes.BeginModify();
 	linkers.BeginModify();
 	std::stringstream nonmetalMsg;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		std::string mol_smiles = obconv.WriteString(&*it);
+		OBMol canon = *it;
+		resetBonds(&canon);
+		std::string mol_smiles = obconv.WriteString(&canon);
 		// printf(mol_smiles.c_str());
 		if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
@@ -92,24 +95,12 @@ int main(int argc, char* argv[])
 			nonmetalMsg << "Found a hydroxyl group" << std::endl;
 			subtractMols(&linkers, &*it);
 		} else if (mol_smiles == "O\t\n") {
-			// Are there other oxygen cases to consider?  isolated oxygen and/or water?
-			// There might also be some issues with how the canonical SMILES is listed here?
-			// Probably since the bonds have not been reset, so the coordination number is wrong.
-			// FIXME: this works for now, but we need to reset the mol_smiles above to get the
-			// correct SMILES (and coordination environment)
-			nonmetalMsg << "Found another node-like oxygen species" << std::endl;
+			nonmetalMsg << "Found a bound water molecule" << std::endl;
 			subtractMols(&linkers, &*it);
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
 		}
-		// FIXME:
-		// Check for metal, single oxygens, etc
-		// For starters, this could probably be done with strings, then use actual atom types later
-		// Even better, try considering all single atoms and hydroxyl species as nodes.
-		// If it's not a linker, loop over atoms of the *it molecule and delete them from nodes.
-		// Then just extract nodes as what's left, as suggested in group meeting
-		// Without doing this, currently the code will extract the wrong node (no -OH) for NU-1000, etc.
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
 	nodes.EndModify();
