@@ -1633,6 +1633,7 @@ namespace OpenBabel
              label_str = etab.GetSymbol(atom->GetAtomicNum()) + to_string(i);
              i++;
            }
+         // Save the existing or generated label for optional bonding
          label_table[&*atom] = label_str;
 
          snprintf(buffer, BUFF_SIZE, "    %-8s%-5s%.5f%10.5f%10.5f%8.3f\n",
@@ -1651,9 +1652,46 @@ namespace OpenBabel
             << "    _geom_bond_site_symmetry_2"   << endl
             << "    _ccdc_geom_bond_type"         << endl;
         // Temporary: check that the map/dict is working (important for exporting bonds)
-        FOR_ATOMS_OF_MOL(atom, *pmol)
+        FOR_BONDS_OF_MOL(bond, *pmol)
         {
-          printf("%p: %s\n", &*atom, label_table[&*atom].c_str());
+          std::string label_1 = label_table[bond->GetBeginAtom()];
+          std::string label_2 = label_table[bond->GetEndAtom()];
+
+          std::string sym_key = ".";  // STUB: this should take care of periodicity
+
+          std::string bond_type;
+          int bond_order = bond->GetBondOrder();
+          switch (bond_order)
+          {
+            case 1:
+              bond_type = "S";
+              break;
+            case 2:
+              bond_type = "D";
+              break;
+            case 3:
+              bond_type = "T";
+              break;
+            case 5:
+              bond_type = "A";  // aromatic, per OBBond::_order
+              break;
+            default:
+              stringstream ss;
+              ss << "Unexpected bond order " << bond_order
+                 << " for bond" << label_1 << "-" << label_2 << std::endl
+                 << "Defaulting to single bond.";
+              obErrorLog.ThrowError(__FUNCTION__, ss.str(), obWarning);
+              bond_type = "S";
+          }
+
+
+          //printf("%p: %s\n", &*atom, label_table[&*atom].c_str());
+          snprintf(buffer, BUFF_SIZE, "    %-7s%-7s%10.5f%7s%4s\n",
+                   label_1.c_str(), label_2.c_str(),
+                   bond->GetLength(), sym_key.c_str(),
+                   bond_type.c_str());
+
+          ofs << buffer;
         }
       }
     return true;

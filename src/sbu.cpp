@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
 	if (EXPORT_NODES) {
 		OBConversion node_conv;
 		node_conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
+		node_conv.AddOption("g");
 		node_conv.WriteFile(&nodes, "Test/nodes.cif");
 		OBConversion linker_conv;
 		linker_conv.SetOutFormat("cif");
