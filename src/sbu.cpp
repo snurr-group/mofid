@@ -19,6 +19,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
+void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
@@ -112,14 +113,9 @@ int main(int argc, char* argv[])
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
 	if (EXPORT_NODES) {
-		OBConversion node_conv;
-		node_conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
-		node_conv.AddOption("g");
-		node_conv.WriteFile(&nodes, "Test/nodes.cif");
-		OBConversion linker_conv;
-		linker_conv.SetOutFormat("cif");
-		linker_conv.AddOption("g");
-		linker_conv.WriteFile(&linkers, "Test/linkers.cif");
+		writeCIF(&nodes, "Test/nodes.cif");
+		writeCIF(&linkers, "Test/linkers.cif");
+		writeCIF(&orig_mol, "Test/orig_mol.cif");
 	}
 
 	return(0);
@@ -135,6 +131,16 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);
+}
+
+void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
+	// Write a molecule to file
+	OBConversion conv;
+	conv.SetOutFormat("cif");  // mmcif has extra, incompatible fields
+	if (write_bonds) {
+		conv.AddOption("g");
+	}
+	conv.WriteFile(molp, filepath);
 }
 
 void printFragments(const std::vector<std::string> &unique_smiles) {
@@ -187,6 +193,7 @@ void resetBonds(OBMol *mol) {
 	FOR_ATOMS_OF_MOL(a, *mol) {
 		a->SetFormalCharge(0);  // Not a specific reason for doing this, but it doesn't seem to make a difference.
 		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
+		a->SetHyb(0);  // Also reset hybridization in case that is causing problems
 	}
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
