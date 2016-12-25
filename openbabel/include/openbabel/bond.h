@@ -236,6 +236,8 @@ namespace OpenBabel
       //! \return The current length of this bond in Angstroms
       //! \todo What is the effect of removing the "const" declaration?
       double  GetLength();
+      //! \return The unit cell of the second atom wrt the first.  {0,0,0} if not periodic or wrapping not required.
+      std::vector<int> GetPeriodicDirection();
       //! \return The index to the neighboring atom of @p ptr (i.e., the end if @p ptr is the start)
       /** \warning If @p ptr is not part of the bond, the beginning atom
           index will always be returned **/

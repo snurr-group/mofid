@@ -1651,15 +1651,14 @@ namespace OpenBabel
             << "    _geom_bond_distance"          << endl
             << "    _geom_bond_site_symmetry_2"   << endl
             << "    _ccdc_geom_bond_type"         << endl;
-        // Temporary: check that the map/dict is working (important for exporting bonds)
         FOR_BONDS_OF_MOL(bond, *pmol)
         {
-          //std::cout << &*bond << ": " << bond->GetParent()->GetPeriodicLattice() << std::endl;
-          //std::cout << &*bond << ": " << bond->IsPeriodic() << std::endl;
           std::string label_1 = label_table[bond->GetBeginAtom()];
           std::string label_2 = label_table[bond->GetEndAtom()];
 
           std::string sym_key = ".";  // STUB: this should take care of periodicity
+          std::vector<int> FIXMEDIR = bond->GetPeriodicDirection();
+          cout << "UC:" << FIXMEDIR[0]<<","<< FIXMEDIR[1] <<","<< FIXMEDIR[2] << std::endl;
 
           std::string bond_type;
           int bond_order = bond->GetBondOrder();
