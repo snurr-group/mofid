@@ -7,5 +7,12 @@ backup:
 	rsync -av --exclude=".*" --exclude="openbabel/" --delete . ../../Box\ Sync/Projects/GitBackups/mofid
 
 # Make this generic later on...
-bin/sbu: src/sbu.cpp
+bin/sbu: src/sbu.cpp /usr/local/lib/openbabel/2.3.90/cifformat.so
 	cd bin && cmake ../src && make
+
+# Be careful: multi-line, nonescaped commands in Make run in separate shells
+/usr/local/lib/openbabel/2.3.90/cifformat.so: openbabel/src/formats/cifformat.cpp
+	cd /cygdrive/c/Users/Benjamin/Git/mofid/openbabel/build; \
+	make cifformat; \
+	make install/fast
+	dos2unix ${BABEL_DATADIR}/*.txt  # Necessary so C++ can actually read the files
