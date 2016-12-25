@@ -1656,9 +1656,20 @@ namespace OpenBabel
           std::string label_1 = label_table[bond->GetBeginAtom()];
           std::string label_2 = label_table[bond->GetEndAtom()];
 
-          std::string sym_key = ".";  // STUB: this should take care of periodicity
-          std::vector<int> FIXMEDIR = bond->GetPeriodicDirection();
-          cout << "UC:" << FIXMEDIR[0]<<","<< FIXMEDIR[1] <<","<< FIXMEDIR[2] << std::endl;
+          std::string sym_key;
+          std::vector<int> uc = bond->GetPeriodicDirection();
+          // uc will automatically be {0,0,0} for non-periodic systems
+          int symmetry_num = 555 + 100*uc[0] + 10*uc[1] + 1*uc[2];
+          if (symmetry_num == 555)
+            {
+              sym_key = ".";
+            }
+          else
+            {
+              stringstream ss;
+              ss << "1_" << symmetry_num;
+              sym_key = ss.str();
+            }
 
           std::string bond_type;
           int bond_order = bond->GetBondOrder();

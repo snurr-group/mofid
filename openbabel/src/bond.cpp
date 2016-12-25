@@ -793,9 +793,9 @@ namespace OpenBabel
             if (fabs(raw_cell - static_cast<double>(round_cell)) > 1e-4)
               {
                 // TODO: this could be more informative
+                // This error is a sanity check and should never happen if PBC is operating correctly.
                 obErrorLog.ThrowError(__FUNCTION__, "Non-integer value of periodic cell", obError);
               }
-            //printf("Loop: %d, %f\n", i, f_direction[i]);
             direction[i] = round_cell;
         }
       }
