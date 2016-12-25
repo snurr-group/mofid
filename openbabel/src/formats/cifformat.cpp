@@ -1654,6 +1654,8 @@ namespace OpenBabel
         // Temporary: check that the map/dict is working (important for exporting bonds)
         FOR_BONDS_OF_MOL(bond, *pmol)
         {
+          //std::cout << &*bond << ": " << bond->GetParent()->GetPeriodicLattice() << std::endl;
+          //std::cout << &*bond << ": " << bond->IsPeriodic() << std::endl;
           std::string label_1 = label_table[bond->GetBeginAtom()];
           std::string label_2 = label_table[bond->GetEndAtom()];
 

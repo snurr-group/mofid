@@ -1550,6 +1550,10 @@ namespace OpenBabel
     if (nukePerceivedData)
       {
         _flags = 0;
+        if (GetPeriodicLattice())
+          {
+            SetFlag(OB_PERIODIC_MOL);
+          }
         OBBond *bond;
         vector<OBBond*>::iterator k;
         for (bond = BeginBond(k);bond;bond = NextBond(k))
