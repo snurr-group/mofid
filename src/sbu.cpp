@@ -27,6 +27,8 @@ void resetBonds(OBMol *mol);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
+int collapseSBU(OBMol *mol, OBMol *fragment);
+vector3 getCentroid(OBMol *fragment, bool weighted);
 
 
 template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
@@ -42,7 +44,7 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 
 /* Constants */
 const bool EXPORT_NODES = true;
-//std::string connection = "No";  // for now, use Nobelium (102) as an indicator for MOF connections
+std::string connection = "Og";  // for now, use Oganesson (118) as an indicator for MOF connections
 
 
 int main(int argc, char* argv[])
@@ -80,8 +82,10 @@ int main(int argc, char* argv[])
 	// Consider all single atoms and hydroxyl species as node building materials.
 	OBMol nodes = orig_mol;
 	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
+	OBMol simplified_net = orig_mol;
 	nodes.BeginModify();
 	linkers.BeginModify();
+	simplified_net.BeginModify();
 	std::stringstream nonmetalMsg;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		OBMol canon = *it;
@@ -101,11 +105,15 @@ int main(int argc, char* argv[])
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
+			collapseSBU(&simplified_net, &*it);
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
+	// TODO: Need to combine the SBUs also at the end.  Do this by combining all of the &nodes fragments??
+	// Also think about where this should happen wrt EndModify()
 	nodes.EndModify();
 	linkers.EndModify();
+	simplified_net.EndModify();
 
 	// For now, just print the SMILES of the nodes and linkers.
 	// Eventually, this may become the basis for MOFFLES.
@@ -116,6 +124,7 @@ int main(int argc, char* argv[])
 		writeCIF(&nodes, "Test/nodes.cif");
 		writeCIF(&linkers, "Test/linkers.cif");
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
+		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 	}
 
 	return(0);
@@ -269,3 +278,48 @@ bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2) {
 			atom1.GetIsotope() == atom2.GetIsotope();
 }
 
+int collapseSBU(OBMol *mol, OBMol *fragment) {
+	// Simplifies *mol by combining all atoms from *fragment into a single
+	// pseudo-atom, which maintains all connections to other existing atoms.
+	// Returns the number of external bonds maintained.
+
+	// Pseudo-code ideas go here:
+	// Test if fragment is in mol (and map the atoms.  See subtractMols for help)
+	// For each atom in this atom list:
+	// 	For each bond in atom
+	// 		If the bond is external (contains an atom not in the fragment atom list),
+	// 		then save the external atom's pointer for connections at the end.
+	//
+	// Calculate the centroid of the SBU (external routine.  Will need some work)
+	// (for now, the centroid can probably be a stub.  Temporarily, pick the first linker atom).
+	// subtractMols(mol, fragment);
+	//
+	// Make a new atom in mol (pseudo-atom) with the coordinates of the centroid
+	// Re-make bonds from the pseudo-atom to existing atoms
+	//
+	// Return the number of bonds formed
+	return 0;
+}
+
+vector3 getCentroid(OBMol *fragment, bool weighted) {
+	// STUB
+	// Calculate the centroid of a fragment, optionally weighted by the atomic mass
+	// (which would give the center of mass).  Consider periodicity as needed, and
+	// wrap coordinates inside of [0,1].
+	// Returns a vector3 of the centroid's coordinates.
+
+	// At first, I thought the periodicity would be even trickier than it is.
+	// You do not have to worry about which unit cell you end up in (which would
+	// require enumerating the possibilities), but rather you can just calculate
+	// it and wrap it to the unit cell at the end.
+
+	// For individual atoms, dwell on what algorithm would make the most sense.
+	// Iterating over bonds from the first fragment?  Graph traversal from the
+	// first atom in the molecule?  Some shortcut based on PBC calculations?
+
+	// If the fragment is non-periodic, this becomes a much easier case.
+	// Handle as a separate "if statement" as in the rest of the code.
+
+	// TODO: currently a stub: return the coordinates of the first atom (check implementation!)
+	return fragment->GetAtom(0)->GetVector();
+}
