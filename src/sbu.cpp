@@ -27,6 +27,7 @@ void resetBonds(OBMol *mol);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
+OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 int collapseSBU(OBMol *mol, OBMol *fragment);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 
@@ -217,17 +218,11 @@ bool subtractMols(OBMol *mol, OBMol *subtracted) {
 
 	std::vector<OBAtom*> deleted;  // Consider implementing as a queue
 	FOR_ATOMS_OF_MOL(a2, *subtracted) {
-		bool matched = false;
-		FOR_ATOMS_OF_MOL(a1, *mol) {
-			if (atomsEqual(*a1, *a2)) {
-				deleted.push_back(&*a1);
-				matched = true;
-				break;
-			}
-		}
-		if (matched == false) {  // *subtracted has an extra atom
+		OBAtom* match = atomInOtherMol(&*a2, mol);
+		if (!match) {  // *subtracted has an extra atom
 			return false;  // *mol not modified
 		}
+		deleted.push_back(&*match);
 	}
 
 	// It's okay to delete the atoms, since they should hold different (cloned) pointers
@@ -276,6 +271,19 @@ bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2) {
 	return atom1.GetAtomicNum() == atom2.GetAtomicNum() &&
 			atom1.GetVector().IsApprox(atom2.GetVector(), 1.0e-6) &&
 			atom1.GetIsotope() == atom2.GetIsotope();
+}
+
+OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
+	// Is an atom within a molecule?  (as defined by atomsEqual conditions)
+	// If so, return the pointer of the copycat.  Otherwise, return NULL
+	// This has the nice benefit that the usage is also compatible with bool
+	// ( if (atomInOtherMol(atomp, molp)) {}  will work, too.)
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		if (atomsEqual(*a, *atom)) {
+			return &*a;
+		}
+	}
+	return NULL;
 }
 
 int collapseSBU(OBMol *mol, OBMol *fragment) {
