@@ -114,8 +114,24 @@ int main(int argc, char* argv[])
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
-	// TODO: Need to combine the SBUs also at the end.  Do this by combining all of the &nodes fragments??
-	// Also think about where this should happen wrt EndModify()
+
+	// Simplify all the node SBUs into single points.
+	// TODO: Think about where this should happen wrt EndModify()
+	// TODO: This currently crashes.  gdb indicates that the error is in bond.cpp:784
+	// where the code is calculating a periodic direction.  My guess is that
+	// one of the connections is messed up: multiply defined node-linker bonds,
+	// atoms that no longer exist, or that sort of thing.
+	// Come to think of it, collapseSBU might be trying to link the node back to
+	// the old linker oxygen atom.  Think about how to get around this in the
+	// new molecular graph.
+	const bool collapse_nodes = false;  // Do not run this code for now.
+	if (collapse_nodes) {
+		std::vector<OBMol> sep_nodes = nodes.Separate();
+		for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
+			collapseSBU(&simplified_net, &*it, 102);  // Nobelium nodes for now
+		}
+	}
+
 	nodes.EndModify();
 	linkers.EndModify();
 	simplified_net.EndModify();
