@@ -4548,6 +4548,7 @@ namespace OpenBabel
     if( ! iter ) return false;
 
     newmol.SetDimension(GetDimension());
+    newmol.SetPeriodicLattice(GetPeriodicLattice());  // FIXME: probably has the same problem as operator=
     map<OBAtom*, OBAtom*> AtomMap;//key is from old mol; value from new mol
     do { //for each atom in fragment
       OBAtom* pnext = &*iter;

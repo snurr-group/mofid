@@ -8,6 +8,8 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <queue>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <openbabel/obconversion.h>
@@ -30,6 +32,7 @@ bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118);
 vector3 getCentroid(OBMol *fragment, bool weighted);
+std::vector<int> makeVector(int a, int b, int c);
 
 
 template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
@@ -47,6 +50,7 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 const bool EXPORT_NODES = true;
 // std::string connection = "Og";  // for now, use Oganesson (118) as an indicator for MOF connections
 // int connection_element = 118;  // Need both of these to generate an OBAtom without the help of etab.GetAtomicNum()
+
 
 int main(int argc, char* argv[])
 {
@@ -137,7 +141,7 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
-	/* ADDME obconversion.AddOption("p", OBConversion::INOPTIONS); */
+	obconversion.AddOption("p", OBConversion::INOPTIONS);
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);
@@ -334,7 +338,6 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
 }
 
 vector3 getCentroid(OBMol *fragment, bool weighted) {
-	// STUB
 	// Calculate the centroid of a fragment, optionally weighted by the atomic mass
 	// (which would give the center of mass).  Consider periodicity as needed, and
 	// wrap coordinates inside of [0,1].
@@ -356,18 +359,68 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	}
 
 	// Otherwise, for periodic systems, we should build the fragment up atom-by-atom
+	std::queue<OBAtom*> to_visit;
+	std::map<OBAtom*, std::vector<int> > unit_cells;
+	OBUnitCell* lattice = fragment->GetPeriodicLattice();
 
-		// At first, I thought the periodicity would be even trickier than it is.
-	// You do not have to worry about which unit cell you end up in (which would
-	// require enumerating the possibilities), but rather you can just calculate
-	// it and wrap it to the unit cell at the end.
+	// Start at whichever atom is (randomly?) saved first
+	// Note: atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
+	OBAtom* start_atom = fragment->GetAtom(1);
+	to_visit.push(start_atom);
+	unit_cells[start_atom] = makeVector(0, 0, 0);  // original unit cell
+	// Traverse the molecular graph until we run out of atoms
+	while (!to_visit.empty()) {
+		OBAtom* current = to_visit.front();
+		to_visit.pop();
+		FOR_NBORS_OF_ATOM(nbr, current) {
+			if (unit_cells.find(&*nbr) == unit_cells.end()) {  // Unvisited atom
+				// TODO: Consider implementing GetPeriodicDirection in atom.cpp as well
+				OBBond* nbr_bond = fragment->GetBond(current, &*nbr);
+				std::vector<int> uc = nbr_bond->GetPeriodicDirection();
+				if (nbr_bond->GetBeginAtom() == &*nbr) {  // opposite bond direction as expected
+					uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
+				}
 
-	// For individual atoms, dwell on what algorithm would make the most sense.
-	// Iterating over bonds from the first fragment?  Graph traversal from the
-	// first atom in the molecule?  Some shortcut based on PBC calculations?
+				std::vector<int> current_uc = unit_cells[current];
+				uc = makeVector(current_uc[0] + uc[0], current_uc[1] + uc[1], current_uc[2] + uc[2]);
+				unit_cells[&*nbr] = uc;
 
+				// Make sure to visit the neighbor (and its neighbors, etc.)
+				// Each atom will only be traversed once, since we've already added it to unit_cells
+				to_visit.push(&*nbr);
+			}
+		}
+	}
 
-	// TODO: currently a stub: return the coordinates of the first atom (check implementation!)
-	return fragment->GetAtom(1)->GetVector();
-	// Can't do atom 0 because atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
+	// We're assuming distinct, connected fragment SBUs, unless the system is nonperiodic.
+	if (fragment->NumAtoms() != unit_cells.size()) {
+		obErrorLog.ThrowError(__FUNCTION__, "getCentroid assumes one connected fragment for periodic systems.  Behavior is undefined.", obWarning);
+		return vector3(0.0, 0.0, 0.0);
+	}
+
+	// Now that we've "unwrapped" the molecular fragment, calculate the centroid
+	for (std::map<OBAtom*, std::vector<int> >::iterator it=unit_cells.begin(); it!=unit_cells.end(); ++it) {
+		double weight = 1.0;
+		if (weighted) {
+			weight = it->first->GetAtomicMass();
+		}
+		std::vector<int> uc_shift = it->second;  // first: second = key: value of a map/dict.
+		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
+		vector3 coord_shift = lattice->FractionalToCartesian(uc_shift_frac);
+		center += weight * (it->first->GetVector() + coord_shift);
+		total_weight += weight;
+	}
+	center /= total_weight;
+	center = lattice->WrapCartesianCoordinate(center);  // Keep result in the [0,1] unit cell
+	return center;
+}
+
+std::vector<int> makeVector(int a, int b, int c) {
+	// Shortcut for initializing a length-3 STL vector of ints.
+	// TODO: Consider making a new int3 class similar to vector3.
+	std::vector<int> v;
+	v.push_back(a);
+	v.push_back(b);
+	v.push_back(c);
+	return v;
 }
