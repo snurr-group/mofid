@@ -137,7 +137,7 @@ bool readCIF(OBMol* molp, std::string filepath) {
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
-	obconversion.AddOption("p", OBConversion::INOPTIONS);
+	/* ADDME obconversion.AddOption("p", OBConversion::INOPTIONS); */
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);
@@ -340,9 +340,24 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// wrap coordinates inside of [0,1].
 	// Returns a vector3 of the centroid's coordinates.
 
-	// Note: for weighting, see OBAtom::GetAtomicMass
+	vector3 center(0.0, 0.0, 0.0);
+	double total_weight = 0;
 
-	// At first, I thought the periodicity would be even trickier than it is.
+	if (!fragment->IsPeriodic()) {
+		FOR_ATOMS_OF_MOL(a, fragment) {
+			double weight = 1.0;
+			if (weighted) {
+				weight = a->GetAtomicMass();
+			}
+			center += weight * a->GetVector();
+			total_weight += weight;
+		}
+		return (center / total_weight);
+	}
+
+	// Otherwise, for periodic systems, we should build the fragment up atom-by-atom
+
+		// At first, I thought the periodicity would be even trickier than it is.
 	// You do not have to worry about which unit cell you end up in (which would
 	// require enumerating the possibilities), but rather you can just calculate
 	// it and wrap it to the unit cell at the end.
@@ -351,8 +366,6 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// Iterating over bonds from the first fragment?  Graph traversal from the
 	// first atom in the molecule?  Some shortcut based on PBC calculations?
 
-	// If the fragment is non-periodic, this becomes a much easier case.
-	// Handle as a separate "if statement" as in the rest of the code.
 
 	// TODO: currently a stub: return the coordinates of the first atom (check implementation!)
 	return fragment->GetAtom(1)->GetVector();
