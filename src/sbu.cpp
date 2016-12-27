@@ -28,7 +28,7 @@ bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
-int collapseSBU(OBMol *mol, OBMol *fragment);
+int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 
 
@@ -45,8 +45,8 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 
 /* Constants */
 const bool EXPORT_NODES = true;
-std::string connection = "Og";  // for now, use Oganesson (118) as an indicator for MOF connections
-
+// std::string connection = "Og";  // for now, use Oganesson (118) as an indicator for MOF connections
+// int connection_element = 118;  // Need both of these to generate an OBAtom without the help of etab.GetAtomicNum()
 
 int main(int argc, char* argv[])
 {
@@ -286,27 +286,51 @@ OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
 	return NULL;
 }
 
-int collapseSBU(OBMol *mol, OBMol *fragment) {
-	// Simplifies *mol by combining all atoms from *fragment into a single
-	// pseudo-atom, which maintains all connections to other existing atoms.
+int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
+	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
+	// with atomic number element, maintaining connections to existing atoms.
 	// Returns the number of external bonds maintained.
 
-	// Pseudo-code ideas go here:
-	// Test if fragment is in mol (and map the atoms.  See subtractMols for help)
-	// For each atom in this atom list:
-	// 	For each bond in atom
-	// 		If the bond is external (contains an atom not in the fragment atom list),
-	// 		then save the external atom's pointer for connections at the end.
-	//
-	// Calculate the centroid of the SBU (external routine.  Will need some work)
-	// (for now, the centroid can probably be a stub.  Temporarily, pick the first linker atom).
-	// subtractMols(mol, fragment);
-	//
-	// Make a new atom in mol (pseudo-atom) with the coordinates of the centroid
-	// Re-make bonds from the pseudo-atom to existing atoms
-	//
-	// Return the number of bonds formed
-	return 0;
+	std::vector<OBAtom*> orig_sbu;
+	FOR_ATOMS_OF_MOL(a, *fragment) {
+		orig_sbu.push_back(atomInOtherMol(&*a, mol));
+	}
+
+	std::vector<OBAtom*> connections;
+	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
+		FOR_NBORS_OF_ATOM(np, *it) {
+			if ((!inVector<OBAtom*>(&*np, orig_sbu))  // External atom: not in fragment
+					&& (!inVector<OBAtom*>(&*np, connections))) {  // only push once
+				connections.push_back(&*np);
+			}
+		}
+	}
+
+	vector3 centroid = getCentroid(fragment, false);  // FIXME: check flags, usage, etc.
+
+	// Delete SBU from the original molecule
+	if (!subtractMols(mol, fragment)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
+		return 0;
+	}
+
+	mol->BeginModify();  // FIXME: should this be here or earlier?  Also consider the error handling
+
+	OBAtom* pseudo_atom = mol->NewAtom();
+	pseudo_atom->SetVector(centroid);
+	pseudo_atom->SetAtomicNum(element);
+	pseudo_atom->SetType(etab.GetName(element));
+
+	for (std::vector<OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
+		OBBond* pseudo_link = mol->NewBond();
+		pseudo_link->SetBegin(pseudo_atom);
+		pseudo_link->SetEnd(*it);  // don't need to dereference since the vector holds pointers
+		pseudo_link->SetBondOrder(1);
+	}
+
+	mol->EndModify();
+
+	return connections.size();
 }
 
 vector3 getCentroid(OBMol *fragment, bool weighted) {
@@ -315,6 +339,8 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// (which would give the center of mass).  Consider periodicity as needed, and
 	// wrap coordinates inside of [0,1].
 	// Returns a vector3 of the centroid's coordinates.
+
+	// Note: for weighting, see OBAtom::GetAtomicMass
 
 	// At first, I thought the periodicity would be even trickier than it is.
 	// You do not have to worry about which unit cell you end up in (which would
@@ -329,5 +355,6 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// Handle as a separate "if statement" as in the rest of the code.
 
 	// TODO: currently a stub: return the coordinates of the first atom (check implementation!)
-	return fragment->GetAtom(0)->GetVector();
+	return fragment->GetAtom(1)->GetVector();
+	// Can't do atom 0 because atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
 }
