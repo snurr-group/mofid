@@ -114,26 +114,16 @@ int main(int argc, char* argv[])
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
-
-	// Simplify all the node SBUs into single points.
-	// TODO: Think about where this should happen wrt EndModify()
-	// TODO: This currently crashes.  gdb indicates that the error is in bond.cpp:784
-	// where the code is calculating a periodic direction.  My guess is that
-	// one of the connections is messed up: multiply defined node-linker bonds,
-	// atoms that no longer exist, or that sort of thing.
-	// Come to think of it, collapseSBU might be trying to link the node back to
-	// the old linker oxygen atom.  Think about how to get around this in the
-	// new molecular graph.
-	const bool collapse_nodes = false;  // Do not run this code for now.
-	if (collapse_nodes) {
-		std::vector<OBMol> sep_nodes = nodes.Separate();
-		for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
-			collapseSBU(&simplified_net, &*it, 102);  // Nobelium nodes for now
-		}
-	}
-
 	nodes.EndModify();
 	linkers.EndModify();
+	simplified_net.EndModify();
+
+	// Simplify all the node SBUs into single points.
+	simplified_net.BeginModify();
+	std::vector<OBMol> sep_nodes = nodes.Separate();
+	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
+		collapseSBU(&simplified_net, &*it, 31);  // Gallium nodes for now for visualization color.
+	}
 	simplified_net.EndModify();
 
 	// For now, just print the SMILES of the nodes and linkers.
@@ -346,6 +336,10 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
 		pseudo_link->SetBegin(pseudo_atom);
 		pseudo_link->SetEnd(*it);  // don't need to dereference since the vector holds pointers
 		pseudo_link->SetBondOrder(1);
+		// Per OBBuilder::Connect in builder.cpp, we need to also update the atoms' bonding.
+		// Otherwise, our OBAtomAtomIter will not operate properly (bonds will not propagate back to the atoms).
+		pseudo_atom->AddBond(pseudo_link);
+		(*it)->AddBond(pseudo_link);
 	}
 
 	mol->EndModify();
