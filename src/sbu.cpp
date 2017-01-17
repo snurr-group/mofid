@@ -6,6 +6,7 @@
 // obabel CIFFILE -ap -ocan
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <algorithm>
 #include <queue>
@@ -22,7 +23,9 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
+std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
@@ -35,6 +38,51 @@ vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
 
 
+class ElementGen
+{
+	protected:
+		std::map<std::string,int> _mapping;
+		std::queue<int> _elements;
+		static const int _default_element = 118;  // Oganesson
+		int _next() {
+			int next = _elements.front();
+			if (_elements.size() > 1) {
+				_elements.pop();
+			}
+			return next;
+		}
+	public:
+		ElementGen() {
+			_elements.push(_default_element);
+		}
+		ElementGen(bool node) {
+			if (node) {  // node defaults
+				_elements.push(40);
+				_elements.push(30);
+				_elements.push(31);
+				_elements.push(118);
+				_elements.push(117);
+			} else {  // linker defaults
+				_elements.push(8);
+				_elements.push(7);
+				_elements.push(6);
+				_elements.push(5);
+			}
+		}
+		int key(std::string smiles) {
+			if (_mapping.find(smiles) == _mapping.end()) {
+				int new_key = _next();
+				_mapping[smiles] = new_key;
+				return new_key;
+			}
+			return _mapping[smiles];
+		}
+		std::map<std::string,int> get_map() {
+			return _mapping;
+		}
+};
+
+
 template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
 bool inVector(const T &element, const std::vector<T> &vec) {
 	// Test if an element is a given member of a vector
@@ -44,12 +92,6 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 		return false;
 	}
 }
-
-
-/* Constants */
-const bool EXPORT_NODES = true;
-// std::string connection = "Og";  // for now, use Oganesson (118) as an indicator for MOF connections
-// int connection_element = 118;  // Need both of these to generate an OBAtom without the help of etab.GetAtomicNum()
 
 
 int main(int argc, char* argv[])
@@ -92,10 +134,9 @@ int main(int argc, char* argv[])
 	linkers.BeginModify();
 	simplified_net.BeginModify();
 	std::stringstream nonmetalMsg;
+	ElementGen linker_conv(false);
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		OBMol canon = *it;
-		resetBonds(&canon);
-		std::string mol_smiles = obconv.WriteString(&canon);
+		std::string mol_smiles = getSMILES(*it, obconv);
 		// printf(mol_smiles.c_str());
 		if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
@@ -110,7 +151,7 @@ int main(int argc, char* argv[])
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
-			collapseSBU(&simplified_net, &*it);
+			collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles));
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
@@ -119,10 +160,12 @@ int main(int argc, char* argv[])
 	simplified_net.EndModify();
 
 	// Simplify all the node SBUs into single points.
+	ElementGen node_conv(true);
 	simplified_net.BeginModify();
 	std::vector<OBMol> sep_nodes = nodes.Separate();
 	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
-		collapseSBU(&simplified_net, &*it, 31);  // Gallium nodes for now for visualization color.
+		std::string node_smiles = getSMILES(*it, obconv);
+		collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles));
 	}
 	simplified_net.EndModify();
 
@@ -131,11 +174,13 @@ int main(int argc, char* argv[])
 	printFragments(uniqueSMILES(nodes.Separate(), obconv));
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
+	const bool EXPORT_NODES = true;
 	if (EXPORT_NODES) {
 		writeCIF(&nodes, "Test/nodes.cif");
 		writeCIF(&linkers, "Test/linkers.cif");
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
+		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 	}
 
 	return(0);
@@ -163,6 +208,28 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	conv.WriteFile(molp, filepath);
 }
 
+void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath) {
+	// Save fragment identities for condensed_linkers.cif
+	std::string equal_line = "================";
+	std::ofstream out_file;
+	out_file.open(filepath.c_str());
+	out_file << "Fragment identities for condensed_linkers.cif" << std::endl << std::endl;
+
+	out_file << "Nodes" << std::endl << equal_line << std::endl;
+	for (std::map<std::string,int>::iterator it=nodes.begin(); it!=nodes.end(); ++it) {
+		out_file << etab.GetSymbol(it->second) << ": " << it->first;
+	}
+	out_file << std::endl << std::endl;
+
+	out_file << "Linkers" << std::endl << equal_line << std::endl;
+	for (std::map<std::string,int>::iterator it=linkers.begin(); it!=linkers.end(); ++it) {
+		out_file << etab.GetSymbol(it->second) << ": " << it->first;
+	}
+	out_file << std::endl;
+
+	out_file.close();
+}
+
 void printFragments(const std::vector<std::string> &unique_smiles) {
 	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
@@ -171,13 +238,18 @@ void printFragments(const std::vector<std::string> &unique_smiles) {
 	}
 }
 
+std::string getSMILES(OBMol fragment, OBConversion obconv) {
+	// Prints SMILES based on OBConversion parameters
+	OBMol canon = fragment;
+	resetBonds(&canon);
+	return obconv.WriteString(&canon);
+}
+
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv) {
 	// Extracts list of SMILES for unique fragments
 	std::vector<std::string> unique_smiles;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		OBMol canon = *it;
-		resetBonds(&canon);
-		std::string mol_smiles = obconv.WriteString(&canon);
+		std::string mol_smiles = getSMILES(*it, obconv);
 		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
 			unique_smiles.push_back(mol_smiles);
 		}
