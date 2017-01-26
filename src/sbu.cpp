@@ -23,6 +23,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+void writeSystre(OBMol* molp, std::string filepath);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
@@ -181,6 +182,7 @@ int main(int argc, char* argv[])
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
+		writeSystre(&simplified_net, "Test/topology.cgd");
 	}
 
 	return(0);
@@ -205,6 +207,13 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	if (write_bonds) {
 		conv.AddOption("g");
 	}
+	conv.WriteFile(molp, filepath);
+}
+
+void writeSystre(OBMol* molp, std::string filepath) {
+	// Write the simplified molecule to Systre for topological determination
+	OBConversion conv;
+	conv.SetOutFormat("cgd");
 	conv.WriteFile(molp, filepath);
 }
 
