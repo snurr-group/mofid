@@ -246,6 +246,7 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 void printFragments(const std::vector<std::string> &unique_smiles) {
 	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
+	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
 	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		printf("%s", i2->c_str());
 	}
