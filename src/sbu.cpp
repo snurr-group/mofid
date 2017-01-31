@@ -23,6 +23,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+void writeSystre(OBMol* molp, std::string filepath);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
@@ -34,8 +35,10 @@ int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118);
+int collapseTwoConn(OBMol* net);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
+void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 
 
 class ElementGen
@@ -181,6 +184,8 @@ int main(int argc, char* argv[])
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
+		collapseTwoConn(&simplified_net);
+		writeSystre(&simplified_net, "Test/topology.cgd");
 	}
 
 	return(0);
@@ -205,6 +210,14 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	if (write_bonds) {
 		conv.AddOption("g");
 	}
+	conv.WriteFile(molp, filepath);
+}
+
+void writeSystre(OBMol* molp, std::string filepath) {
+	// Write the simplified molecule to Systre for topological determination
+	OBConversion conv;
+	conv.SetOutFormat("cgd");
+	conv.AddOption("c");  // Optional flag to print edge centers
 	conv.WriteFile(molp, filepath);
 }
 
@@ -233,6 +246,7 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 void printFragments(const std::vector<std::string> &unique_smiles) {
 	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
+	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
 	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		printf("%s", i2->c_str());
 	}
@@ -404,19 +418,41 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
 	pseudo_atom->SetType(etab.GetName(element));
 
 	for (std::vector<OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
-		OBBond* pseudo_link = mol->NewBond();
-		pseudo_link->SetBegin(pseudo_atom);
-		pseudo_link->SetEnd(*it);  // don't need to dereference since the vector holds pointers
-		pseudo_link->SetBondOrder(1);
-		// Per OBBuilder::Connect in builder.cpp, we need to also update the atoms' bonding.
-		// Otherwise, our OBAtomAtomIter will not operate properly (bonds will not propagate back to the atoms).
-		pseudo_atom->AddBond(pseudo_link);
-		(*it)->AddBond(pseudo_link);
+		formBond(mol, pseudo_atom, *it, 1);  // don't need to dereference iterator since it's a vector of pointers
 	}
 
 	mol->EndModify();
 
 	return connections.size();
+}
+
+int collapseTwoConn(OBMol* net) {
+	// Collapses two-connected nodes into edges to simplify the topology
+	// Returns the number of nodes deleted from the network
+	// FIXME: BUGGY LOGIC: doesn't have a problem with forming multiple single bonds between the same simplified net.
+
+	int simplifications = 0;
+
+	net->BeginModify();
+	std::vector<OBAtom*> to_delete;
+	FOR_ATOMS_OF_MOL(a, *net) {
+		if (a->GetValence() == 2) {
+			std::vector<OBAtom*> nbors;
+			FOR_NBORS_OF_ATOM(n, *a) {
+				nbors.push_back(&*n);
+			}
+
+			formBond(net, nbors[0], nbors[1]); // FIXME: probably needs a bond direction flag as well
+			to_delete.push_back(&*a);
+			++simplifications;
+		}
+	}
+	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
+		net->DeleteAtom(*it);
+	}
+	net->EndModify();
+
+	return simplifications;
 }
 
 vector3 getCentroid(OBMol *fragment, bool weighted) {
@@ -505,4 +541,22 @@ std::vector<int> makeVector(int a, int b, int c) {
 	v.push_back(b);
 	v.push_back(c);
 	return v;
+}
+
+void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
+	// Makes a bond between two atoms, complete with the proper accounting
+	// TODO: decide how to handle cases where the bond already exists.
+	// Overwrite existing bonds?  Make it, as long as it's a different periodic direction??
+	if (!mol->GetBond(begin, end)) {
+		OBBond* pseudo_link = mol->NewBond();
+		pseudo_link->SetBegin(begin);
+		pseudo_link->SetEnd(end);
+		pseudo_link->SetBondOrder(order);
+		// Per OBBuilder::Connect in builder.cpp, we need to also update the atoms' bonding.
+		// Otherwise, our OBAtomAtomIter will not operate properly (bonds will not propagate back to the atoms).
+		begin->AddBond(pseudo_link);
+		end->AddBond(pseudo_link);
+	} else {
+		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
+	}
 }
