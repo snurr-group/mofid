@@ -214,6 +214,7 @@ void writeSystre(OBMol* molp, std::string filepath) {
 	// Write the simplified molecule to Systre for topological determination
 	OBConversion conv;
 	conv.SetOutFormat("cgd");
+	conv.AddOption("c");  // Optional flag to print edge centers
 	conv.WriteFile(molp, filepath);
 }
 

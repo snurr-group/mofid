@@ -14,6 +14,7 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <sstream>
 
 using namespace std;
 
@@ -32,19 +33,6 @@ public:
 		OBConversion::RegisterOptionParam("c", this, 0, OBConversion::OUTOPTIONS);
 	}
 
-	/* The first line of the description should be a brief identifier, <40 chars, because
-     it is used in dropdown lists, etc. in some user interfaces. The rest is optional.
-
-	   Describe any format specific options here. This text is parsed to provide
-	   checkboxes, etc for the GUI (for details click the control menu),
-	   so please try to keep to a similar form.
-
-	   Write options are the most common, and the "Write" is optional.
-	   The option f takes a text parameter, so that it is essential that the option
-	   is registered in the constructor of the class.
-	   Finish the options with a blank line as shown, if there are more than one
-	   group of options, or if there are further comments after them.
-	*/
 	virtual const char* Description() //required
 	{
 		return
@@ -131,6 +119,7 @@ bool SystreFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 	      << endl;
 	}
 
+	std::stringstream edge_centers;
 	FOR_BONDS_OF_MOL(b, *pmol) {
 	  std::vector<int> bond_dir = b->GetPeriodicDirection();
 	  vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
@@ -140,16 +129,16 @@ bool SystreFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 	  ofs << indent << "EDGE  "
 	      << begin[0] << " " << begin[1] << " " << begin[2] << "   "
 	      << end[0] << " " << end[1] << " " << end[2] << endl;
+	  // Do edge center calculation, since we already have the coordinates handy
+	  edge_centers << "# EDGE_CENTER  "
+	      << (begin[0] + end[0]) / 2.0 << " "
+	      << (begin[1] + end[1]) / 2.0 << " "
+	      << (begin[2] + end[2]) / 2.0 << endl;
 	}
 
-	// At the end, optionally print the edge centers.
-	// The code will not take care of problems we're having with N-ligand hMOFs,
-	// but certainly the infrastructure is in the right direction.
-
 	if(pConv->IsOption("c")) //OBConversion::OUTOPTIONS is the default
-          ofs << "# STUB: EDGE_CENTER specifications should go here" << endl;
-	  // Actually, we should probably implement this as another step within the BONDS loop as a stringstream.
-	  // Then, write it at the end if the flag is set to export it
+	  ofs << edge_centers.str();
+
 	ofs << "END" << endl;
 
 	return true;
