@@ -1,0 +1,10 @@
+{
+	"nodes" : {
+		"sym_6_mc_3" : "[Zn]O([Zn])([Zn])[Zn]"
+	},
+	"linkers" : {
+		"L__" : "None",
+		"L_12" : "[O]C(=O)c1ccc(cc1)C(=O)[O]"
+	},
+	"functionalization" : {}
+}

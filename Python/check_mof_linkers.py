@@ -10,6 +10,7 @@ against the "recipe."
 @author: Ben Bucior
 """
 
+import os, sys
 import subprocess
 import glob
 import json
@@ -19,6 +20,8 @@ import openbabel  # for visualization only, since my changes aren't backported t
 SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 CIF_DIR = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
 HMOF_DB = "C:/Users/Benjamin/Git/mofid/Resources/hmof_linker_info.json"
+TOBACCO_DB = "C:/Users/Benjamin/Git/mofid/Resources/tobacco_info.json"
+MOF_TYPE = "tobacco"  # hmof or tobacco
 
 
 def extract_linkers(mof_path):
@@ -27,7 +30,7 @@ def extract_linkers(mof_path):
 	fragments = cpp_output.strip().split("\n")
 	return sorted(fragments)
 
-def parse_filename(hmof_path):
+def parse_hmof_name(hmof_path):
 	# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
 	codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": 0}
 	parts = hmof_path.strip(".cifCIF").split("_")
@@ -46,11 +49,36 @@ def parse_filename(hmof_path):
 			continue
 	return codes
 
-def load_hmof_components(db_file):
+def parse_tobacco_name(tobacco_path):
+	# Extract ToBACCo recipes from the filename
+	# Format: topology_sym_x_node_type_sym_x_node2_type_L_linkernum.cif ("_" for empty linker)
+	# Can we parse this using ToBACCo's own code??
+	codes = {"num": None, "nodes": [], "linker": None, "topology": None}
+	mof_info = os.path.splitext(os.path.basename(tobacco_path))[0]  # Get the basename without file extension
+
+	parsed = mof_info.split("_", 1)
+	codes['topology'] = parsed[0]
+	mof_info = parsed[1]
+
+	while "sym_" in mof_info:
+		parsed = mof_info.split("_")
+		codes['nodes'].append("_".join(parsed[0:4]))
+		mof_info = "_".join(parsed[4:])
+
+	# Not sure why bcs, etc., have an extra underscore in the topology.
+	mof_info = mof_info.strip("_")
+	if mof_info == "":
+		mof_info = "_"
+	codes['linker'] = mof_info
+
+	#print tobacco_path, codes
+	return codes
+
+def load_components(db_file):
 	# Load node and linker compositions from a saved JSON definition (to keep this file cleaner)
 	with open(db_file, "r") as inp:
-		hmof_db = json.load(inp)
-	return hmof_db
+		mof_db = json.load(inp)
+	return mof_db
 
 def extract_db_smiles(db_dict):
 	# Save all the nodes and linker definitions to the current directory
@@ -62,9 +90,19 @@ def extract_db_smiles(db_dict):
 	for id in linkers:
 		print(linkers[id] + " " + id)
 
+# Set filename parser
+if MOF_TYPE == "hmof":
+	parse_filename = parse_hmof_name
+	SBU_DB = HMOF_DB
+elif MOF_TYPE == "tobacco":
+	parse_filename = parse_tobacco_name
+	SBU_DB = TOBACCO_DB
+else:
+	raise ValueError("MOF parsing only (partially) implemented for hMOFs and ToBACCo")
 
-if __name__ == "__main__":
-	hmof_db = load_hmof_components(HMOF_DB)
+
+if __name__ == False:  # disable my old hMOF code for now.  Re-incorporate later
+	hmof_db = load_components(SBU_DB)
 	# print hmof_db["nodes"]["0"][1]
 	new_linkers = []
 	for cif_file in glob.glob(CIF_DIR + '/*.[Cc][Ii][Ff]'):
@@ -79,3 +117,13 @@ if __name__ == "__main__":
 		print "\n"
 	extract_db_smiles(hmof_db)
 
+
+if __name__ == "__main__":
+	mof_db = load_components(SBU_DB)
+	for cif_file in glob.glob('C:/Users/Benjamin/Desktop/ToBACCo - Copy/output_structures' + '/*.[Cc][Ii][Ff]'):
+		id = parse_filename(cif_file)
+		print id
+		if id['nodes'] == ['sym_6_mc_3'] and id['linker'] == "L_12" and id['topology'] == "test.pcu":
+			print "Found MOF-5!:", id
+
+	
