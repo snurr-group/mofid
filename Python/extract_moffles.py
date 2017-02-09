@@ -49,6 +49,23 @@ def extract_topology(mof_path):
 			return "NEW"
 	return "ERROR"  # unexpected format
 
+def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HERE"):
+	# Assemble the MOFFLES code from its components
+	moffles = ".".join(linkers) + " "
+	moffles = moffles + "f1" + "."
+	moffles = moffles + topology + "."
+	moffles = moffles + cat + "."
+	moffles = moffles + "F1" + "."
+	moffles = moffles + mof_name
+	return moffles
+
+def cif2moffles(cif_path):
+	# Assemble the MOFFLES code from all of its pieces
+	linkers = extract_linkers(cif_path)
+	topology = extract_topology(SBU_SYSTRE_PATH)
+	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
+	return assemble_moffles(linkers, topology, mof_name=mof_name)
+
 def usage():
 	raise SyntaxError("Run this code with a single parameter: path to the CIF file")
 
@@ -57,16 +74,5 @@ if __name__ == "__main__":
 	if len(args) != 1:
 		usage()
 	cif_file = args[0]
-	linkers = extract_linkers(cif_file)
-	topology = extract_topology(SBU_SYSTRE_PATH)
-	mof_name = os.path.splitext(os.path.basename(cif_file))[0]
 	
-	# Assemble the MOFFLES code
-	moffles = ".".join(linkers) + " "
-	moffles = moffles + "f1" + "."
-	moffles = moffles + topology + "."
-	moffles = moffles + "CAT_TBD" + "."
-	moffles = moffles + "F1" + "."
-	moffles = moffles + mof_name
-	
-	print moffles
+	print cif2moffles(cif_file)

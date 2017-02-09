@@ -4,8 +4,8 @@
 Calculate MOF linkers
 
 Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
-sbu.cpp to decompose MOFs into fragments.  Compare actual hMOF fragments
-against the "recipe."
+sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
+ToBACCo or hMOF structures against their "recipe."
 
 @author: Ben Bucior
 """
@@ -16,6 +16,7 @@ import glob
 import json
 # import re
 import openbabel  # for visualization only, since my changes aren't backported to the python library
+from extract_moffles import cif2moffles, assemble_moffles
 
 SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 CIF_DIR = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
@@ -23,6 +24,10 @@ HMOF_DB = "C:/Users/Benjamin/Git/mofid/Resources/hmof_linker_info.json"
 TOBACCO_DB = "C:/Users/Benjamin/Git/mofid/Resources/tobacco_info.json"
 MOF_TYPE = "tobacco"  # hmof or tobacco
 
+
+def any(member, list):
+	# Is the member any part of the list?
+	return member in list
 
 def extract_linkers(mof_path):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
@@ -53,8 +58,9 @@ def parse_tobacco_name(tobacco_path):
 	# Extract ToBACCo recipes from the filename
 	# Format: topology_sym_x_node_type_sym_x_node2_type_L_linkernum.cif ("_" for empty linker)
 	# Can we parse this using ToBACCo's own code??
-	codes = {"num": None, "nodes": [], "linker": None, "topology": None}
+	codes = {"name": None, "nodes": [], "linker": None, "topology": None}
 	mof_info = os.path.splitext(os.path.basename(tobacco_path))[0]  # Get the basename without file extension
+	codes['name'] = mof_info
 
 	parsed = mof_info.split("_", 1)
 	codes['topology'] = parsed[0]
@@ -68,7 +74,7 @@ def parse_tobacco_name(tobacco_path):
 	# Not sure why bcs, etc., have an extra underscore in the topology.
 	mof_info = mof_info.strip("_")
 	if mof_info == "":
-		mof_info = "_"
+		mof_info = "L__"
 	codes['linker'] = mof_info
 
 	#print tobacco_path, codes
@@ -118,12 +124,48 @@ if __name__ == False:  # disable my old hMOF code for now.  Re-incorporate later
 	extract_db_smiles(hmof_db)
 
 
+
 if __name__ == "__main__":
 	mof_db = load_components(SBU_DB)
 	for cif_file in glob.glob('C:/Users/Benjamin/Desktop/ToBACCo - Copy/output_structures' + '/*.[Cc][Ii][Ff]'):
 		id = parse_filename(cif_file)
-		print id
 		if id['nodes'] == ['sym_6_mc_3'] and id['linker'] == "L_12" and id['topology'] == "test.pcu":
 			print "Found MOF-5!:", id
+		# CHALLENGE: ToBACCo has "organic nodes" as defined by ToBACCo that won't be picked up by MOFFLES
+		# Combinining _on_ with linkers will have to wait.  In the meantime, just consider the pure metal cases.
+		# Also skip B-containing sym_13_mc_12 and sym_16_mc_6, or Si-containing sym_4_on_14
+		# sym_24_mc_13 will also be incompatible with our current decomposition scheme
+		# For now, also sym_3_mc_0, sym_4_mc_1, sym_8_mc_7, sym_8_mc_8
+		# TODO: Combine _on_ with the linker somehow
+		#if not any(True, ['_on_' in x for x in id['nodes']]):
+		if not any(False, [x in mof_db['nodes'] for x in id['nodes']]):
+			#print id
+			linkers = []
+			for node in id['nodes']:
+				smiles = mof_db['nodes'][node]
+				if smiles not in linkers:
+					linkers.append(smiles)
+			smiles = mof_db['linkers'][id['linker']]
+			if smiles != "None":
+				linkers.append(smiles)
+			linkers.sort()
+			#print linkers
+
+			topology = id['topology']
+			if topology.startswith('test.'):
+				topology = topology[5:]
+
+			moffles_name = assemble_moffles(linkers, topology, mof_name=id['name'])
+			# print moffles_name
+			#moffles_auto = cif2moffles(cif_file.replace("\\", "/"))
+			moffles_auto = cif2moffles(cif_file)
+			if moffles_auto == moffles_name:
+				print "Success!:", moffles_auto
+			else:
+				print "Failure::"
+				print "Database:", moffles_name
+				print "Auto:", moffles_auto
+			# Need to call the extract_moffles code #cif2moffles
+			# Generate a comparison MOFFLES based on SBU composition
 
 	
