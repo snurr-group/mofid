@@ -10,3 +10,5 @@ Notebooks/
 .codelite/
 bin/
 !openbabel/data/
+ob_changes.patch
+

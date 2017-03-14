@@ -1,4 +1,4 @@
-.PHONY: all backup test
+.PHONY: all backup test diff ob_changes.patch
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -18,3 +18,9 @@ bin/sbu: src/sbu.cpp /usr/local/lib/openbabel/2.3.90/cifformat.so
 	make systreformat; \
 	make install/fast
 	dos2unix ${BABEL_DATADIR}/*.txt  # Necessary so C++ can actually read the files
+
+diff: ob_changes.patch
+
+ob_changes.patch:
+	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' > $@
+	# Lists my changes to the main OpenBabel code
