@@ -3,6 +3,7 @@
 library(jsonlite)
 library(dplyr)
 library(readr)
+library(stringr)
 
 isotherm_list <- fromJSON("Data/NISTcheck/isotherms.json")
 core_dois <- read_tsv("Data/NISTcheck/structure-doi.tsv",
