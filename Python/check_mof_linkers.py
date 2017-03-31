@@ -42,7 +42,6 @@ def parse_hmof_name(hmof_path):
 	flag = None
 	for part in parts:
 		if flag is not None:
-			#codes[flag] = int(part)
 			codes[flag] = part  # For now, keep it as a string, since our json will be string-based, anyway
 			flag = None
 			continue
@@ -77,7 +76,6 @@ def parse_tobacco_name(tobacco_path):
 		mof_info = "L__"
 	codes['linker'] = mof_info
 
-	#print tobacco_path, codes
 	return codes
 
 def load_components(db_file):
@@ -113,7 +111,7 @@ if __name__ == False:  # disable my old hMOF code for now.  Re-incorporate later
 	new_linkers = []
 	for cif_file in glob.glob(CIF_DIR + '/*.[Cc][Ii][Ff]'):
 		id = parse_filename(cif_file)
-		if id['m'] != "0" or id["i"]!="0" or id["k"]!=id["j"] or id["j"] in new_linkers:
+		if id['m'] != "0" or id["i"] != "0" or id["k"] != id["j"] or id["j"] in new_linkers:
 			# Later, this will probably just be id['m']!='0' since we'll want to temporarily exclude functionalization
 			continue
 		print cif_file
@@ -127,19 +125,18 @@ if __name__ == False:  # disable my old hMOF code for now.  Re-incorporate later
 
 if __name__ == "__main__":
 	mof_db = load_components(SBU_DB)
-	for cif_file in glob.glob('C:/Users/Benjamin/Desktop/ToBACCo - Copy/output_structures' + '/*.[Cc][Ii][Ff]'):
+	moffles_results = []
+	for cif_file in glob.glob(
+	#				'C:/Users/Benjamin/Git/mofid/Notebooks/20170209-tobacco-mofs/used_tobacco_mofs' + '/*.[Cc][Ii][Ff]'):
+					'Data/tobacco_L_12/quick' + '/*.[Cc][Ii][Ff]'):
 		id = parse_filename(cif_file)
-		if id['nodes'] == ['sym_6_mc_3'] and id['linker'] == "L_12" and id['topology'] == "test.pcu":
-			print "Found MOF-5!:", id
 		# CHALLENGE: ToBACCo has "organic nodes" as defined by ToBACCo that won't be picked up by MOFFLES
 		# Combinining _on_ with linkers will have to wait.  In the meantime, just consider the pure metal cases.
 		# Also skip B-containing sym_13_mc_12 and sym_16_mc_6, or Si-containing sym_4_on_14
 		# sym_24_mc_13 will also be incompatible with our current decomposition scheme
 		# For now, also sym_3_mc_0, sym_4_mc_1, sym_8_mc_7, sym_8_mc_8
 		# TODO: Combine _on_ with the linker somehow
-		#if not any(True, ['_on_' in x for x in id['nodes']]):
 		if not any(False, [x in mof_db['nodes'] for x in id['nodes']]):
-			#print id
 			linkers = []
 			for node in id['nodes']:
 				smiles = mof_db['nodes'][node]
@@ -149,23 +146,31 @@ if __name__ == "__main__":
 			if smiles != "None":
 				linkers.append(smiles)
 			linkers.sort()
-			#print linkers
 
 			topology = id['topology']
 			if topology.startswith('test.'):
 				topology = topology[5:]
 
+			# Generate a reference MOFFLES based on SBU composition
 			moffles_name = assemble_moffles(linkers, topology, mof_name=id['name'])
-			# print moffles_name
-			#moffles_auto = cif2moffles(cif_file.replace("\\", "/"))
+			# Calculate the MOFFLES derived from the CIF structure itself
 			moffles_auto = cif2moffles(cif_file)
 			if moffles_auto == moffles_name:
-				print "Success!:", moffles_auto
-			else:
-				print "Failure::"
-				print "Database:", moffles_name
-				print "Auto:", moffles_auto
-			# Need to call the extract_moffles code #cif2moffles
-			# Generate a comparison MOFFLES based on SBU composition
+				# print "Success!:", moffles_auto
+				moffles_results.append({
+					"match": True,
+					"from_name": moffles_name,
+					"from_cif":  moffles_auto
+				})
 
-	
+			else:
+				# print "Failure::"
+				# print "Database:", moffles_name
+				# print "Auto:", moffles_auto
+				moffles_results.append({
+					"match": False,
+					"from_name": moffles_name,
+					"from_cif":  moffles_auto
+				})
+
+	print moffles_results
