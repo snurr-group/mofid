@@ -16,7 +16,7 @@ import glob
 import json
 # import re
 import openbabel  # for visualization only, since my changes aren't backported to the python library
-from extract_moffles import cif2moffles, assemble_moffles
+from extract_moffles import cif2moffles, assemble_moffles, parse_moffles
 
 SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 CIF_DIR = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
@@ -94,6 +94,26 @@ def extract_db_smiles(db_dict):
 	for id in linkers:
 		print(linkers[id] + " " + id)
 
+def compare_moffles(moffles1, moffles2, names = None):
+	# Compares MOFFLES strings to identify sources of difference, if any
+	if names is None:
+		names = ['mof1', 'mof2']
+	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	comparison = dict()
+	comparison['match'] = True
+	comparison[names[0]] = moffles1
+	comparison[names[1]] = moffles2
+	for key in parsed[0]:
+		expected = parsed[0][key]
+		if parsed[1][key] == expected:
+			comparison[key] = expected
+		else:
+			comparison[key] = False
+			comparison['match'] = False
+
+	return comparison
+
+
 # Set filename parser
 if MOF_TYPE == "hmof":
 	parse_filename = parse_hmof_name
@@ -124,11 +144,16 @@ if __name__ == False:  # disable my old hMOF code for now.  Re-incorporate later
 
 
 if __name__ == "__main__":
+	args = sys.argv[1:]
+	if len(args) == 0:
+		inputs = glob.glob('Data/tobacco_L_12/quick' + '/*.[Cc][Ii][Ff]')
+	else:
+		inputs = args
+
 	mof_db = load_components(SBU_DB)
-	moffles_results = []
-	for cif_file in glob.glob(
-	#				'C:/Users/Benjamin/Git/mofid/Notebooks/20170209-tobacco-mofs/used_tobacco_mofs' + '/*.[Cc][Ii][Ff]'):
-					'Data/tobacco_L_12/quick' + '/*.[Cc][Ii][Ff]'):
+	moffles_results = dict()
+
+	for cif_file in inputs:
 		id = parse_filename(cif_file)
 		# CHALLENGE: ToBACCo has "organic nodes" as defined by ToBACCo that won't be picked up by MOFFLES
 		# Combinining _on_ with linkers will have to wait.  In the meantime, just consider the pure metal cases.
@@ -155,22 +180,6 @@ if __name__ == "__main__":
 			moffles_name = assemble_moffles(linkers, topology, mof_name=id['name'])
 			# Calculate the MOFFLES derived from the CIF structure itself
 			moffles_auto = cif2moffles(cif_file)
-			if moffles_auto == moffles_name:
-				# print "Success!:", moffles_auto
-				moffles_results.append({
-					"match": True,
-					"from_name": moffles_name,
-					"from_cif":  moffles_auto
-				})
-
-			else:
-				# print "Failure::"
-				# print "Database:", moffles_name
-				# print "Auto:", moffles_auto
-				moffles_results.append({
-					"match": False,
-					"from_name": moffles_name,
-					"from_cif":  moffles_auto
-				})
+			moffles_results.append(compare_moffles(moffles_name, moffles_auto, ['from_name', 'from_cif']))
 
 	print moffles_results

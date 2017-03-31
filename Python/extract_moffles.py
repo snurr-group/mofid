@@ -59,6 +59,35 @@ def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HER
 	moffles = moffles + mof_name
 	return moffles
 
+def parse_moffles(moffles):
+	# Deconstruct a MOFFLES string into its pieces
+	components = moffles.split()
+	smiles = components[0]
+	if len(components) > 2:
+		raise ValueError("FIXME: parse_moffles currently does not support spaces in common names")
+	metadata = components[1]
+	metadata = metadata.split('.')
+
+	mof_name = None
+	cat = None
+	topology = None
+	for loc, tag in enumerate(metadata):
+		if loc == 0 and tag != 'f1':
+			raise ValueError("MOFFLES v1 must start with tag 'f1'")
+		if tag == 'F1':
+			mof_name = '.'.join(metadata[loc+1:])
+			break
+		elif tag.lower().startswith('cat'):
+			cat = tag[3:]
+		else:
+			topology = tag
+	return dict(
+		linkers = smiles,
+		topology = topology,
+		cat = cat,
+		name = mof_name
+	)
+
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers = extract_linkers(cif_path)
