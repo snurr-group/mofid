@@ -101,6 +101,7 @@ def compare_moffles(moffles1, moffles2, names = None):
 	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
 	comparison = dict()
 	comparison['match'] = True
+	comparison['errors'] = []
 	comparison[names[0]] = moffles1
 	comparison[names[1]] = moffles2
 	for key in parsed[0]:
@@ -110,7 +111,7 @@ def compare_moffles(moffles1, moffles2, names = None):
 		else:
 			comparison[key] = False
 			comparison['match'] = False
-
+			comparison['errors'].append(key)
 	return comparison
 
 
@@ -151,7 +152,7 @@ if __name__ == "__main__":
 		inputs = args
 
 	mof_db = load_components(SBU_DB)
-	moffles_results = dict()
+	moffles_results = []
 
 	for cif_file in inputs:
 		id = parse_filename(cif_file)
@@ -183,3 +184,16 @@ if __name__ == "__main__":
 			moffles_results.append(compare_moffles(moffles_name, moffles_auto, ['from_name', 'from_cif']))
 
 	print moffles_results
+	if True:  # Errors analysis
+		print "Error analysis:"
+		error_types = {'topology': 0, 'smiles': 0, 'both': 0, 'success': 0}
+		for match in moffles_results:
+			if match['match']:
+				error_types['success'] += 1
+			if len(match['errors']) > 1:
+				error_types['both'] +=1
+			elif 'topology' in match['errors']:
+				error_types['topology'] += 1
+			elif 'linkers' in match['errors']:
+				error_types['smiles'] += 1
+		print error_types, "Total:", len(moffles_results)
