@@ -151,6 +151,9 @@ int main(int argc, char* argv[])
 		} else if (mol_smiles == "O\t\n") {
 			nonmetalMsg << "Found a bound water molecule" << std::endl;
 			subtractMols(&linkers, &*it);
+		} else if (mol_smiles == "[O]O[O]\t\n") {
+			nonmetalMsg << "Found a central oxygen with coordinated solvent" << std::endl;
+			subtractMols(&linkers, &*it);
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
