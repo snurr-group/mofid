@@ -24,3 +24,14 @@ diff: ob_changes.patch
 ob_changes.patch:
 	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' > $@
 	# Lists my changes to the main OpenBabel code
+
+setup:
+	cd openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DBUILD_SHARED=OFF -DCMAKE_INSTALL_PREFIX=../installed ..; \
+	make -j2;  # Build in parallel \
+	make install; \
+	cd ../../bin; \
+	cmake -DOpenBabel2_DIR=../openbabel/installed ../static_executable/; \
+	make
