@@ -20,6 +20,7 @@ set(executable_target sbu)
 # Set the path containing OpenBabel2Config.cmake, needed for find_package below.
 find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
           ${OpenBabel2_DIR}
+          "../openbabel/build"
           "/usr/lib/openbabel"
          "/usr/local/lib/openbabel")
 
