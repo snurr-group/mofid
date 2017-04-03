@@ -11,4 +11,4 @@ Notebooks/
 bin/
 !openbabel/data/
 ob_changes.patch
-
+openbabel/installed

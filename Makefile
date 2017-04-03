@@ -7,17 +7,16 @@ backup:
 	rsync -av --exclude=".*" --exclude="openbabel/" --delete . ../../Box\ Sync/Projects/GitBackups/mofid
 
 # Make this generic later on...
-bin/sbu: src/sbu.cpp /usr/local/lib/openbabel/2.3.90/cifformat.so
-	cd bin && cmake ../src && make
+bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
+	cd bin && make
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
-/usr/local/lib/openbabel/2.3.90/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/formats/systreformat.cpp
-	cd /cygdrive/c/Users/Benjamin/Git/mofid/openbabel/build; \
+openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/formats/systreformat.cpp
+	cd mofid/openbabel/build; \
 	make cifformat; \
 	make systreformat; \
 	make install/fast
-	dos2unix ${BABEL_DATADIR}/*.txt  # Necessary so C++ can actually read the files
 
 diff: ob_changes.patch
 
@@ -29,9 +28,13 @@ setup:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DBUILD_SHARED=OFF -DCMAKE_INSTALL_PREFIX=../installed ..; \
+	cmake -DCMAKE_INSTALL_PREFIX=../installed ..; \
 	make -j2;  # Build in parallel \
-	make install; \
-	cd ../../bin; \
-	cmake -DOpenBabel2_DIR=../openbabel/installed ../static_executable/; \
+	make install; # This is apparently a crucial step to get the sbu linker working correctly \
+	cd ../../; \
+	mkdir bin; \
+	cd bin; \
+	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
 	make
+	# Sets up all the cmake details, so that usage is as simple as
+	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
