@@ -16,6 +16,14 @@ set(sources sbu.cpp)
 set(executable_target sbu)
 
 ################################################################################
+# TODO: set LOCAL_OB_DATADIR to be a local directory (not in the OB subproject)
+set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/../openbabel/installed/share/openbabel/2.3.90"
+    CACHE PATH "Install dir for OB data")
+# Set up include file for the data directory
+configure_file(${CMAKE_SOURCE_DIR}/config_sbu.h.cmake
+  ${CMAKE_BINARY_DIR}/includes/config_sbu.h)
+include_directories(${CMAKE_BINARY_DIR}/includes/)
+
 
 # Set the path containing OpenBabel2Config.cmake, needed for find_package below.
 find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS

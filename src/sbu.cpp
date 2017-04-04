@@ -16,6 +16,8 @@
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
+#include <openbabel/babelconfig.h>
+#include "config_sbu.h"
 
 
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
@@ -102,6 +104,20 @@ int main(int argc, char* argv[])
 	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
+
+	// Set up the babel data directory to use the local version
+	// (instead of system-wide Open Babel data)
+	std::stringstream dataMsg;
+	dataMsg << "Using local Open Babel data saved in " << LOCAL_OB_DATADIR << std::endl;
+	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obInfo);
+	std::stringstream dataEnv;
+	dataEnv << "BABEL_DATADIR=" << LOCAL_OB_DATADIR;
+	//putenv(dataEnv.str().c_str());
+	//putenv("BABEL_DATADIR=\"/cygdrive/c/Users/Benjamin/Git/mofid/src/../openbabel/installed/share/openbabel/2.3.90\"");
+	// Use setenv instead of putenv, per advice about string copies vs. pointers
+	// This is similar to the approach of cryos/avogadro:main.cpp:127
+	// Per my objective, this only sets the environment within the scope of the sbu.exe program
+	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
 	OBMol mol;
 	if (!readCIF(&mol, filename)) {

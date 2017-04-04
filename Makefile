@@ -29,12 +29,13 @@ setup:
 	mkdir build installed; \
 	cd build; \
 	cmake -DCMAKE_INSTALL_PREFIX=../installed ..; \
-	make -j2;  # Build in parallel \
-	make install; # This is apparently a crucial step to get the sbu linker working correctly \
+	make -j2; \
+	make install; \
 	cd ../../; \
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
+	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
