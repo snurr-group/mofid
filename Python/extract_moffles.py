@@ -88,6 +88,29 @@ def parse_moffles(moffles):
 		name = mof_name
 	)
 
+def compare_moffles(moffles1, moffles2, names=None):
+	# Compares MOFFLES strings to identify sources of difference, if any
+	if names is None:
+		names = ['mof1', 'mof2']
+	if moffles1 is None or moffles2 is None:
+		# TODO: add MOF names, other fields?
+		return {'match': 'NA', 'errors': ['Undefined composition'], 'topology': None, 'linkers': None}
+	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	comparison = dict()
+	comparison['match'] = True
+	comparison['errors'] = []
+	comparison[names[0]] = moffles1
+	comparison[names[1]] = moffles2
+	for key in parsed[0]:
+		expected = parsed[0][key]
+		if parsed[1][key] == expected:
+			comparison[key] = expected
+		else:
+			comparison[key] = False
+			comparison['match'] = False
+			comparison['errors'].append(key)
+	return comparison
+
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers = extract_linkers(cif_path)
