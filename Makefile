@@ -32,6 +32,7 @@ setup:
 	make -j2; \
 	make install; \
 	cd ../../; \
+	mkdir Test/; \
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
