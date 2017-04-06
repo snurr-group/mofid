@@ -24,6 +24,8 @@ HMOF_DB = "C:/Users/Benjamin/Git/mofid/Resources/hmof_linker_info.json"
 TOBACCO_DB = "C:/Users/Benjamin/Git/mofid/Resources/tobacco_info.json"
 KNOWN_DB = "C:/Users/Benjamin/Git/mofid/Resources/known_info.json"
 DEFAULT_CIFS = "Data/tobacco_L_12/quick"
+# HMOF_DEFAULT_CIFS = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
+PRINT_CURRENT_MOF = True
 
 
 def any(member, list):
@@ -76,6 +78,17 @@ class MOFCompare:
 		for id in linkers:
 			print(linkers[id] + " " + id)
 
+	def test_cif(self, cif_path):
+		# Compares an arbitrary CIF file against its expected specification
+		# Returns a formatted JSON string with the results
+		moffles_from_name = self.expected_moffles(cif_path)
+		if moffles_from_name is None:  # missing SBU info in the DB file
+			return None  # Currently, skip reporting of structures with undefined nodes/linkers
+		else:
+			# Calculate the MOFFLES derived from the CIF structure itself
+			moffles_auto = cif2moffles(cif_path)
+			return compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
+
 
 class KnownMOFs(MOFCompare):
 	def __init__(self):
@@ -91,14 +104,13 @@ class KnownMOFs(MOFCompare):
 class HypoMOFs(MOFCompare):
 	def __init__(self):
 		self.db_file = HMOF_DB
-		raise ValueError("hMOF comparison not yet implemented.  Stub code needs to be updated.")
-		self.mof_db = None
 		self.load_components()
 
 	def parse_filename(self, hmof_path):
 		# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
 		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": 0}
-		parts = hmof_path.strip(".cifCIF").split("_")
+		basename = os.path.splitext(os.path.basename(hmof_path))[0]  # Get the basename without file extension
+		parts = basename.split("_")
 		flag = None
 		for part in parts:
 			if flag is not None:
@@ -111,26 +123,44 @@ class HypoMOFs(MOFCompare):
 			if part in codes.keys():
 				flag = part
 				continue
+		codes["name"] = basename
 		return codes
 
-	def stub(self):
-		# Old code about hMOFs
-		###hmof_db = load_components(SBU_DB)
-		# print hmof_db["nodes"]["0"][1]
-		new_linkers = []
-		CIF_DIR = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
-		for cif_file in glob.glob(CIF_DIR + '/*.[Cc][Ii][Ff]'):
-			# Handle with hMOF class: id = parse_filename(cif_file)
-			### STUB:
-			id = dict()
-			if id['m'] != "0" or id["i"] != "0" or id["k"] != id["j"] or id["j"] in new_linkers:
-				# Later, this will probably just be id['m']!='0' since we'll want to temporarily exclude functionalization
-				continue
-			print cif_file
-			for fragment in extract_linkers(cif_file):
-				print fragment
-			new_linkers.append(id["j"])
-			print "\n"
+	def expected_moffles(self, cif_path):
+		# What is the expected MOFFLES based on the information in a MOF's filename?
+		# TODO: add catentation and expected (known?) topology
+		# For now, just assume everything is **pcu** since we're starting with Zn4O nodes
+		codes = self.parse_filename(cif_path)
+		code_key = {
+			'i': 'nodes',
+			'j': 'linkers',
+			'k': 'linkers',
+			'm': 'functionalization',
+		}
+
+		if codes['m'] != "0" or codes["k"] != codes["j"]:
+			return None  # For now, temporarily exclude functionalization (until we can figure out SMIRKS transforms)
+			# Also exclude multiple linkers, to narrow down the number of test structures, at least to begin
+
+		is_component_defined = []
+		for key in code_key:
+			is_component_defined.extend([x in self.mof_db[code_key[key]] for x in codes[key]])
+
+		if not any(False, is_component_defined):
+			sbus = []
+			sbu_codes = ['i', 'j', 'k']
+			for part in sbu_codes:
+				smiles = self.mof_db[code_key[part]][codes[part]]
+				# print "SMILES:", smiles
+				if smiles not in sbus:
+					sbus.append(smiles)
+			sbus.sort()
+
+			# topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
+			topology = "ERROR"  # Temporarily disable topology checks for hMOFs, since pcu is still buggy
+			return assemble_moffles(sbus, topology, mof_name=codes['name'])
+		else:
+			return None
 
 
 class TobaccoMOFs(MOFCompare):
@@ -194,33 +224,26 @@ class TobaccoMOFs(MOFCompare):
 		else:
 			return None
 
-	def test_cif(self, cif_path):
-		# Compares an arbitrary CIF file against its expected specification
-		# Returns a formatted JSON string with the results
-		# TODO: move to the parent class
-		# TODO: consider updating compare_moffles with more helpful output data, including the name?
-		moffles_from_name = self.expected_moffles(cif_path)
-		if moffles_from_name is None:  # missing SBU info in the DB file
-			return None
-		else:
-			# Calculate the MOFFLES derived from the CIF structure itself
-			moffles_auto = cif2moffles(cif_path)
-			return compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
-
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) == 0:
 		inputs = glob.glob(DEFAULT_CIFS + '/*.[Cc][Ii][Ff]')
+	if len(args) == 1 and args[0].endswith("/"):
+		# Run a whole directory if specified as a single argument with an ending slash
+		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 	else:
 		inputs = args
 
 	# TODO: parse file type based on (future) command line argument, or guess it based on the filename
 	# For now, just assume the file is a ToBACCo MOF
-	comparer = TobaccoMOFs()
+	#comparer = TobaccoMOFs()
+	comparer = HypoMOFs()
 	moffles_results = []
 
 	for cif_file in inputs:
+		if PRINT_CURRENT_MOF:
+			print "Currently analyzing:", cif_file
 		result = comparer.test_cif(cif_file)
 		if result is not None:
 			moffles_results.append(result)
