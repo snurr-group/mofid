@@ -22,8 +22,9 @@ from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compar
 SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 HMOF_DB = "C:/Users/Benjamin/Git/mofid/Resources/hmof_linker_info.json"
 TOBACCO_DB = "C:/Users/Benjamin/Git/mofid/Resources/tobacco_info.json"
-KNOWN_DB = "C:/Users/Benjamin/Git/mofid/Resources/known_info.json"
-DEFAULT_CIFS = "Data/tobacco_L_12/quick"
+KNOWN_DB = "C:/Users/Benjamin/Git/mofid/Resources/known_mof_info.json"
+DEFAULT_CIFS = "Data/RingCIFs"
+# TOBACCO_DEFAULT_CIFS = "Data/tobacco_L_12/quick"
 # HMOF_DEFAULT_CIFS = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
 PRINT_CURRENT_MOF = True
 
@@ -91,14 +92,23 @@ class MOFCompare:
 
 
 class KnownMOFs(MOFCompare):
+	# Minimal class which doesn't have to do much work to scour the database of known MOFs.
+	# Excellent as a integration test for my code, i.e. did my changes cause anything else to obviously break?
 	def __init__(self):
-		pass
+		self.db_file = KNOWN_DB
+		self.load_components()
 
 	def parse_filename(self, mof_path):
-		# Extract basename of the MOF.  test_cif will convert it to the reference moffles string
+		# Extract basename of the MOF.  expected_moffles will convert it to the reference moffles string
 		return os.path.splitext(os.path.basename(mof_path))[0]  # Get the basename without file extension
 
-	# def expected_moffles?  test_cif is used in ToBACCo.
+	def expected_moffles(self, cif_path):
+		# What is the expected MOFFLES based on the information in a MOF's filename?
+		mof_name = self.parse_filename(cif_path)
+		if mof_name in self.mof_db:
+			return self.mof_db[mof_name]
+		else:
+			return None
 
 
 class HypoMOFs(MOFCompare):
@@ -229,7 +239,7 @@ if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) == 0:
 		inputs = glob.glob(DEFAULT_CIFS + '/*.[Cc][Ii][Ff]')
-	if len(args) == 1 and args[0].endswith("/"):
+	elif len(args) == 1 and args[0].endswith("/"):
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 	else:
@@ -238,12 +248,13 @@ if __name__ == "__main__":
 	# TODO: parse file type based on (future) command line argument, or guess it based on the filename
 	# For now, just assume the file is a ToBACCo MOF
 	#comparer = TobaccoMOFs()
-	comparer = HypoMOFs()
+	#comparer = HypoMOFs()
+	comparer = KnownMOFs()
 	moffles_results = []
 
 	for cif_file in inputs:
 		if PRINT_CURRENT_MOF:
-			print "Currently analyzing:", cif_file
+			print "Found CIF:", cif_file
 		result = comparer.test_cif(cif_file)
 		if result is not None:
 			moffles_results.append(result)
