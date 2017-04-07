@@ -29,7 +29,7 @@ public:
 	//Register this format type ID in the constructor
   SystreFormat()
 	{
-		OBConversion::RegisterFormat("CGD",this);
+		OBConversion::RegisterFormat("cgd",this);
 		OBConversion::RegisterOptionParam("c", this, 0, OBConversion::OUTOPTIONS);
 	}
 

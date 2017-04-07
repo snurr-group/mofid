@@ -1,6 +1,6 @@
 {
 	"nodes" : {
-		"0" : ["[Zn]", "[O]"]
+		"0" : "[Zn]O([Zn])([Zn])[Zn]"
 	},
 	"linkers" : {
 		"0" : "[O]C(=O)c1ccc(cc1)C(=O)[O]",
@@ -11,7 +11,7 @@
 		"5" : "[O]C(=O)C#Cc1ccc(cc1)C#CC(=O)[O]",
 		"6" : "[O]C(=O)c1ccc(cc1)C#Cc1ccc(cc1)C(=O)[O]",
 		"7" : "[O]C(=O)c1ccc(cc1)N=Nc1ccc(cc1)C(=O)[O]",
-		"8" : "WRONG BOND TO OXYGEN",
+		"8" : "",
 		"9" : "[O]C(=O)C=CC(=O)[O]",
 		"10" : "[O]C(=O)C=CC=CC(=O)[O]",
 		"11" : "[O]C(=O)C=CC=CC(=O)[O]",
@@ -34,5 +34,7 @@
 		"28" : "[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O]",
 		"29" : "[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c1c2c3ccc3c2c(cc1)c(=O)n(c3=O)c1ccc(cc1)C(=O)[O]"
 	},
-	"functionalization" : {}
+	"functionalization" : {
+		"0"  : ""
+	}
 }

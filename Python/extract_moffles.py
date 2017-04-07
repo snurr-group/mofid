@@ -64,6 +64,7 @@ def parse_moffles(moffles):
 	components = moffles.split()
 	smiles = components[0]
 	if len(components) > 2:
+		print "Bad MOFFLES:", moffles
 		raise ValueError("FIXME: parse_moffles currently does not support spaces in common names")
 	metadata = components[1]
 	metadata = metadata.split('.')
@@ -87,6 +88,40 @@ def parse_moffles(moffles):
 		cat = cat,
 		name = mof_name
 	)
+
+def compare_moffles(moffles1, moffles2, names=None):
+	# Compares MOFFLES strings to identify sources of difference, if any
+	if names is None:
+		names = ['mof1', 'mof2']
+	if moffles1 is None or moffles2 is None:
+		mof_name = 'Undefined'
+		for x in [moffles1, moffles2]:
+			if x is not None:
+				mof_name = parse_moffles(x)['name']
+		return {'match': 'NA',
+		        'errors': ['Undefined composition'],
+		        'topology': None,
+		        'linkers': None,
+		        'cat': None,
+		        names[0]: moffles1,
+		        names[1]: moffles2,
+		        'name': mof_name
+		        }
+	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	comparison = dict()
+	comparison['match'] = True
+	comparison['errors'] = []
+	comparison[names[0]] = moffles1
+	comparison[names[1]] = moffles2
+	for key in parsed[0]:
+		expected = parsed[0][key]
+		if parsed[1][key] == expected:
+			comparison[key] = expected
+		else:
+			comparison[key] = False
+			comparison['match'] = False
+			comparison['errors'].append(key)
+	return comparison
 
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces

@@ -2,6 +2,7 @@
 Data/
 !README.md
 Test/
+!openbabel/test
 .RData
 .Rhistory
 .Rproj.user
@@ -11,4 +12,4 @@ Notebooks/
 bin/
 !openbabel/data/
 ob_changes.patch
-
+openbabel/installed
