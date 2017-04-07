@@ -257,11 +257,11 @@ if __name__ == "__main__":
 	comparer = KnownMOFs()
 	moffles_results = []
 
-	for cif_file in inputs:
+	for num_cif, cif_file in enumerate(inputs):
 		if PRINT_CURRENT_MOF:
-			print "Found CIF:", cif_file
+			sys.stderr.write(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
 		result = comparer.test_cif(cif_file)
 		if result is not None:
 			moffles_results.append(result)
 
-	print summarize(moffles_results)
+	json.dump(summarize(moffles_results), sys.stdout)
