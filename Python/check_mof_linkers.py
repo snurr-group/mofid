@@ -306,4 +306,9 @@ if __name__ == "__main__":
 		if result is not None:
 			moffles_results.append(result)
 
-	json.dump(summarize(moffles_results), sys.stdout, indent=4)
+	results_summary = summarize(moffles_results)
+	json.dump(results_summary, sys.stdout, indent=4)
+	num_mofs = results_summary['errors']['total_cifs']
+	num_errors = num_mofs - results_summary['errors']['error_types']['success']
+	mof_log(" ".join(["\nResults:", str(num_errors), "errors in", str(num_mofs), "MOFs\n"]))
+	sys.exit(num_errors)

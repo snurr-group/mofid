@@ -3,5 +3,5 @@
 # For now, keep things simple for cygwin compilation by enforcing unix line endings
 src/ob_datadir/* text eol=lf
 src/ob_datadir/*.png binary
-
+Makefile text eol=lf
 
