@@ -44,6 +44,15 @@ def path_to_resource(resource):
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
 
+def basename(path):
+	# Get the basename for a given path, without the file extension
+	return os.path.splitext(os.path.basename(path))[0]
+
+def mof_log(msg):
+	# Logging helper function, which writes to stderr to avoid polluting the json
+	if PRINT_CURRENT_MOF:
+		sys.stderr.write(msg)
+
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
 	summarized = {'mofs': results, 'errors': dict()}
@@ -103,6 +112,7 @@ class MOFCompare:
 			moffles_auto = cif2moffles(cif_path)
 			comparison = compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
 			comparison['time'] = time.time() - start
+			comparison['name_parser'] = self.__class__.__name__
 			return comparison
 
 
@@ -115,7 +125,7 @@ class KnownMOFs(MOFCompare):
 
 	def parse_filename(self, mof_path):
 		# Extract basename of the MOF.  expected_moffles will convert it to the reference moffles string
-		return os.path.splitext(os.path.basename(mof_path))[0]  # Get the basename without file extension
+		return basename(mof_path)
 
 	def expected_moffles(self, cif_path):
 		# What is the expected MOFFLES based on the information in a MOF's filename?
@@ -134,8 +144,8 @@ class HypoMOFs(MOFCompare):
 	def parse_filename(self, hmof_path):
 		# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
 		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": 0}
-		basename = os.path.splitext(os.path.basename(hmof_path))[0]  # Get the basename without file extension
-		parts = basename.split("_")
+		mof_name = basename(hmof_path)  # Get the basename without file extension
+		parts = mof_name.split("_")
 		flag = None
 		for part in parts:
 			if flag is not None:
@@ -148,7 +158,7 @@ class HypoMOFs(MOFCompare):
 			if part in codes.keys():
 				flag = part
 				continue
-		codes["name"] = basename
+		codes["name"] = mof_name
 		return codes
 
 	def expected_moffles(self, cif_path):
@@ -198,7 +208,7 @@ class TobaccoMOFs(MOFCompare):
 		# Format: topology_sym_x_node_type_sym_x_node2_type_L_linkernum.cif ("_" for empty linker)
 		# Can we parse this using ToBACCo's own code??
 		codes = {"name": None, "nodes": [], "linker": None, "topology": None}
-		mof_info = os.path.splitext(os.path.basename(tobacco_path))[0]  # Get the basename without file extension
+		mof_info = basename(tobacco_path)  # Get the basename without file extension
 		codes['name'] = mof_info
 
 		parsed = mof_info.split("_", 1)
@@ -262,22 +272,18 @@ class AutoCompare:
 
 	def test_cif(self, cif_path):
 		# Dispatch to the class corresponding to the source of the input CIF
-		mof_info = os.path.splitext(os.path.basename(cif_path))[0]  # Get the basename without file extension
+		mof_info = basename(cif_path)
 		if mof_info in self.precalculated:
-			if PRINT_CURRENT_MOF:
-				sys.stderr.write("...using precompiled table of known MOFs\n")
+			mof_log("...using precompiled table of known MOFs\n")
 			return self.known.test_cif(cif_path)
 		elif "hypotheticalmof" in mof_info.lower() or "hmof" in mof_info.lower():
-			if PRINT_CURRENT_MOF:
-				sys.stderr.write("...parsing file with rules for hypothetical MOFs\n")
+			mof_log("...parsing file with rules for hypothetical MOFs\n")
 			return self.hmof.test_cif(cif_path)
 		elif "_sym_" in mof_info:
-			if PRINT_CURRENT_MOF:
-				sys.stderr.write("...parsing file with rules for ToBACCo MOFs\n")
+			mof_log("...parsing file with rules for ToBACCo MOFs\n")
 			return self.tobacco.test_cif(cif_path)
 		else:
-			if PRINT_CURRENT_MOF:
-				sys.stderr.write("...unable to find a suitable rule automatically\n")
+			mof_log("...unable to find a suitable rule automatically\n")
 			return None
 
 
@@ -295,10 +301,9 @@ if __name__ == "__main__":
 
 	moffles_results = []
 	for num_cif, cif_file in enumerate(inputs):
-		if PRINT_CURRENT_MOF:
-			sys.stderr.write(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
+		mof_log(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
 		result = comparer.test_cif(cif_file)
 		if result is not None:
 			moffles_results.append(result)
 
-	json.dump(summarize(moffles_results), sys.stdout)
+	json.dump(summarize(moffles_results), sys.stdout, indent=4)
