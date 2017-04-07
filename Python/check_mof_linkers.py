@@ -14,6 +14,7 @@ import os, sys
 import subprocess
 import glob
 import json
+import time
 # import copy  # copy.deepcopy(x)
 # import re
 import openbabel  # for visualization only, since my changes aren't backported to the python library
@@ -51,6 +52,7 @@ def summarize(results):
 			error_types['smiles'] += 1
 	summarized['errors']['error_types'] = error_types
 	summarized['errors']['total_cifs'] = len(results)
+	summarized['errors']['elapsed_time'] = sum([mof['time'] for mof in results])
 	return summarized
 
 class MOFCompare:
@@ -82,13 +84,16 @@ class MOFCompare:
 	def test_cif(self, cif_path):
 		# Compares an arbitrary CIF file against its expected specification
 		# Returns a formatted JSON string with the results
+		start = time.time()
 		moffles_from_name = self.expected_moffles(cif_path)
 		if moffles_from_name is None:  # missing SBU info in the DB file
 			return None  # Currently, skip reporting of structures with undefined nodes/linkers
 		else:
 			# Calculate the MOFFLES derived from the CIF structure itself
 			moffles_auto = cif2moffles(cif_path)
-			return compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
+			comparison = compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
+			comparison['time'] = time.time() - start
+			return comparison
 
 
 class KnownMOFs(MOFCompare):
