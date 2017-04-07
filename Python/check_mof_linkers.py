@@ -20,19 +20,29 @@ import time
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
-SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
-HMOF_DB = "C:/Users/Benjamin/Git/mofid/Resources/hmof_linker_info.json"
-TOBACCO_DB = "C:/Users/Benjamin/Git/mofid/Resources/tobacco_info.json"
-KNOWN_DB = "C:/Users/Benjamin/Git/mofid/Resources/known_mof_info.json"
-DEFAULT_CIFS = "Data/RingCIFs"
-# TOBACCO_DEFAULT_CIFS = "Data/tobacco_L_12/quick"
-# HMOF_DEFAULT_CIFS = "C:/Users/Benjamin/Desktop/Jiayi/Files/Dataset Comparison/hMOF"
+# Locations of important files, relative to the Python source code
+SBU_BIN = "../bin/sbu.exe"
+
+HMOF_DB = "../Resources/hmof_linker_info.json"
+TOBACCO_DB = "../Resources/tobacco_info.json"
+KNOWN_DB = "../Resources/known_mof_info.json"
+
+KNOWN_DEFAULT_CIFS = "../Data/RingCIFs"
+TOBACCO_DEFAULT_CIFS = "../Data/tobacco_L_12/quick"
+HMOF_DEFAULT_CIFS = "../Data/hmofs_i_0_no_cat"
+NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
 
 
 def any(member, list):
 	# Is the member any part of the list?
 	return member in list
+
+def path_to_resource(resource):
+	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
+	# However, some absolute paths are still present in extract_moffles.py since they're system-wide
+	python_path = os.path.dirname(__file__)
+	return os.path.join(python_path, resource)
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
@@ -100,7 +110,7 @@ class KnownMOFs(MOFCompare):
 	# Minimal class which doesn't have to do much work to scour the database of known MOFs.
 	# Excellent as a integration test for my code, i.e. did my changes cause anything else to obviously break?
 	def __init__(self):
-		self.db_file = KNOWN_DB
+		self.db_file = path_to_resource(KNOWN_DB)
 		self.load_components()
 
 	def parse_filename(self, mof_path):
@@ -118,7 +128,7 @@ class KnownMOFs(MOFCompare):
 
 class HypoMOFs(MOFCompare):
 	def __init__(self):
-		self.db_file = HMOF_DB
+		self.db_file = path_to_resource(HMOF_DB)
 		self.load_components()
 
 	def parse_filename(self, hmof_path):
@@ -180,7 +190,7 @@ class HypoMOFs(MOFCompare):
 
 class TobaccoMOFs(MOFCompare):
 	def __init__(self):
-		self.db_file = TOBACCO_DB
+		self.db_file = path_to_resource(TOBACCO_DB)
 		self.load_components()
 
 	def parse_filename(self, tobacco_path):
@@ -239,24 +249,51 @@ class TobaccoMOFs(MOFCompare):
 		else:
 			return None
 
+class AutoCompare:
+	# Automatically selects the appropriate MOF comparison class using filename-based heuristics
+	# Note: this is not a full implementation of MOFCompare--just a wrapper for test_cif
+	# TODO: allow the user to manually specify the MOF class using a command line flag
+	def __init__(self):
+		self.known = KnownMOFs()
+		self.precalculated = self.known.mof_db.keys()
+		self.hmof = HypoMOFs()
+		self.tobacco = TobaccoMOFs()
+		# Maybe also a NullMOFs class eventually, which is just a calculator sans comparisons?
+
+	def test_cif(self, cif_path):
+		# Dispatch to the class corresponding to the source of the input CIF
+		mof_info = os.path.splitext(os.path.basename(cif_path))[0]  # Get the basename without file extension
+		if mof_info in self.precalculated:
+			if PRINT_CURRENT_MOF:
+				sys.stderr.write("...using precompiled table of known MOFs\n")
+			return self.known.test_cif(cif_path)
+		elif "hypotheticalmof" in mof_info.lower() or "hmof" in mof_info.lower():
+			if PRINT_CURRENT_MOF:
+				sys.stderr.write("...parsing file with rules for hypothetical MOFs\n")
+			return self.hmof.test_cif(cif_path)
+		elif "_sym_" in mof_info:
+			if PRINT_CURRENT_MOF:
+				sys.stderr.write("...parsing file with rules for ToBACCo MOFs\n")
+			return self.tobacco.test_cif(cif_path)
+		else:
+			if PRINT_CURRENT_MOF:
+				sys.stderr.write("...unable to find a suitable rule automatically\n")
+			return None
+
 
 if __name__ == "__main__":
+	comparer = AutoCompare()  # By default, guess the MOF type by filename
 	args = sys.argv[1:]
-	if len(args) == 0:
-		inputs = glob.glob(DEFAULT_CIFS + '/*.[Cc][Ii][Ff]')
+	if len(args) == 0:  # validation testing against reference MOFs
+		inputs = glob.glob(path_to_resource(NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
+		comparer = KnownMOFs()
 	elif len(args) == 1 and args[0].endswith("/"):
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 	else:
 		inputs = args
 
-	# TODO: parse file type based on (future) command line argument, or guess it based on the filename
-	# For now, just assume the file is a ToBACCo MOF
-	#comparer = TobaccoMOFs()
-	#comparer = HypoMOFs()
-	comparer = KnownMOFs()
 	moffles_results = []
-
 	for num_cif, cif_file in enumerate(inputs):
 		if PRINT_CURRENT_MOF:
 			sys.stderr.write(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
