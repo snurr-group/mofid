@@ -23,7 +23,7 @@
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
 // Function prototypes
-bool readCIF(OBMol* molp, std::string filepath);
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 void writeSystre(OBMol* molp, std::string filepath);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
@@ -115,12 +115,23 @@ int main(int argc, char* argv[])
 	// Per my objective, this only sets the environment within the scope of the sbu.exe program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
-	OBMol mol;
-	if (!readCIF(&mol, filename)) {
+	OBMol orig_mol;
+	// Massively improving performance by skipping kekulization of the full MOF
+	if (!readCIF(&orig_mol, filename, false)) {
 		printf("Error reading file: %s", filename);
 		exit(1);
 	}
-	OBMol orig_mol = mol;  // Copy original definition to another variable for later use
+
+	/* Copy original definition to another variable for later use.
+	 * Perform all copies at once to reduce the performance bottleneck.
+	 * Currently, copying internally calls SSSR through EndModify(), so this statement is ~60% of the total code walltime.
+	 * If the statements are nested together, the compiler is smart enough to amortize the operation.
+	 * The biggest performance boost would come from figuring out a way around this behavior.
+	 */
+	OBMol mol = orig_mol;
+	OBMol nodes = orig_mol;
+	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
+	OBMol simplified_net = orig_mol;
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -142,9 +153,6 @@ int main(int argc, char* argv[])
 
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.
-	OBMol nodes = orig_mol;
-	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
-	OBMol simplified_net = orig_mol;
 	nodes.BeginModify();
 	linkers.BeginModify();
 	simplified_net.BeginModify();
@@ -200,6 +208,7 @@ int main(int argc, char* argv[])
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 		collapseTwoConn(&simplified_net);
+		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
 		writeSystre(&simplified_net, "Test/topology.cgd");
 	}
 
@@ -207,12 +216,15 @@ int main(int argc, char* argv[])
 }
 
 
-bool readCIF(OBMol* molp, std::string filepath) {
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
 	// Read the first distinguished molecule from a CIF file
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
 	obconversion.AddOption("p", OBConversion::INOPTIONS);
+	if (!bond_orders) {
+		obconversion.AddOption("s", OBConversion::INOPTIONS);
+	}
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);

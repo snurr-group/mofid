@@ -13,7 +13,7 @@ bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
 openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/formats/systreformat.cpp
-	cd mofid/openbabel/build; \
+	cd openbabel/build; \
 	make cifformat; \
 	make systreformat; \
 	make install/fast
@@ -23,6 +23,9 @@ diff: ob_changes.patch
 ob_changes.patch:
 	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' > $@
 	# Lists my changes to the main OpenBabel code
+
+test: bin/sbu
+	python Python/check_mof_linkers.py
 
 setup:
 	cd openbabel; \

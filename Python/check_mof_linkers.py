@@ -21,8 +21,6 @@ import openbabel  # for visualization only, since my changes aren't backported t
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
 # Locations of important files, relative to the Python source code
-SBU_BIN = "../bin/sbu.exe"
-
 HMOF_DB = "../Resources/hmof_linker_info.json"
 TOBACCO_DB = "../Resources/tobacco_info.json"
 KNOWN_DB = "../Resources/known_mof_info.json"
@@ -306,4 +304,9 @@ if __name__ == "__main__":
 		if result is not None:
 			moffles_results.append(result)
 
-	json.dump(summarize(moffles_results), sys.stdout, indent=4)
+	results_summary = summarize(moffles_results)
+	json.dump(results_summary, sys.stdout, indent=4)
+	num_mofs = results_summary['errors']['total_cifs']
+	num_errors = num_mofs - results_summary['errors']['error_types']['success']
+	mof_log(" ".join(["\nResults:", str(num_errors), "errors in", str(num_mofs), "MOFs\n"]))
+	sys.exit(num_errors)

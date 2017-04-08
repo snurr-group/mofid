@@ -41,6 +41,9 @@ include_directories(${OpenBabel2_INCLUDE_DIRS})
 # Dependencies
 #find_package(LibXml2)
 
+# Set compiler flags similar to Open Babel's CMAKE_CXX_FLAGS_RELWITHDEBINFO
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
+
 # The executable
 add_executable(${executable_target} ${sources})
 # Link against imported openbabel target
