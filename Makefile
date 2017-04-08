@@ -25,7 +25,7 @@ ob_changes.patch:
 	# Lists my changes to the main OpenBabel code
 
 test: bin/sbu
-	Python/check_mof_linkers.py
+	python Python/check_mof_linkers.py
 
 setup:
 	cd openbabel; \

@@ -21,8 +21,6 @@ import openbabel  # for visualization only, since my changes aren't backported t
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
 # Locations of important files, relative to the Python source code
-SBU_BIN = "../bin/sbu.exe"
-
 HMOF_DB = "../Resources/hmof_linker_info.json"
 TOBACCO_DB = "../Resources/tobacco_info.json"
 KNOWN_DB = "../Resources/known_mof_info.json"
@@ -288,6 +286,7 @@ class AutoCompare:
 
 
 if __name__ == "__main__":
+	print sys.platform
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs
