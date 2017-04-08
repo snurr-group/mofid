@@ -286,7 +286,6 @@ class AutoCompare:
 
 
 if __name__ == "__main__":
-	print sys.platform
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs

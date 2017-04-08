@@ -115,13 +115,23 @@ int main(int argc, char* argv[])
 	// Per my objective, this only sets the environment within the scope of the sbu.exe program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
-	OBMol mol;
+	OBMol orig_mol;
 	// Massively improving performance by skipping kekulization of the full MOF
-	if (!readCIF(&mol, filename, false)) {
+	if (!readCIF(&orig_mol, filename, false)) {
 		printf("Error reading file: %s", filename);
 		exit(1);
 	}
-	OBMol orig_mol = mol;  // Copy original definition to another variable for later use
+
+	/* Copy original definition to another variable for later use.
+	 * Perform all copies at once to reduce the performance bottleneck.
+	 * Currently, copying internally calls SSSR through EndModify(), so this statement is ~60% of the total code walltime.
+	 * If the statements are nested together, the compiler is smart enough to amortize the operation.
+	 * The biggest performance boost would come from figuring out a way around this behavior.
+	 */
+	OBMol mol = orig_mol;
+	OBMol nodes = orig_mol;
+	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
+	OBMol simplified_net = orig_mol;
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -143,9 +153,6 @@ int main(int argc, char* argv[])
 
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.
-	OBMol nodes = orig_mol;
-	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
-	OBMol simplified_net = orig_mol;
 	nodes.BeginModify();
 	linkers.BeginModify();
 	simplified_net.BeginModify();
