@@ -23,7 +23,7 @@
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
 // Function prototypes
-bool readCIF(OBMol* molp, std::string filepath);
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 void writeSystre(OBMol* molp, std::string filepath);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
@@ -116,7 +116,8 @@ int main(int argc, char* argv[])
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
 	OBMol mol;
-	if (!readCIF(&mol, filename)) {
+	// Massively improving performance by skipping kekulization of the full MOF
+	if (!readCIF(&mol, filename, false)) {
 		printf("Error reading file: %s", filename);
 		exit(1);
 	}
@@ -200,6 +201,7 @@ int main(int argc, char* argv[])
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 		collapseTwoConn(&simplified_net);
+		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
 		writeSystre(&simplified_net, "Test/topology.cgd");
 	}
 
@@ -207,12 +209,15 @@ int main(int argc, char* argv[])
 }
 
 
-bool readCIF(OBMol* molp, std::string filepath) {
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
 	// Read the first distinguished molecule from a CIF file
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
 	obconversion.AddOption("p", OBConversion::INOPTIONS);
+	if (!bond_orders) {
+		obconversion.AddOption("s", OBConversion::INOPTIONS);
+	}
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
 	return obconversion.ReadFile(molp, filepath);
