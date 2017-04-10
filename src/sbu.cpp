@@ -36,12 +36,14 @@ bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
-int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118);
-int collapseTwoConn(OBMol* net);
+int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
+int collapseTwoConn(OBMol* net, int ignore_element = 0);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
 void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 
+
+const int X_CONN = 52;  // Atom type for connection sites.  Assigned to Te for now.
 
 class ElementGen
 {
@@ -207,7 +209,13 @@ int main(int argc, char* argv[])
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
-		collapseTwoConn(&simplified_net);
+
+		int simplifications;
+		do {
+			simplifications = 0;
+			simplifications += collapseTwoConn(&simplified_net);
+		} while(simplifications);
+
 		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
 		writeSystre(&simplified_net, "Test/topology.cgd");
 	}
@@ -409,51 +417,55 @@ OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
 	return NULL;
 }
 
-int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
+int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
 	// with atomic number element, maintaining connections to existing atoms.
+	// If conn_element != 0, then add that element as a spacer at the connection
+	// site (like "X" or "Q" atoms in top-down crystal generators).
 	// Returns the number of external bonds maintained.
 
 	std::vector<OBAtom*> orig_sbu;
 	FOR_ATOMS_OF_MOL(a, *fragment) {
-		orig_sbu.push_back(atomInOtherMol(&*a, mol));
+		OBAtom* orig_atom = atomInOtherMol(&*a, mol);
+		if (!orig_atom) {
+			obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
+			return 0;
+		}
+		orig_sbu.push_back(orig_atom);
 	}
 
-	std::vector<OBAtom*> connections;
+	std::map<OBAtom*, OBAtom*> connections;  // <External atom, internal atom bonded to it>
 	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
 		FOR_NBORS_OF_ATOM(np, *it) {
 			if ((!inVector<OBAtom*>(&*np, orig_sbu))  // External atom: not in fragment
-					&& (!inVector<OBAtom*>(&*np, connections))) {  // only push once
-				connections.push_back(&*np);
+					&& (connections.find(&*np) == connections.end())) {  // only push once
+				connections[&*np] = *it;
 			}
 		}
 	}
 
-	vector3 centroid = getCentroid(fragment, false);  // FIXME: check flags, usage, etc.
+	vector3 centroid = getCentroid(fragment, false);
 
-	// Delete SBU from the original molecule
-	if (!subtractMols(mol, fragment)) {
-		obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
-		return 0;
-	}
-
-	mol->BeginModify();  // FIXME: should this be here or earlier?  Also consider the error handling
+	mol->BeginModify();
 
 	OBAtom* pseudo_atom = mol->NewAtom();
 	pseudo_atom->SetVector(centroid);
 	pseudo_atom->SetAtomicNum(element);
 	pseudo_atom->SetType(etab.GetName(element));
 
-	for (std::vector<OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
-		formBond(mol, pseudo_atom, *it, 1);  // don't need to dereference iterator since it's a vector of pointers
+	for (std::map<OBAtom*, OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
+		formBond(mol, pseudo_atom, it->first, 1);  // don't need to dereference iterator since it's a vector of pointers
 	}
+
+	// Delete SBU from the original molecule
+	subtractMols(mol, fragment);
 
 	mol->EndModify();
 
 	return connections.size();
 }
 
-int collapseTwoConn(OBMol* net) {
+int collapseTwoConn(OBMol *net, int ignore_element) {
 	// Collapses two-connected nodes into edges to simplify the topology
 	// Returns the number of nodes deleted from the network
 	// FIXME: BUGGY LOGIC: doesn't have a problem with forming multiple single bonds between the same simplified net.
@@ -463,13 +475,13 @@ int collapseTwoConn(OBMol* net) {
 	net->BeginModify();
 	std::vector<OBAtom*> to_delete;
 	FOR_ATOMS_OF_MOL(a, *net) {
-		if (a->GetValence() == 2) {
+		if (a->GetValence() == 2 && a->GetAtomicNum() != ignore_element) {
 			std::vector<OBAtom*> nbors;
 			FOR_NBORS_OF_ATOM(n, *a) {
 				nbors.push_back(&*n);
 			}
 
-			formBond(net, nbors[0], nbors[1]); // FIXME: probably needs a bond direction flag as well
+			formBond(net, nbors[0], nbors[1]);
 			to_delete.push_back(&*a);
 			++simplifications;
 		}
