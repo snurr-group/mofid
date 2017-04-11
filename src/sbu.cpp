@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 			simplifications = 0;
 			simplifications += collapseTwoConn(&simplified_net, X_CONN);
 			simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
-			//simplifications += collapseXX(&simplified_net, X_CONN);
+			simplifications += collapseXX(&simplified_net, X_CONN);
 		} while(simplifications);
 
 		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
@@ -529,7 +529,7 @@ int collapseTwoConn(OBMol *net, int ignore_element) {
 
 int collapseXX(OBMol *net, int element_x) {
 	// Simplify X-X bonds in the simplified net with their midpoint
-	// FIXME: unknown bugs related to drawing bonds.
+	// FIXME: bond drawings in CIF are inconsistent due to ambiguity of unit cells for coordinates at 0.0
 	// Returns the number of X-X bonds simplified
 	int simplifications = 0;
 	OBUnitCell* lattice = net->GetPeriodicLattice();
@@ -539,24 +539,25 @@ int collapseXX(OBMol *net, int element_x) {
 	while (new_simplification) {
 		new_simplification = false;
 		FOR_ATOMS_OF_MOL(a, *net) {
-			if (a->GetAtomicNum() == element_x) {  // Found the first X
-				OBAtom* nbor = NULL;
-				FOR_NBORS_OF_ATOM(n, *a) {  // TODO: rename a, etc., for clarity
+			OBAtom* x1 = &*a;
+			if (x1->GetAtomicNum() == element_x) {  // Found the first X
+				OBAtom* x2 = NULL;
+				FOR_NBORS_OF_ATOM(n, *x1) {
 					if (n->GetAtomicNum() == element_x) {
-						nbor = &*n;
+						x2 = &*n;
 					}
 				}
-				if (nbor) { // another X exists, so simplify
+				if (x2) { // X-X exists, so simplify
 					// Get the midpoint, per the style of getCentroid
 					// Consider refactoring the code of getCentroid to cumulatively add bonds in direction of the second molecule
 					// e.g. something with unwrapping coordinates?  Then, you start with a point at 1.5, 2.8, 3.9 and can easily calculate where the next one should go
-					OBBond* nbor_bond = net->GetBond(&*a, nbor);
+					OBBond* nbor_bond = net->GetBond(x1, x2);
 					std::vector<int> uc = nbor_bond->GetPeriodicDirection();
-					if (nbor_bond->GetBeginAtom() == nbor) {  // opposite bond direction as expected
+					if (nbor_bond->GetBeginAtom() == x2) {  // opposite bond direction as expected
 						uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
 					}
 					vector3 coord_shift = lattice->FractionalToCartesian(vector3(uc[0], uc[1], uc[2]));
-					vector3 midpoint = (a->GetVector() + nbor->GetVector() + coord_shift) / 2.0;
+					vector3 midpoint = (x1->GetVector() + x2->GetVector() + coord_shift) / 2.0;
 
 					// Make a new atom at the X-X midpoint
 					OBAtom* mid_atom = net->NewAtom();
@@ -566,12 +567,12 @@ int collapseXX(OBMol *net, int element_x) {
 
 					// Form bonds between the new midpoint atom and neighbors of X-X
 					std::vector<OBAtom*> x_nbors;
-					FOR_NBORS_OF_ATOM(m, *a) {
+					FOR_NBORS_OF_ATOM(m, *x1) {
 						if (!inVector<OBAtom*>(&*m, x_nbors)) {
 							x_nbors.push_back(&*m);
 						}
 					}
-					FOR_NBORS_OF_ATOM(m, *nbor) {
+					FOR_NBORS_OF_ATOM(m, *x2) {
 						if (!inVector<OBAtom*>(&*m, x_nbors)) {
 							x_nbors.push_back(&*m);
 						}
@@ -581,8 +582,8 @@ int collapseXX(OBMol *net, int element_x) {
 					}
 
 					// Delete old X-X atoms
-					net->DeleteAtom(&*a);
-					net->DeleteAtom(nbor);
+					net->DeleteAtom(x1);
+					net->DeleteAtom(x2);
 
 					// Break out of the FOR_ATOMS loop so we can start with a fresh, unmodified loop
 					new_simplification = true;
