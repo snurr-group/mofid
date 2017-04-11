@@ -1,14 +1,14 @@
 {
-	"P1-IRMOF-1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.NEW.CAT_TBD.F1.P1-IRMOF-1",
+	"P1-IRMOF-1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.P1-IRMOF-1",
 	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.ERROR.CAT_TBD.F1.hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
-	"VUSKEA_clean" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.ERROR.CAT_TBD.F1.VUSKEA_clean",
+	"VUSKEA_clean" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.VUSKEA_clean",
 	
 	"Zn4O_cluster_with_hydrogen" : "[O]C=O.[Zn]O([Zn])([Zn])[Zn] f1.ERROR.CAT_TBD.F1.Zn4O_cluster_with_hydrogen",
 	
 	"P1-Cu-BTC" : "[Cu][Cu].[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O] f1.tbo.CAT_TBD.F1.P1-Cu-BTC",
 	"DOTSOV_clean" : "[Cu][Cu].[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O] f1.tbo.CAT_TBD.F1.DOTSOV_clean",
 	
-	"NU-1000_S1" : "O[Zr]123([OH2])O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)([OH2])O)([OH2])O)([OH2])O.[O]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O] f1.ERROR.CAT_TBD.F1.NU-1000_S1",
+	"NU-1000_S1" : "O[Zr]123([OH2])O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)([OH2])O)([OH2])O)([OH2])O.[O]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O] f1.csq.CAT_TBD.F1.NU-1000_S1",
 	"super_nu1000" : "O[Zr]123([OH2])O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)([OH2])O)([OH2])O)([OH2])O.[O]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O] f1.csq.CAT_TBD.F1.super_nu1000",
 	
 	"super_csq_sym_5_mc_2_sym_8_mc_9_L_12" : "O[Zr]123(O)O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O.[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Cu]#[Cu][O] f1.csq.CAT_TBD.F1.super_csq_sym_5_mc_2_sym_8_mc_9_L_12",
@@ -16,12 +16,10 @@
 	"ADARAA_clean" : "[Co].[Co]O[Co].[O]C(=O)c1cc(cc(c1)C(=O)[O])C1=C2C=CC(=N2)C(=c2ccc(=C(C3=NC(=C(c4[n]c1cc4)c1c(Br)cccc1Br)C=C3)c1cc(cc(c1)C(=O)[O])C(=O)[O])[n]2)c1c(Br)cccc1Br f1.NEW.CAT_TBD.F1.ADARAA_clean",
 	"ic101935f_si_002_tobacco" : "[O]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O])Nc1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pyr.CAT_TBD.F1.ic101935f_si_002_tobacco",
 	
-	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.ERROR.CAT_TBD.F1.MIL-47-P1-RASPA",
+	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.NEW.CAT_TBD.F1.MIL-47-P1-RASPA",
 	
 	"_some_known_issues" : {
-		"MOF-5 structures" : "pcu topology not yet supported",
-		"P1-IRMOF-1" : "temporarily use the dia-f topology for this CIF, due to the way the bonds are connected with the missing gaps",
-		"NU-1000 structures" : "Larger supercell currently required to calculate the topology correctly",
+		"hMOF-1" : "Topology not yet identified due to catenation and M-X-X-M reducing to M-X-nothing",
 		"ADARAA_clean" : "Porphyrinic MOF, though Co ion is currently listed as a separate node",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)"

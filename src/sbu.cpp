@@ -25,7 +25,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
-void writeSystre(OBMol* molp, std::string filepath, bool write_centers = true);
+void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
@@ -42,11 +42,15 @@ int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
+vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 
+/* Define global parameters for MOF decomposition */
+// Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
+const int X_CONN = 52;
+// Max. degrees between redundant L-X bonds.  Oxalic acid (extreme case) is < 85 degrees.
+const int LX_ANGLE_TOL = 66;  // don't make this a round number without justification
 
-const int X_CONN = 52;  // Atom type for connection sites.  Assigned to Te for now.
-const int LX_ANGLE_TOL = 89;  // max. degrees between redundant L-X bonds.  Oxalic acid (extreme case) is < 85 degrees.
 
 class ElementGen
 {
@@ -196,8 +200,7 @@ int main(int argc, char* argv[])
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
-			//collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
-			collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles));  // Temporarily disable X-connections for Systre testing
+			collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
@@ -234,13 +237,12 @@ int main(int argc, char* argv[])
 		do {
 			simplifications = 0;
 			simplifications += collapseTwoConn(&simplified_net, X_CONN);
-			// Temporarily disable X-connections for Systre testing
-			//simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
-			//simplifications += collapseXX(&simplified_net, X_CONN);
+			simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
+			simplifications += collapseXX(&simplified_net, X_CONN);
 		} while(simplifications);
 
 		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
-		writeSystre(&simplified_net, "Test/topology.cgd");
+		writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
 	}
 
 	return(0);
@@ -271,8 +273,10 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	conv.WriteFile(molp, filepath);
 }
 
-void writeSystre(OBMol* pmol, std::string filepath, bool write_centers) {
+void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_centers) {
 	// Write the simplified molecule to Systre for topological determination
+	// element_x defines the atomic number of a special two-connected pseudo-atom.
+	// If defined and nonzero, use X's as the graph edges.  Otherwise, the OBAtoms are directly linked through their OBBonds.
 	// Can also print the (optional) edge_center field
 
 	std::ofstream ofs;
@@ -296,35 +300,69 @@ void writeSystre(OBMol* pmol, std::string filepath, bool write_centers) {
 
 	int current_node = 0;
 	FOR_ATOMS_OF_MOL(a, *pmol) {
-		++current_node;
-		vector3 frac_coords = uc->CartesianToFractional(a->GetVector());
-		ofs << indent << "NODE " << current_node
-			<< " " << a->GetValence()  // coordination of the atom
-			<< " " << frac_coords[0]
-			<< " " << frac_coords[1]
-			<< " " << frac_coords[2]
-			<< std::endl;
+		if (a->GetAtomicNum() != element_x) {
+			++current_node;
+			vector3 frac_coords = uc->CartesianToFractional(a->GetVector());
+			ofs << indent << "NODE " << current_node
+				<< " " << a->GetValence()  // coordination of the atom
+				<< " " << frac_coords[0]
+				<< " " << frac_coords[1]
+				<< " " << frac_coords[2]
+				<< std::endl;
+		}
 	}
 
-	std::stringstream edge_centers;
-	FOR_BONDS_OF_MOL(b, *pmol) {
-		std::vector<int> bond_dir = b->GetPeriodicDirection();
-		vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
-		vector3 begin = uc->CartesianToFractional(b->GetBeginAtom()->GetVector());
-		// For the second atom, we need to copy it to the correct unit cell with f_add
-		vector3 end = uc->CartesianToFractional(b->GetEndAtom()->GetVector()) + f_add;
-		ofs << indent << "EDGE  "
-			<< begin[0] << " " << begin[1] << " " << begin[2] << "   "
-			<< end[0] << " " << end[1] << " " << end[2] << std::endl;
-		// Do edge center calculation, since we already have the coordinates handy
-		edge_centers << "# EDGE_CENTER  "
-			<< (begin[0] + end[0]) / 2.0 << " "
-			<< (begin[1] + end[1]) / 2.0 << " "
-			<< (begin[2] + end[2]) / 2.0 << std::endl;
-	}
+	if (element_x) {
+		FOR_ATOMS_OF_MOL(x, *pmol) {
+			if (x->GetAtomicNum() == element_x) {
+				std::vector<vector3> vertices;  // Unwrap vertex coordinates near the connector X
+				FOR_NBORS_OF_ATOM(n, *x) {
+					vector3 n_coords = uc->CartesianToFractional(n->GetVector());
+					vector3 x_coords = uc->CartesianToFractional(x->GetVector());
+					vertices.push_back(unwrapFracNear(n_coords, x_coords, uc));
+				}
+				if (vertices.size() != 2) {
+					obErrorLog.ThrowError(__FUNCTION__, "Inconsistency: found connector X without two bonds", obWarning);
+				}
+				ofs << indent << "EDGE  "
+					<< vertices[0][0] << " " << vertices[0][1]  << " " << vertices[0][2] << "   "
+					<< vertices[1][0] << " " << vertices[1][1]  << " " << vertices[1][2] << std::endl;
+			}
+		}
 
-	if (write_centers)
-		ofs << edge_centers.str();
+		if (write_centers) {
+			FOR_ATOMS_OF_MOL(x, *pmol) {
+				if (x->GetAtomicNum() == element_x) {
+					vector3 frac_coords = uc->CartesianToFractional(x->GetVector());
+					ofs << indent << "# EDGE_CENTER  "
+						<< frac_coords[0] << " "
+						<< frac_coords[1] << " "
+						<< frac_coords[2] << std::endl;
+				}
+			}
+		}
+
+	} else {
+		std::stringstream edge_centers;
+		FOR_BONDS_OF_MOL(b, *pmol) {
+			std::vector<int> bond_dir = b->GetPeriodicDirection();
+			vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
+			vector3 begin = uc->CartesianToFractional(b->GetBeginAtom()->GetVector());
+			// For the second atom, we need to copy it to the correct unit cell with f_add
+			vector3 end = uc->CartesianToFractional(b->GetEndAtom()->GetVector()) + f_add;
+			ofs << indent << "EDGE  "
+				<< begin[0] << " " << begin[1] << " " << begin[2] << "   "
+				<< end[0] << " " << end[1] << " " << end[2] << std::endl;
+			// Do edge center calculation, since we already have the coordinates handy
+			edge_centers << "# EDGE_CENTER  "
+				<< (begin[0] + end[0]) / 2.0 << " "
+				<< (begin[1] + end[1]) / 2.0 << " "
+				<< (begin[2] + end[2]) / 2.0 << std::endl;
+		}
+
+		if (write_centers)
+			ofs << edge_centers.str();
+	}
 
 	ofs << "END" << std::endl;
 	ofs.close();
@@ -789,6 +827,15 @@ std::vector<int> makeVector(int a, int b, int c) {
 	v.push_back(b);
 	v.push_back(c);
 	return v;
+}
+
+vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
+	// Unwraps periodic, fractional coordinates (atom, etc.) at new_loc to be close to the reference
+	// ref_loc, so you don't have to think about crossing box boundaries, etc.
+	// i.e. unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
+	// TODO: Consider adding a Cartesian version and using it to simplify midpoint calculations, etc.
+	vector3 bond_dir = uc->PBCFractionalDifference(new_loc, ref_loc);
+	return ref_loc + bond_dir;
 }
 
 void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
