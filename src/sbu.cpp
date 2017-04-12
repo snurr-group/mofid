@@ -594,10 +594,15 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 		}
 	} else {
 		for (std::map<OBAtom*, OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
+			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
+			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
+			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
+			OBUnitCell* lattice = mol->GetPeriodicLattice();
+			vector3 internal_atom_loc = unwrapCartNear(it->second->GetVector(), centroid, lattice);
+			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
+
 			OBAtom* conn_atom = mol->NewAtom();
-			conn_atom->SetVector(it->second->GetVector());  // Put connection point at the internal atom (e.g. COO or metal)
-			// Note: many top-down MOF generators place the connection point halfway on the node and linker bond.
-			// Implementing that will require accounting for PBC by building the bonds, similar to getCentroid
+			conn_atom->SetVector(conn_loc);
 			conn_atom->SetAtomicNum(conn_element);
 			conn_atom->SetType(etab.GetName(conn_element));
 			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal

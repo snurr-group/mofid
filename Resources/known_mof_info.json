@@ -1,6 +1,6 @@
 {
 	"P1-IRMOF-1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.P1-IRMOF-1",
-	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.ERROR.CAT_TBD.F1.hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
+	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
 	"VUSKEA_clean" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.VUSKEA_clean",
 	
 	"Zn4O_cluster_with_hydrogen" : "[O]C=O.[Zn]O([Zn])([Zn])[Zn] f1.ERROR.CAT_TBD.F1.Zn4O_cluster_with_hydrogen",
@@ -19,7 +19,7 @@
 	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.NEW.CAT_TBD.F1.MIL-47-P1-RASPA",
 	
 	"_some_known_issues" : {
-		"hMOF-1" : "Topology not yet identified due to catenation and M-X-X-M reducing to M-X-nothing",
+		"hMOF-1" : "Catenated",
 		"ADARAA_clean" : "Porphyrinic MOF, though Co ion is currently listed as a separate node",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)"
