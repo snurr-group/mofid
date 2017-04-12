@@ -43,6 +43,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
 vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
+vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 
 /* Define global parameters for MOF decomposition */
@@ -661,19 +662,7 @@ int collapseXX(OBMol *net, int element_x) {
 					}
 				}
 				if (x2) { // X-X exists, so simplify
-					// Get the midpoint, per the style of getCentroid
-					// Consider refactoring the code of getCentroid to cumulatively add bonds in direction of the second molecule
-					// e.g. something with unwrapping coordinates?  Then, you start with a point at 1.5, 2.8, 3.9 and can easily calculate where the next one should go
-					OBBond* nbor_bond = net->GetBond(x1, x2);
-					std::vector<int> uc = nbor_bond->GetPeriodicDirection();
-					if (nbor_bond->GetBeginAtom() == x2) {  // opposite bond direction as expected
-						uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
-					}
-					vector3 coord_shift = lattice->FractionalToCartesian(vector3(uc[0], uc[1], uc[2]));
-					vector3 midpoint = (x1->GetVector() + x2->GetVector() + coord_shift) / 2.0;
-
-					// Get the neighbors of both X's
-					std::vector<OBAtom*> x_nbors;
+					std::vector<OBAtom*> x_nbors;  // Get the neighbors of both X's
 					FOR_NBORS_OF_ATOM(m, *x1) {
 						if (&*m != x2) {
 							x_nbors.push_back(&*m);
@@ -697,6 +686,8 @@ int collapseXX(OBMol *net, int element_x) {
 					}
 
 					// Make a new atom at the X-X midpoint
+					vector3 unwrapped2 = unwrapCartNear(x2->GetVector(), x1->GetVector(), lattice);
+					vector3 midpoint = (x1->GetVector() + unwrapped2) / 2.0;
 					OBAtom* mid_atom = net->NewAtom();
 					mid_atom->SetVector(midpoint);
 					mid_atom->SetAtomicNum(element_x);
@@ -727,7 +718,7 @@ int collapseXX(OBMol *net, int element_x) {
 
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x) {
 	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction
-	// TODO: Consider averaging the positions instead of selecting one of the two at random.
+	// TODO: Consider averaging the positions (midpoint) instead of selecting one of the two at random.
 	// Returns the number of L-X bonds deleted
 
 	std::vector<OBAtom*> to_delete;
@@ -867,8 +858,15 @@ vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
 	// Unwraps periodic, fractional coordinates (atom, etc.) at new_loc to be close to the reference
 	// ref_loc, so you don't have to think about crossing box boundaries, etc.
 	// i.e. unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
-	// TODO: Consider adding a Cartesian version and using it to simplify midpoint calculations, etc.
 	vector3 bond_dir = uc->PBCFractionalDifference(new_loc, ref_loc);
+	return ref_loc + bond_dir;
+}
+
+vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
+	// Unwraps periodic, Cartesian coordinates (atom, etc.) at new_loc to be close to the reference
+	// ref_loc, so you don't have to think about crossing box boundaries, etc.
+	// Similar ideas as unwrapFracNear
+	vector3 bond_dir = uc->PBCCartesianDifference(new_loc, ref_loc);
 	return ref_loc + bond_dir;
 }
 
