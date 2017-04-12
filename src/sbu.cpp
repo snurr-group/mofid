@@ -313,13 +313,35 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 	}
 
 	if (element_x) {
+		std::vector<OBAtom*> visited_x;  // Have to keep track of visited connectors since we have tiny unit cells containing M-X-X-M'
 		FOR_ATOMS_OF_MOL(x, *pmol) {
-			if (x->GetAtomicNum() == element_x) {
+			if (x->GetAtomicNum() == element_x && !inVector<OBAtom*>(&*x, visited_x)) {
+				visited_x.push_back(&*x);
 				std::vector<vector3> vertices;  // Unwrap vertex coordinates near the connector X
+				vector3 x_coords = uc->CartesianToFractional(x->GetVector());
 				FOR_NBORS_OF_ATOM(n, *x) {
-					vector3 n_coords = uc->CartesianToFractional(n->GetVector());
-					vector3 x_coords = uc->CartesianToFractional(x->GetVector());
-					vertices.push_back(unwrapFracNear(n_coords, x_coords, uc));
+					vector3 raw_n_coords = uc->CartesianToFractional(n->GetVector());
+					vector3 unwrap_n_coords = unwrapFracNear(raw_n_coords, x_coords, uc);
+					if (n->GetAtomicNum() == element_x) {  // X-X present, so find the next connector.
+						visited_x.push_back(&*n);
+						// FIXME: This doesn't work due to the nature of unwrapping
+						// x1 and x2 are both super close to M, so it's just bouncing back and forth on both sides.
+						// Likely, we'll have to fix this by incorporating the two-connected linker.
+						// Will it be generalizable if we transform X-L-X into X-X-X as an intermediate?
+						FOR_NBORS_OF_ATOM(n2, *n) {
+							if (&*n2 != &*x) {  // we don't want to return to x1
+								if (n2->GetAtomicNum() == element_x) {
+									obErrorLog.ThrowError(__FUNCTION__, "Unexpected X-X-X connection in simplified net.", obWarning);
+								}
+								vector3 raw_v2_coords = uc->CartesianToFractional(n2->GetVector());
+								vector3 unwrap_v2_coords = unwrapFracNear(raw_v2_coords, unwrap_n_coords, uc);
+								vertices.push_back(unwrap_v2_coords);
+							}
+						}
+					} else {  // Standard vertex case, M-X-M
+						vertices.push_back(unwrap_n_coords);
+					}
+
 				}
 				if (vertices.size() != 2) {
 					obErrorLog.ThrowError(__FUNCTION__, "Inconsistency: found connector X without two bonds", obWarning);
@@ -650,6 +672,30 @@ int collapseXX(OBMol *net, int element_x) {
 					vector3 coord_shift = lattice->FractionalToCartesian(vector3(uc[0], uc[1], uc[2]));
 					vector3 midpoint = (x1->GetVector() + x2->GetVector() + coord_shift) / 2.0;
 
+					// Get the neighbors of both X's
+					std::vector<OBAtom*> x_nbors;
+					FOR_NBORS_OF_ATOM(m, *x1) {
+						if (&*m != x2) {
+							x_nbors.push_back(&*m);
+						}
+					}
+					FOR_NBORS_OF_ATOM(m, *x2) {
+						if (&*m != x1) {
+							x_nbors.push_back(&*m);
+						}
+					}
+					if (x_nbors.size() != 2) {  // Each X should have one additional neighbor
+						std::stringstream nborMsg;
+						nborMsg << "y-X-X-y should be 4 atoms.  Found " << 2 + x_nbors.size() << std::endl;
+						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obInfo);
+					}
+					if (x_nbors.size() == 2 && x_nbors[0] == x_nbors[1]) {
+						// x1 and x2 are bonded to the same psuedo-atom (M-x1-x2-M').
+						// They're not redundant, because M' is often the periodic image of M.
+						// Simplifying x1-x2 will cause an inconsistency with two M-X bonds, so skip these x's
+						continue;
+					}
+
 					// Make a new atom at the X-X midpoint
 					OBAtom* mid_atom = net->NewAtom();
 					mid_atom->SetVector(midpoint);
@@ -657,21 +703,9 @@ int collapseXX(OBMol *net, int element_x) {
 					mid_atom->SetType(etab.GetName(element_x));
 
 					// Form bonds between the new midpoint atom and neighbors of X-X
-					std::vector<OBAtom*> x_nbors;
-					FOR_NBORS_OF_ATOM(m, *x1) {
-						if (!inVector<OBAtom*>(&*m, x_nbors)) {
-							x_nbors.push_back(&*m);
-						}
-					}
-					FOR_NBORS_OF_ATOM(m, *x2) {
-						if (!inVector<OBAtom*>(&*m, x_nbors)) {
-							x_nbors.push_back(&*m);
-						}
-					}
 					for (std::vector<OBAtom*>::iterator it = x_nbors.begin(); it != x_nbors.end(); ++it) {
 						formBond(net, mid_atom, *it, 1);
 					}
-
 					// Delete old X-X atoms
 					net->DeleteAtom(x1);
 					net->DeleteAtom(x2);
