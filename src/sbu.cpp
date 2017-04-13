@@ -44,7 +44,8 @@ vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
 vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
-void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
+OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
+OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
@@ -583,11 +584,7 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 
 	mol->BeginModify();
 
-	OBAtom* pseudo_atom = mol->NewAtom();
-	pseudo_atom->SetVector(centroid);
-	pseudo_atom->SetAtomicNum(element);
-	pseudo_atom->SetType(etab.GetName(element));
-
+	OBAtom* pseudo_atom = formAtom(mol, centroid, element);
 	if (conn_element == 0) {  // Not using an "X" psuedo-atom
 		for (std::map<OBAtom*, OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
 			formBond(mol, pseudo_atom, it->first, 1);  // don't need to dereference iterator since it's a vector of pointers
@@ -601,10 +598,7 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 			vector3 internal_atom_loc = unwrapCartNear(it->second->GetVector(), centroid, lattice);
 			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
 
-			OBAtom* conn_atom = mol->NewAtom();
-			conn_atom->SetVector(conn_loc);
-			conn_atom->SetAtomicNum(conn_element);
-			conn_atom->SetType(etab.GetName(conn_element));
+			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
 			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
 			formBond(mol, conn_atom, it->first, 1);  // Connect to external
 		}
@@ -693,11 +687,7 @@ int collapseXX(OBMol *net, int element_x) {
 					// Make a new atom at the X-X midpoint
 					vector3 unwrapped2 = unwrapCartNear(x2->GetVector(), x1->GetVector(), lattice);
 					vector3 midpoint = (x1->GetVector() + unwrapped2) / 2.0;
-					OBAtom* mid_atom = net->NewAtom();
-					mid_atom->SetVector(midpoint);
-					mid_atom->SetAtomicNum(element_x);
-					mid_atom->SetType(etab.GetName(element_x));
-
+					OBAtom* mid_atom = formAtom(net, midpoint, element_x);
 					// Form bonds between the new midpoint atom and neighbors of X-X
 					for (std::vector<OBAtom*>::iterator it = x_nbors.begin(); it != x_nbors.end(); ++it) {
 						formBond(net, mid_atom, *it, 1);
@@ -875,12 +865,13 @@ vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
 	return ref_loc + bond_dir;
 }
 
-void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
+OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	// Makes a bond between two atoms, complete with the proper accounting
 	// TODO: decide how to handle cases where the bond already exists.
 	// Overwrite existing bonds?  Make it, as long as it's a different periodic direction??
+	OBBond* pseudo_link = NULL;
 	if (!mol->GetBond(begin, end)) {
-		OBBond* pseudo_link = mol->NewBond();
+		pseudo_link = mol->NewBond();
 		pseudo_link->SetBegin(begin);
 		pseudo_link->SetEnd(end);
 		pseudo_link->SetBondOrder(order);
@@ -891,4 +882,14 @@ void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	} else {
 		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
 	}
+	return pseudo_link;
+}
+
+OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
+	// Makes a new atom with a specified location and atomic number
+	OBAtom* atom = mol->NewAtom();
+	atom->SetVector(loc);
+	atom->SetAtomicNum(element);
+	atom->SetType(etab.GetName(element));
+	return atom;
 }
