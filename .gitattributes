@@ -4,4 +4,4 @@
 src/ob_datadir/* text eol=lf
 src/ob_datadir/*.png binary
 Makefile text eol=lf
-
+*.sh text eol=lf
