@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <queue>
 #include <map>
+#include <set>
 #include <stdio.h>
 #include <stdlib.h>
 #include <openbabel/obconversion.h>
@@ -570,12 +571,14 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 		orig_sbu.push_back(orig_atom);
 	}
 
-	std::map<OBAtom*, OBAtom*> connections;  // <External atom, internal atom bonded to it>
+	std::set<std::vector<OBAtom*> > connections;  // <External atom, internal atom bonded to it>
 	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
 		FOR_NBORS_OF_ATOM(np, *it) {
-			if ((!inVector<OBAtom*>(&*np, orig_sbu))  // External atom: not in fragment
-					&& (connections.find(&*np) == connections.end())) {  // only push once
-				connections[&*np] = *it;
+			if (!inVector<OBAtom*>(&*np, orig_sbu)) {  // External atom: not in fragment
+				std::vector<OBAtom*> new_connection;
+				new_connection.push_back(&*np);
+				new_connection.push_back(*it);
+				connections.insert(new_connection);  // only push a connection once, as guaranteed by a set
 			}
 		}
 	}
@@ -586,21 +589,29 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 
 	OBAtom* pseudo_atom = formAtom(mol, centroid, element);
 	if (conn_element == 0) {  // Not using an "X" psuedo-atom
-		for (std::map<OBAtom*, OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
-			formBond(mol, pseudo_atom, it->first, 1);  // don't need to dereference iterator since it's a vector of pointers
+		std::vector<OBAtom*> new_external_conn;
+		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
+			OBAtom* external_atom = (*it)[0];
+			if (!inVector<OBAtom*>(external_atom, new_external_conn)) {  // Only form external bonds once
+				formBond(mol, pseudo_atom, external_atom, 1);
+				new_external_conn.push_back(external_atom);
+			}
 		}
 	} else {
-		for (std::map<OBAtom*, OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
+		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
 			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
 			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
 			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
 			OBUnitCell* lattice = mol->GetPeriodicLattice();
-			vector3 internal_atom_loc = unwrapCartNear(it->second->GetVector(), centroid, lattice);
+			OBAtom* external_atom = (*it)[0];
+			OBAtom* internal_atom = (*it)[1];
+
+			vector3 internal_atom_loc = unwrapCartNear(internal_atom->GetVector(), centroid, lattice);
 			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
 
 			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
 			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
-			formBond(mol, conn_atom, it->first, 1);  // Connect to external
+			formBond(mol, conn_atom, external_atom, 1);
 		}
 	}
 
