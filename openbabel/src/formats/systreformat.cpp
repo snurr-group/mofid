@@ -86,6 +86,8 @@ bool SystreFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 	ostream& ofs = *pConv->GetOutStream();
 	/** Write the representation of the OBMol molecule to the output stream **/
 
+	obErrorLog.ThrowError(__FUNCTION__, "cgd exporter deprecated.  Added to main MOF parsing code", obWarning);
+
 	// We'll need to first extract the periodic matrix (if applicable)
 	if (!pmol->IsPeriodic()) {
 	    obErrorLog.ThrowError(__FUNCTION__, "Cannot export nonperiodic systems to CGD", obWarning);

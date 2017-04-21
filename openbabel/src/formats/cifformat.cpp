@@ -1645,12 +1645,17 @@ namespace OpenBabel
 
     if (pConv->IsOption("g", OBConversion::OUTOPTIONS))
       {
-        ofs << "loop_"                            << endl
-            << "    _geom_bond_atom_site_label_1" << endl
-            << "    _geom_bond_atom_site_label_2" << endl
-            << "    _geom_bond_distance"          << endl
-            << "    _geom_bond_site_symmetry_2"   << endl
-            << "    _ccdc_geom_bond_type"         << endl;
+        if (pmol->NumBonds() > 0) {
+            ofs << "loop_"                            << endl
+                << "    _geom_bond_atom_site_label_1" << endl
+                << "    _geom_bond_atom_site_label_2" << endl
+                << "    _geom_bond_distance"          << endl
+                << "    _geom_bond_site_symmetry_2"   << endl
+                << "    _ccdc_geom_bond_type"         << endl;
+        } else {
+            obErrorLog.ThrowError(__FUNCTION__, "No bonds defined in molecule for CIF export", obWarning);
+        }
+
         FOR_BONDS_OF_MOL(bond, *pmol)
         {
           std::string label_1 = label_table[bond->GetBeginAtom()];

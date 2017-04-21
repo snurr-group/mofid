@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <queue>
 #include <map>
+#include <set>
 #include <stdio.h>
 #include <stdlib.h>
 #include <openbabel/obconversion.h>
@@ -25,7 +26,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
-void writeSystre(OBMol* molp, std::string filepath);
+void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
@@ -36,11 +37,22 @@ bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
-int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118);
-int collapseTwoConn(OBMol* net);
+int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
+int collapseTwoConn(OBMol* net, int ignore_element = 0);
+int collapseXX(OBMol *net, int element_x);
+int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 std::vector<int> makeVector(int a, int b, int c);
-void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
+vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
+vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
+OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
+OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
+
+/* Define global parameters for MOF decomposition */
+// Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
+const int X_CONN = 52;
+// Max. degrees between redundant L-X bonds.  Oxalic acid (extreme case) is < 85 degrees.
+const int LX_ANGLE_TOL = 66;  // don't make this a round number without justification
 
 
 class ElementGen
@@ -85,6 +97,13 @@ class ElementGen
 		std::map<std::string,int> get_map() {
 			return _mapping;
 		}
+		std::vector<int> used_elements() {
+			std::vector<int> elements;
+			for (std::map<std::string,int>::iterator it = _mapping.begin(); it != _mapping.end(); ++it) {
+				elements.push_back(it->second);
+			}
+			return elements;
+		}
 };
 
 
@@ -120,6 +139,13 @@ int main(int argc, char* argv[])
 	if (!readCIF(&orig_mol, filename, false)) {
 		printf("Error reading file: %s", filename);
 		exit(1);
+	}
+
+	// Strip all of the original CIF labels, so they don't interfere with the automatically generated labels in the output
+	FOR_ATOMS_OF_MOL(a, orig_mol) {
+		if (a->HasData("_atom_site_label")) {
+			a->DeleteData("_atom_site_label");
+		}
 	}
 
 	/* Copy original definition to another variable for later use.
@@ -177,13 +203,14 @@ int main(int argc, char* argv[])
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
-			collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles));
+			collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
 	nodes.EndModify();
 	linkers.EndModify();
 	simplified_net.EndModify();
+	writeCIF(&simplified_net, "Test/test_partial.cif");
 
 	// Simplify all the node SBUs into single points.
 	ElementGen node_conv(true);
@@ -191,6 +218,7 @@ int main(int argc, char* argv[])
 	std::vector<OBMol> sep_nodes = nodes.Separate();
 	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
 		std::string node_smiles = getSMILES(*it, obconv);
+		// Only calculating the connection points on the linkers
 		collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles));
 	}
 	simplified_net.EndModify();
@@ -207,9 +235,17 @@ int main(int argc, char* argv[])
 		writeCIF(&orig_mol, "Test/orig_mol.cif");
 		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
-		collapseTwoConn(&simplified_net);
+
+		int simplifications;
+		do {
+			simplifications = 0;
+			simplifications += collapseTwoConn(&simplified_net, X_CONN);
+			simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
+			simplifications += collapseXX(&simplified_net, X_CONN);
+		} while(simplifications);
+
 		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
-		writeSystre(&simplified_net, "Test/topology.cgd");
+		writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
 	}
 
 	return(0);
@@ -240,12 +276,121 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	conv.WriteFile(molp, filepath);
 }
 
-void writeSystre(OBMol* molp, std::string filepath) {
+void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_centers) {
 	// Write the simplified molecule to Systre for topological determination
-	OBConversion conv;
-	conv.SetOutFormat("cgd");
-	conv.AddOption("c");  // Optional flag to print edge centers
-	conv.WriteFile(molp, filepath);
+	// element_x defines the atomic number of a special two-connected pseudo-atom.
+	// If defined and nonzero, use X's as the graph edges.  Otherwise, the OBAtoms are directly linked through their OBBonds.
+	// Can also print the (optional) edge_center field
+
+	std::ofstream ofs;
+	ofs.open(filepath.c_str());
+
+	OBUnitCell* uc = pmol->GetPeriodicLattice();
+
+	// Write header for the molecule
+	std::string indent = "  ";
+	ofs << "# CGD file generated by Open Babel " << BABEL_VERSION << ", see http://openbabel.sf.net" << std::endl;
+	ofs << "CRYSTAL" << std::endl;
+	ofs << indent << "NAME " << pmol->GetTitle() << std::endl;
+	ofs << indent << "GROUP P1" << std::endl;  // TODO: use test cases to verify that Open Babel converts everything to P1
+	ofs << indent << "CELL "
+		<< uc->GetA() << " "
+		<< uc->GetB() << " "
+		<< uc->GetC() << " "
+		<< uc->GetAlpha() << " "
+		<< uc->GetBeta() << " "
+		<< uc->GetGamma() << std::endl;
+
+	int current_node = 0;
+	FOR_ATOMS_OF_MOL(a, *pmol) {
+		if (a->GetAtomicNum() != element_x) {
+			++current_node;
+			vector3 frac_coords = uc->CartesianToFractional(a->GetVector());
+			ofs << indent << "NODE " << current_node
+				<< " " << a->GetValence()  // coordination of the atom
+				<< " " << frac_coords[0]
+				<< " " << frac_coords[1]
+				<< " " << frac_coords[2]
+				<< std::endl;
+		}
+	}
+
+	if (element_x) {
+		std::vector<OBAtom*> visited_x;  // Have to keep track of visited connectors since we have tiny unit cells containing M-X-X-M'
+		FOR_ATOMS_OF_MOL(x, *pmol) {
+			if (x->GetAtomicNum() == element_x && !inVector<OBAtom*>(&*x, visited_x)) {
+				visited_x.push_back(&*x);
+				std::vector<vector3> vertices;  // Unwrap vertex coordinates near the connector X
+				vector3 x_coords = uc->CartesianToFractional(x->GetVector());
+				FOR_NBORS_OF_ATOM(n, *x) {
+					vector3 raw_n_coords = uc->CartesianToFractional(n->GetVector());
+					vector3 unwrap_n_coords = unwrapFracNear(raw_n_coords, x_coords, uc);
+					if (n->GetAtomicNum() == element_x) {  // X-X present, so find the next connector.
+						visited_x.push_back(&*n);
+						// FIXME: This doesn't work due to the nature of unwrapping
+						// x1 and x2 are both super close to M, so it's just bouncing back and forth on both sides.
+						// Likely, we'll have to fix this by incorporating the two-connected linker.
+						// Will it be generalizable if we transform X-L-X into X-X-X as an intermediate?
+						FOR_NBORS_OF_ATOM(n2, *n) {
+							if (&*n2 != &*x) {  // we don't want to return to x1
+								if (n2->GetAtomicNum() == element_x) {
+									obErrorLog.ThrowError(__FUNCTION__, "Unexpected X-X-X connection in simplified net.", obWarning);
+								}
+								vector3 raw_v2_coords = uc->CartesianToFractional(n2->GetVector());
+								vector3 unwrap_v2_coords = unwrapFracNear(raw_v2_coords, unwrap_n_coords, uc);
+								vertices.push_back(unwrap_v2_coords);
+							}
+						}
+					} else {  // Standard vertex case, M-X-M
+						vertices.push_back(unwrap_n_coords);
+					}
+
+				}
+				if (vertices.size() != 2) {
+					obErrorLog.ThrowError(__FUNCTION__, "Inconsistency: found connector X without two bonds", obWarning);
+				}
+				ofs << indent << "EDGE  "
+					<< vertices[0][0] << " " << vertices[0][1]  << " " << vertices[0][2] << "   "
+					<< vertices[1][0] << " " << vertices[1][1]  << " " << vertices[1][2] << std::endl;
+			}
+		}
+
+		if (write_centers) {
+			FOR_ATOMS_OF_MOL(x, *pmol) {
+				if (x->GetAtomicNum() == element_x) {
+					vector3 frac_coords = uc->CartesianToFractional(x->GetVector());
+					ofs << indent << "# EDGE_CENTER  "
+						<< frac_coords[0] << " "
+						<< frac_coords[1] << " "
+						<< frac_coords[2] << std::endl;
+				}
+			}
+		}
+
+	} else {
+		std::stringstream edge_centers;
+		FOR_BONDS_OF_MOL(b, *pmol) {
+			std::vector<int> bond_dir = b->GetPeriodicDirection();
+			vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
+			vector3 begin = uc->CartesianToFractional(b->GetBeginAtom()->GetVector());
+			// For the second atom, we need to copy it to the correct unit cell with f_add
+			vector3 end = uc->CartesianToFractional(b->GetEndAtom()->GetVector()) + f_add;
+			ofs << indent << "EDGE  "
+				<< begin[0] << " " << begin[1] << " " << begin[2] << "   "
+				<< end[0] << " " << end[1] << " " << end[2] << std::endl;
+			// Do edge center calculation, since we already have the coordinates handy
+			edge_centers << "# EDGE_CENTER  "
+				<< (begin[0] + end[0]) / 2.0 << " "
+				<< (begin[1] + end[1]) / 2.0 << " "
+				<< (begin[2] + end[2]) / 2.0 << std::endl;
+		}
+
+		if (write_centers)
+			ofs << edge_centers.str();
+	}
+
+	ofs << "END" << std::endl;
+	ofs.close();
 }
 
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath) {
@@ -409,67 +554,91 @@ OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
 	return NULL;
 }
 
-int collapseSBU(OBMol *mol, OBMol *fragment, int element) {
+int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
 	// with atomic number element, maintaining connections to existing atoms.
+	// If conn_element != 0, then add that element as a spacer at the connection
+	// site (like "X" or "Q" atoms in top-down crystal generators).
 	// Returns the number of external bonds maintained.
 
 	std::vector<OBAtom*> orig_sbu;
 	FOR_ATOMS_OF_MOL(a, *fragment) {
-		orig_sbu.push_back(atomInOtherMol(&*a, mol));
+		OBAtom* orig_atom = atomInOtherMol(&*a, mol);
+		if (!orig_atom) {
+			obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
+			return 0;
+		}
+		orig_sbu.push_back(orig_atom);
 	}
 
-	std::vector<OBAtom*> connections;
+	std::set<std::vector<OBAtom*> > connections;  // <External atom, internal atom bonded to it>
 	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
 		FOR_NBORS_OF_ATOM(np, *it) {
-			if ((!inVector<OBAtom*>(&*np, orig_sbu))  // External atom: not in fragment
-					&& (!inVector<OBAtom*>(&*np, connections))) {  // only push once
-				connections.push_back(&*np);
+			if (!inVector<OBAtom*>(&*np, orig_sbu)) {  // External atom: not in fragment
+				std::vector<OBAtom*> new_connection;
+				new_connection.push_back(&*np);
+				new_connection.push_back(*it);
+				connections.insert(new_connection);  // only push a connection once, as guaranteed by a set
 			}
 		}
 	}
 
-	vector3 centroid = getCentroid(fragment, false);  // FIXME: check flags, usage, etc.
+	vector3 centroid = getCentroid(fragment, false);
+
+	mol->BeginModify();
+
+	OBAtom* pseudo_atom = formAtom(mol, centroid, element);
+	if (conn_element == 0) {  // Not using an "X" psuedo-atom
+		std::vector<OBAtom*> new_external_conn;
+		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
+			OBAtom* external_atom = (*it)[0];
+			if (!inVector<OBAtom*>(external_atom, new_external_conn)) {  // Only form external bonds once
+				formBond(mol, pseudo_atom, external_atom, 1);
+				new_external_conn.push_back(external_atom);
+			}
+		}
+	} else {
+		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
+			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
+			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
+			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
+			OBUnitCell* lattice = mol->GetPeriodicLattice();
+			OBAtom* external_atom = (*it)[0];
+			OBAtom* internal_atom = (*it)[1];
+
+			vector3 internal_atom_loc = unwrapCartNear(internal_atom->GetVector(), centroid, lattice);
+			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
+
+			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
+			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
+			formBond(mol, conn_atom, external_atom, 1);
+		}
+	}
 
 	// Delete SBU from the original molecule
-	if (!subtractMols(mol, fragment)) {
-		obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
-		return 0;
-	}
-
-	mol->BeginModify();  // FIXME: should this be here or earlier?  Also consider the error handling
-
-	OBAtom* pseudo_atom = mol->NewAtom();
-	pseudo_atom->SetVector(centroid);
-	pseudo_atom->SetAtomicNum(element);
-	pseudo_atom->SetType(etab.GetName(element));
-
-	for (std::vector<OBAtom*>::iterator it = connections.begin(); it != connections.end(); ++it) {
-		formBond(mol, pseudo_atom, *it, 1);  // don't need to dereference iterator since it's a vector of pointers
-	}
+	subtractMols(mol, fragment);
 
 	mol->EndModify();
 
 	return connections.size();
 }
 
-int collapseTwoConn(OBMol* net) {
+int collapseTwoConn(OBMol *net, int ignore_element) {
 	// Collapses two-connected nodes into edges to simplify the topology
 	// Returns the number of nodes deleted from the network
-	// FIXME: BUGGY LOGIC: doesn't have a problem with forming multiple single bonds between the same simplified net.
 
 	int simplifications = 0;
 
 	net->BeginModify();
 	std::vector<OBAtom*> to_delete;
 	FOR_ATOMS_OF_MOL(a, *net) {
-		if (a->GetValence() == 2) {
+		if (a->GetValence() == 2 && a->GetAtomicNum() != ignore_element) {
 			std::vector<OBAtom*> nbors;
 			FOR_NBORS_OF_ATOM(n, *a) {
 				nbors.push_back(&*n);
 			}
 
-			formBond(net, nbors[0], nbors[1]); // FIXME: probably needs a bond direction flag as well
+			formBond(net, nbors[0], nbors[1]);
 			to_delete.push_back(&*a);
 			++simplifications;
 		}
@@ -480,6 +649,127 @@ int collapseTwoConn(OBMol* net) {
 	net->EndModify();
 
 	return simplifications;
+}
+
+int collapseXX(OBMol *net, int element_x) {
+	// Simplify X-X bonds in the simplified net with their midpoint
+	// FIXME: bond drawings in CIF are inconsistent due to ambiguity of unit cells for coordinates at 0.0
+	// Returns the number of X-X bonds simplified
+	int simplifications = 0;
+	OBUnitCell* lattice = net->GetPeriodicLattice();
+
+	net->BeginModify();
+	bool new_simplification = true;
+	while (new_simplification) {
+		new_simplification = false;
+		FOR_ATOMS_OF_MOL(a, *net) {
+			OBAtom* x1 = &*a;
+			if (x1->GetAtomicNum() == element_x) {  // Found the first X
+				OBAtom* x2 = NULL;
+				FOR_NBORS_OF_ATOM(n, *x1) {
+					if (n->GetAtomicNum() == element_x) {
+						x2 = &*n;
+					}
+				}
+				if (x2) { // X-X exists, so simplify
+					std::vector<OBAtom*> x_nbors;  // Get the neighbors of both X's
+					FOR_NBORS_OF_ATOM(m, *x1) {
+						if (&*m != x2) {
+							x_nbors.push_back(&*m);
+						}
+					}
+					FOR_NBORS_OF_ATOM(m, *x2) {
+						if (&*m != x1) {
+							x_nbors.push_back(&*m);
+						}
+					}
+					if (x_nbors.size() != 2) {  // Each X should have one additional neighbor
+						std::stringstream nborMsg;
+						nborMsg << "y-X-X-y should be 4 atoms.  Found " << 2 + x_nbors.size() << std::endl;
+						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obInfo);
+					}
+					if (x_nbors.size() == 2 && x_nbors[0] == x_nbors[1]) {
+						// x1 and x2 are bonded to the same psuedo-atom (M-x1-x2-M').
+						// They're not redundant, because M' is often the periodic image of M.
+						// Simplifying x1-x2 will cause an inconsistency with two M-X bonds, so skip these x's
+						continue;
+					}
+
+					// Make a new atom at the X-X midpoint
+					vector3 unwrapped2 = unwrapCartNear(x2->GetVector(), x1->GetVector(), lattice);
+					vector3 midpoint = (x1->GetVector() + unwrapped2) / 2.0;
+					OBAtom* mid_atom = formAtom(net, midpoint, element_x);
+					// Form bonds between the new midpoint atom and neighbors of X-X
+					for (std::vector<OBAtom*>::iterator it = x_nbors.begin(); it != x_nbors.end(); ++it) {
+						formBond(net, mid_atom, *it, 1);
+					}
+					// Delete old X-X atoms
+					net->DeleteAtom(x1);
+					net->DeleteAtom(x2);
+
+					// Break out of the FOR_ATOMS loop so we can start with a fresh, unmodified loop
+					new_simplification = true;
+					break;
+				}
+			}
+		}
+		if (new_simplification) {
+			simplifications += 1;
+		}
+	}
+	net->EndModify();
+
+	return simplifications;
+}
+
+int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x) {
+	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction
+	// TODO: Consider averaging the positions (midpoint) instead of selecting one of the two at random.
+	// Returns the number of L-X bonds deleted
+
+	std::vector<OBAtom*> to_delete;
+
+	FOR_ATOMS_OF_MOL(L, *net) {  // Iterating over linkers
+		if (inVector<int>(L->GetAtomicNum(), linker_elements)) {  // if linker atom
+			std::vector<OBAtom*> connectors;
+			std::map<OBAtom*,OBAtom*> metals;  // <Atom X, M of L-X-M>
+			FOR_NBORS_OF_ATOM(n, *L) {
+				if (n->GetAtomicNum() == element_x) {  // connection site
+					connectors.push_back(&*n);
+					FOR_NBORS_OF_ATOM(M, *n) {  // So we can compare the node connections later
+						if (!inVector<int>(M->GetAtomicNum(), linker_elements)) {
+							metals[&*n] = &*M;
+						}
+					}
+				}
+			}
+
+			// Iterate through the bonded L-X's to find redundant pairs
+			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
+				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
+					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant copy.
+					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
+					if ( *x1 != *x2
+						&& !inVector<OBAtom*>(*x1, to_delete)
+						&& !inVector<OBAtom*>(*x2, to_delete)
+						&& metals[*x1] == metals[*x2]
+						&& (net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL) )
+					{
+						to_delete.push_back(*x2);
+					}
+				}
+			}
+		}
+	}
+
+	// Delete the redundant X's (which will also remove its X-L and X-M bonds)
+	net->BeginModify();
+	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
+		net->DeleteAtom(*it);
+	}
+	net->EndModify();
+
+	return to_delete.size();
 }
 
 vector3 getCentroid(OBMol *fragment, bool weighted) {
@@ -570,12 +860,29 @@ std::vector<int> makeVector(int a, int b, int c) {
 	return v;
 }
 
-void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
+vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
+	// Unwraps periodic, fractional coordinates (atom, etc.) at new_loc to be close to the reference
+	// ref_loc, so you don't have to think about crossing box boundaries, etc.
+	// i.e. unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
+	vector3 bond_dir = uc->PBCFractionalDifference(new_loc, ref_loc);
+	return ref_loc + bond_dir;
+}
+
+vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
+	// Unwraps periodic, Cartesian coordinates (atom, etc.) at new_loc to be close to the reference
+	// ref_loc, so you don't have to think about crossing box boundaries, etc.
+	// Similar ideas as unwrapFracNear
+	vector3 bond_dir = uc->PBCCartesianDifference(new_loc, ref_loc);
+	return ref_loc + bond_dir;
+}
+
+OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	// Makes a bond between two atoms, complete with the proper accounting
 	// TODO: decide how to handle cases where the bond already exists.
 	// Overwrite existing bonds?  Make it, as long as it's a different periodic direction??
+	OBBond* pseudo_link = NULL;
 	if (!mol->GetBond(begin, end)) {
-		OBBond* pseudo_link = mol->NewBond();
+		pseudo_link = mol->NewBond();
 		pseudo_link->SetBegin(begin);
 		pseudo_link->SetEnd(end);
 		pseudo_link->SetBondOrder(order);
@@ -586,4 +893,14 @@ void formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	} else {
 		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
 	}
+	return pseudo_link;
+}
+
+OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
+	// Makes a new atom with a specified location and atomic number
+	OBAtom* atom = mol->NewAtom();
+	atom->SetVector(loc);
+	atom->SetAtomicNum(element);
+	atom->SetType(etab.GetName(element));
+	return atom;
 }
