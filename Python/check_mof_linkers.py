@@ -189,8 +189,7 @@ class HypoMOFs(MOFCompare):
 					sbus.append(smiles)
 			sbus.sort()
 
-			# topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
-			topology = "ERROR"  # Temporarily disable topology checks for hMOFs, since pcu is still buggy
+			topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
 			return assemble_moffles(sbus, topology, mof_name=codes['name'])
 		else:
 			return None
