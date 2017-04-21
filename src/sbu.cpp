@@ -228,25 +228,23 @@ int main(int argc, char* argv[])
 	printFragments(uniqueSMILES(nodes.Separate(), obconv));
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 
-	const bool EXPORT_NODES = true;
-	if (EXPORT_NODES) {
-		writeCIF(&nodes, "Test/nodes.cif");
-		writeCIF(&linkers, "Test/linkers.cif");
-		writeCIF(&orig_mol, "Test/orig_mol.cif");
-		writeCIF(&simplified_net, "Test/condensed_linkers.cif");
-		writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
+	// Write out the decomposed and simplified MOF
+	writeCIF(&nodes, "Test/nodes.cif");
+	writeCIF(&linkers, "Test/linkers.cif");
+	writeCIF(&orig_mol, "Test/orig_mol.cif");
+	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
+	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 
-		int simplifications;
-		do {
-			simplifications = 0;
-			simplifications += collapseTwoConn(&simplified_net, X_CONN);
-			simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
-			simplifications += collapseXX(&simplified_net, X_CONN);
-		} while(simplifications);
+	int simplifications;
+	do {
+		simplifications = 0;
+		simplifications += collapseTwoConn(&simplified_net, X_CONN);
+		simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
+		simplifications += collapseXX(&simplified_net, X_CONN);
+	} while(simplifications);
 
-		writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
-		writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
-	}
+	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
+	writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
 
 	return(0);
 }
