@@ -1278,19 +1278,8 @@ namespace OpenBabel
 
   double OBAtom::GetAngle(int b, int c)
   {
-    // TODO: Update this method to call the other one
     OBMol *mol = (OBMol*)GetParent();
-    vector3 v1,v2;
-
-    v1 = this->GetVector() - mol->GetAtom(b)->GetVector();
-    v2 = mol->GetAtom(c)->GetVector() - mol->GetAtom(b)->GetVector();
-
-    if (IsNearZero(v1.length(), 1.0e-3)
-      || IsNearZero(v2.length(), 1.0e-3)) {
-        return(0.0);
-    }
-
-    return(vectorAngle(v1, v2));
+    return(this->GetAngle(mol->GetAtom(b), mol->GetAtom(c)));
   }
 
   bool OBAtom::GetNewBondVector(vector3 &v,double length)

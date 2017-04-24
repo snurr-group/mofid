@@ -237,6 +237,7 @@ namespace OpenBabel
     double x,y,z,mag,rotang,sn,cs,t,tx,ty,tz;
 
     //calculate the torsion angle
+    // TODO: fix this calculation for periodic systems
     radang = CalcTorsionAngle(a->GetVector(),
                               b->GetVector(),
                               c->GetVector(),

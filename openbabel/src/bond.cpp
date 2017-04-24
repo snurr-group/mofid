@@ -615,10 +615,7 @@ namespace OpenBabel
               {
                 if (nbrEnd != _bgn)
                   {
-                    torsion=fabs(CalcTorsionAngle(nbrStart->GetVector(),
-                                                  static_cast<OBAtom*>(_bgn)->GetVector(),
-                                                  static_cast<OBAtom*>(_end)->GetVector(),
-                                                  nbrEnd->GetVector()));
+                    torsion=fabs(_parent->GetTorsion(nbrStart, _bgn, _end, nbrEnd));
 
                     // >12&&<168 not enough
                     if (torsion > 15.0  && torsion < 160.0)

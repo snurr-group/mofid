@@ -7,6 +7,8 @@
 	
 	"hypotheticalMOF_5071180_i_2_j_25_k_1_m_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)c1ccc(cc1)C(=O)[O].n1ccc(cc1)c1ccncc1 f1.pcu.CAT_TBD.F1.hypotheticalMOF_5071180_i_2_j_25_k_1_m_0",
 	
+	"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "[O]C(=O)c1cc2ccc3c4c2c(c1)ccc4cc(c3)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.hypotheticalMOF_15286_i_0_j_17_k_17_m_0",
+	
 	"P1-Cu-BTC" : "[Cu][Cu].[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O] f1.tbo.CAT_TBD.F1.P1-Cu-BTC",
 	"DOTSOV_clean" : "[Cu][Cu].[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O] f1.tbo.CAT_TBD.F1.DOTSOV_clean",
 	
@@ -29,5 +31,10 @@
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"ZIF-69-RASPA" : "Strange radicals in both linkers",
 		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)"
+	},
+	
+	"_regression_tests" : {
+		"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "Multiple representations of the linker fixed by incorporating torsion code in OBBond::IsDoubleBondGeometry", 
+		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"
 	}
 }
