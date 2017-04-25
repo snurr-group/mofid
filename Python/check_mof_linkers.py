@@ -17,7 +17,10 @@ import json
 import time
 # import copy  # copy.deepcopy(x)
 # import re
+
 import openbabel  # for visualization only, since my changes aren't backported to the python library
+import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
+
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
 # Locations of important files, relative to the Python source code
@@ -241,6 +244,7 @@ class GAMOFs(MOFCompare):
 			#is_component_defined.extend([x in self.mof_db[code_key[key]] for x in codes[key]])
 			is_component_defined.extend([codes[key] in self.mof_db[code_key[key]]])
 
+		topology = self._topology_from_gene(codes)
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
@@ -249,9 +253,13 @@ class GAMOFs(MOFCompare):
 				smiles = self.mof_db[code_key[part]][codes[part]]
 				if smiles not in sbus:
 					sbus.append(smiles)
+				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
+				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
+					n_smi = self._carboxylate_to_hydroxyl(smiles)
+					if n_smi not in sbus:
+						sbus.append(n_smi)
 			sbus.sort()
 
-			topology = self._topology_from_gene(codes)
 			return assemble_moffles(sbus, topology, mof_name=codes['name'])
 		else:
 			return None
@@ -292,6 +300,19 @@ class GAMOFs(MOFCompare):
 		else:
 			raise ValueError("Undefined topology for " + genes["name"])
 			return "UNK"
+
+	def _carboxylate_to_hydroxyl(self, linker_smiles):
+		# Transforms carboxylate linkers to their nitrogen-terminated versions
+		# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
+		# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
+		# and phmodel.cpp:208, which clarifies that the transformation code can "delete atoms, change atom types, atom formal charges, and bond types"
+		transform = pybel.ob.OBChemTsfm()
+		success = transform.Init("[#6:1][C:2](=[O:3])[O:4]", "[#7:1]")  # delete carboxylate and transform the C->N
+		assert success
+		mol = pybel.readstring("smi", linker_smiles)
+		transform.Apply(mol.OBMol)
+		n_smiles = mol.write("can", opt = {'i': True})  # Use the same format and parameters as sbu.cpp
+		return n_smiles.rstrip()
 
 
 class TobaccoMOFs(MOFCompare):

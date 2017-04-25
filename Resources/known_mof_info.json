@@ -25,6 +25,11 @@
 	
 	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.NEW.CAT_TBD.F1.MIL-47-P1-RASPA",
 	
+	"hypotheticalMOF_27262_1_0_2_9_9_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)C(=O)[O].n1ccncc1 f1.pcu.CAT_TBD.F1.hypotheticalMOF_27262_1_0_2_9_9_0",
+	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O]C(=O)C=CC=CC(=O)[O] f1.fcu.CAT_TBD.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
+	"hypotheticalMOF_2000756_0_0_2_32_32_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O] f1.tbo.CAT_TBD.F1.hypotheticalMOF_2000756_0_0_2_32_32_0",
+	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.CAT_TBD.F1.hypotheticalMOF_5026325_3_0_0_27_27_0",
+	
 	"_some_known_issues" : {
 		"hMOF-1" : "Catenated",
 		"ADARAA_clean" : "Porphyrinic MOF, though Co ion is currently listed as a separate node.  Topology not found due to multiple connections between linker and porphyrin metal",
