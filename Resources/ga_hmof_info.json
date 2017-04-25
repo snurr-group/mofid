@@ -1,0 +1,55 @@
+{
+	"nodes" : {
+		"0" : "[Zn]O([Zn])([Zn])[Zn]",
+		"2" : "[Cu][Cu]",
+		"4" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43"
+	},
+	"linkers" : {
+		"0" : "[O]C(=O)C(=O)[O]",
+		"1" : "[O]C(=O)C=CC(=O)[O]",
+		"2" : "[O]C(=O)C#CC(=O)[O]",
+		"3" : "[O]C(=O)C12C3C4C2C2C1C3C42C(=O)[O]",
+		"4" : "[O]C(=O)c1cc(c2ccccc2)c(cc1c1ccccc1)C(=O)[O]",
+		"5" : "[O]C(=O)c1c2ccccc2c(c2c1cccc2)C(=O)[O]",
+		"6" : "[O]C(=O)c1ccc(c2c1cccc2)C(=O)[O]",
+		"7" : "[O]C(=O)c1ccc(c2c1CC2)C(=O)[O]",
+		"8" : "[O]C(=O)C12CCC(CC1)(CC2)C(=O)[O]",
+		"9" : "[O]C(=O)c1ccc(cc1)C(=O)[O]",
+		"10" : "[O]C(=O)C=CC=CC(=O)[O]",
+		"11" : "[O]C(=O)C=CC=CC(=O)[O]",
+		"12" : "[O]C(=O)C#CC#CC(=O)[O]",
+		"13" : "[O]C(=O)c1ccc2c(c1)ccc(c2)C(=O)[O]",
+		"14" : "[O]C(=O)c1ccc2c(c1)c1cccc(c1cc2)C(=O)[O]",
+		"15" : "[O]C(=O)C#CC=CC#CC(=O)[O]",
+		"16" : "[O]C(=O)c1cc2ccc3c4c2c(c1)ccc4cc(c3)C(=O)[O]",
+		"17" : "[O]C(=O)c1ccc(cc1)c1ccc(cc1)C(=O)[O]",
+		"18" : "[O]C(=O)C#CC#CC#CC(=O)[O]",
+		"19" : "[O]C(=O)C#CC12C3C4C2C2C1C3C42C#CC(=O)[O]",
+		"20" : "[O]C(=O)C#CC12CCC(CC1)(CC2)C#CC(=O)[O]",
+		"21" : "[O]C(=O)C#Cc1ccc(cc1)C#CC(=O)[O]",
+		"22" : "[O]C(=O)c1ccc2c(c1)c1ccc3c(c1cc2)cc(cc3)C(=O)[O]",
+		"23" : "[O]C(=O)c1ccc(cc1)C=Cc1ccc(cc1)C(=O)[O]",
+		"24" : "[O]C(=O)c1ccc(cc1)N=Nc1ccc(cc1)C(=O)[O]",
+		"25" : "[O]C(=O)c1ccc(cc1)C#Cc1ccc(cc1)C(=O)[O]",
+		"26" : "[O]C(=O)c1ccc(cc1)c1ccc(cc1)c1ccc(cc1)C(=O)[O]",
+		"27" : "[O]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O]",
+		"28" : "[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O]",
+		"29" : "[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c1c2c3ccc3c2c(cc1)c(=O)n(c3=O)c1ccc(cc1)C(=O)[O]",
+		"30" : "[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O]",
+		"31" : "[O]C(=O)C#Cc1cc(C#CC(=O)[O])cc(c1)C#CC(=O)[O]",
+		"32" : "[O]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O]",
+		"33" : "[O]C(=O)c1ccc(cc1)C#Cc1cc(C#Cc2ccc(cc2)C(=O)[O])cc(c1)C#Cc1ccc(cc1)C(=O)[O]",
+		"38" : "[O][C]([O])c1cc(cc(c1)c1ccc(cc1)c1cc(cc(c1)C(=O)[O])C(=O)[O])C(=O)[O]",
+		"39" : "[O]C(=O)c1cc(C(=O)[O])c2c3c1cc1ccc4c5c1c3c1c(c2)ccc2c1c5c1c(c4)c(cc(c1c2)C(=O)[O])C(=O)[O]"
+	},
+	"functionalization" : {
+		"0" : "[O]C(=O)C(=O)[O] has problems with topology simplification, as expected"
+	},
+	"_known_issues" : {
+		"0" : "Oxalic acid does not yet simplify properly due to the X-L-X angle",
+		"4" : "[O]C(=O)c1cc2C3=C[CH]C=CC3OC(=O)c2cc1c1ccccc1 for many pcu MOFs",
+		"34--37" : "Come back to the tetrahedral tetracoordinated linkers later, since they are likely nitrogen-terminated due to topological/SBU constraints",
+		"node 1" : "Skip Zn paddlewheels until simplification of the Zn-Zn node is resolved",
+		"node 3" : "Skip Vanadium chain until a topology is implemented"
+	}
+}
