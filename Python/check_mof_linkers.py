@@ -20,6 +20,7 @@ import time
 
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
+from rdkit import Chem  # Use rdkit substructure transforms since they can easily add atoms
 
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
@@ -54,6 +55,19 @@ def mof_log(msg):
 	# Logging helper function, which writes to stderr to avoid polluting the json
 	if PRINT_CURRENT_MOF:
 		sys.stderr.write(msg)
+
+def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
+	# Perform an rdkit chemical transformation and renormalize to Open Babel SMILES
+	# http://www.rdkit.org/docs/GettingStartedInPython.html#chemical-transformations
+	# http://www.rdkit.org/Python_Docs/rdkit.Chem.rdmolopule.html#ReplaceSubstructs
+	rd_mol = Chem.MolFromSmiles(mol_smiles)
+	repl = Chem.MolFromSmiles(replacement)
+	patt = Chem.MolFromSmarts(query)
+	rms = Chem.ReplaceSubstructs(rd_mol, patt, repl, replaceAll = replace_all)
+	rd_smiles = Chem.MolToSmiles(rms[0])
+
+	ob_mol = pybel.readstring("smi", rd_smiles)
+	return ob_mol.write("can", opt={'i': True}).rstrip()  # Use the same format and parameters as sbu.cpp
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
@@ -255,7 +269,7 @@ class GAMOFs(MOFCompare):
 					sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
 				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
-					n_smi = self._carboxylate_to_hydroxyl(smiles)
+					n_smi = self._carboxylate_to_nitrogen(smiles)
 					if n_smi not in sbus:
 						sbus.append(n_smi)
 			sbus.sort()
@@ -301,18 +315,9 @@ class GAMOFs(MOFCompare):
 			raise ValueError("Undefined topology for " + genes["name"])
 			return "UNK"
 
-	def _carboxylate_to_hydroxyl(self, linker_smiles):
+	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
-		# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
-		# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
-		# and phmodel.cpp:208, which clarifies that the transformation code can "delete atoms, change atom types, atom formal charges, and bond types"
-		transform = pybel.ob.OBChemTsfm()
-		success = transform.Init("[#6:1][C:2](=[O:3])[O:4]", "[#7:1]")  # delete carboxylate and transform the C->N
-		assert success
-		mol = pybel.readstring("smi", linker_smiles)
-		transform.Apply(mol.OBMol)
-		n_smiles = mol.write("can", opt = {'i': True})  # Use the same format and parameters as sbu.cpp
-		return n_smiles.rstrip()
+		return rdkit_transform(linker_smiles, '[#6]C(=O)[O]', 'N')
 
 
 class TobaccoMOFs(MOFCompare):
