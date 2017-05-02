@@ -15,7 +15,7 @@ import subprocess
 import glob
 import json
 import time
-# import copy  # copy.deepcopy(x)
+import copy  # copy.deepcopy(x)
 # import re
 
 import openbabel  # for visualization only, since my changes aren't backported to the python library
@@ -85,6 +85,12 @@ def summarize(results):
 			error_types['topology'] += 1
 		elif 'linkers' in match['errors']:
 			error_types['smiles'] += 1
+		elif len(match['errors']) == 1:  # Other class of known issue with MOFFLES generation and/or naming scheme
+			known_issue = match['errors'][0]
+			if known_issue not in error_types:
+				error_types[known_issue] = 0  # Initialize new class of errors
+			error_types[known_issue] += 1
+
 	summarized['errors']['error_types'] = error_types
 	summarized['errors']['total_cifs'] = len(results)
 	summarized['errors']['elapsed_time'] = sum([mof['time'] for mof in results])
@@ -126,10 +132,36 @@ class MOFCompare:
 		else:
 			# Calculate the MOFFLES derived from the CIF structure itself
 			moffles_auto = cif2moffles(cif_path)
-			comparison = compare_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
+			comparison = self.compare_multi_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
 			comparison['time'] = time.time() - start
 			comparison['name_parser'] = self.__class__.__name__
 			return comparison
+
+	def compare_multi_moffles(self, multi_moffles1, moffles2, names=None):
+		# Allow multiple reference MOFFLES for comparison against the extracted version
+		# to account for known issues in either the naming or reference material (ambiguities, etc)
+
+		if type(multi_moffles1) in [str, unicode]:  # Base case where there's only a single reference
+			return compare_moffles(multi_moffles1, moffles2, names)
+
+		assert type(multi_moffles1) == dict  # Else, let's handle multiple references
+		assert 'default' in multi_moffles1
+		default_comparison = compare_moffles(multi_moffles1['default'], moffles2, names)
+		if default_comparison['match']:
+			return default_comparison
+
+		for test in multi_moffles1.keys():
+			if test == 'default':
+				continue
+			test_moffles = multi_moffles1[test]
+			test_comparison = compare_moffles(test_moffles, moffles2, names)
+			if test_comparison['match']:
+				test_comparison['match'] = False  # Should it be reported as a match if we know the source of error?
+				test_comparison['errors'] = [test]
+				return test_comparison
+
+		return default_comparison  # No special cases apply
+
 
 
 class KnownMOFs(MOFCompare):
@@ -262,7 +294,7 @@ class GAMOFs(MOFCompare):
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
-			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization and N-termination
+			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization
 			for part in sbu_codes:
 				smiles = self.mof_db[code_key[part]][codes[part]]
 				if smiles not in sbus:
@@ -274,7 +306,18 @@ class GAMOFs(MOFCompare):
 						sbus.append(n_smi)
 			sbus.sort()
 
-			return assemble_moffles(sbus, topology, mof_name=codes['name'])
+			moffles_options = dict()
+			moffles_options['default'] = assemble_moffles(sbus, topology, mof_name=codes['name'])
+
+			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
+				not_fcu_sbus = copy.deepcopy(sbus)  # Lists are a mutable type in Python
+				not_fcu_sbus.append('[O]C(=O)c1ccccc1')  # Benzoic acid capping agent
+				not_fcu_sbus.sort()
+				# FIXME: the MOF should report the **pcu** topology once solvent removal is implemented
+				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
+				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', mof_name=codes['name'])
+
+			return moffles_options
 		else:
 			return None
 
