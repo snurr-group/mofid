@@ -39,7 +39,7 @@
 		"31" : "[O]C(=O)C#Cc1cc(C#CC(=O)[O])cc(c1)C#CC(=O)[O]",
 		"32" : "[O]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O]",
 		"33" : "[O]C(=O)c1ccc(cc1)C#Cc1cc(C#Cc2ccc(cc2)C(=O)[O])cc(c1)C#Cc1ccc(cc1)C(=O)[O]",
-		"38" : "[O][C]([O])c1cc(cc(c1)c1ccc(cc1)c1cc(cc(c1)C(=O)[O])C(=O)[O])C(=O)[O]",
+		"38" : "[O]C(=O)c1cc(cc(c1)C(=O)[O])c1ccc(cc1)c1cc(cc(c1)C(=O)[O])C(=O)[O]",
 		"39" : "[O]C(=O)c1cc(C(=O)[O])c2c3c1cc1ccc4c5c1c3c1c(c2)ccc2c1c5c1c(c4)c(cc(c1c2)C(=O)[O])C(=O)[O]"
 	},
 	"functionalization" : {

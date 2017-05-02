@@ -90,7 +90,7 @@ def parse_moffles(moffles):
 		else:
 			topology = tag
 	return dict(
-		linkers = smiles,
+		smiles = smiles,
 		topology = topology,
 		cat = cat,
 		name = mof_name
@@ -108,7 +108,7 @@ def compare_moffles(moffles1, moffles2, names=None):
 		return {'match': 'NA',
 		        'errors': ['Undefined composition'],
 		        'topology': None,
-		        'linkers': None,
+		        'smiles': None,
 		        'cat': None,
 		        names[0]: moffles1,
 		        names[1]: moffles2,
@@ -127,7 +127,7 @@ def compare_moffles(moffles1, moffles2, names=None):
 		else:
 			comparison[key] = False
 			comparison['match'] = False
-			comparison['errors'].append(key)
+			comparison['errors'].append("err_" + key)
 	return comparison
 
 def cif2moffles(cif_path):

@@ -63,6 +63,13 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	rd_mol = Chem.MolFromSmiles(mol_smiles)
 	repl = Chem.MolFromSmiles(replacement)
 	patt = Chem.MolFromSmarts(query)
+	if rd_mol is None:
+		raise ValueError("Molecule rejected by rdkit: " + mol_smiles)
+	if patt is None:
+		raise ValueError("SMARTS pattern rejected by rdkit: " + query)
+	if repl is None:
+		raise ValueError("SMILES replacement rejected by rdkit: " + replacement)
+
 	rms = Chem.ReplaceSubstructs(rd_mol, patt, repl, replaceAll = replace_all)
 	rd_smiles = Chem.MolToSmiles(rms[0])
 
@@ -72,24 +79,24 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
 	summarized = {'mofs': results, 'errors': dict()}
-	error_types = {'topology': 0, 'smiles': 0, 'both': 0, 'success': 0, 'undefined': 0}
+	error_types = {'err_topology': 0, 'err_smiles': 0, 'both': 0, 'success': 0, 'undefined': 0}
 	for match in results:
 		if match['match'] == 'NA':  # NA cases where we don't know the nodes and linkers
 			assert 'Undefined composition' in match['errors']
 			error_types['undefined'] += 1
 		elif match['match']:
 			error_types['success'] += 1
-		elif len(match['errors']) > 1:
+		elif len(match['errors']) == 2:
 			error_types['both'] += 1
-		elif 'topology' in match['errors']:
-			error_types['topology'] += 1
-		elif 'linkers' in match['errors']:
-			error_types['smiles'] += 1
 		elif len(match['errors']) == 1:  # Other class of known issue with MOFFLES generation and/or naming scheme
 			known_issue = match['errors'][0]
 			if known_issue not in error_types:
 				error_types[known_issue] = 0  # Initialize new class of errors
 			error_types[known_issue] += 1
+		else:
+			if 'unreliable_summary' not in error_types:
+				error_types['unreliable_summary'] = 0
+			error_types['unreliable_summary'] += 1
 
 	summarized['errors']['error_types'] = error_types
 	summarized['errors']['total_cifs'] = len(results)
