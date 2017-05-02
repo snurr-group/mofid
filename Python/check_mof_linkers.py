@@ -317,6 +317,13 @@ class GAMOFs(MOFCompare):
 				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', mof_name=codes['name'])
 
+			n_regr_smiles = '[nH]1cc2ccc3c4c2c(c1)ccc4c[nH]c3'
+			if n_regr_smiles in sbus:  # Open Babel has trouble round-tripping the SMILES below
+				n_regr_sbus = copy.deepcopy(sbus)
+				n_regr_sbus[n_regr_sbus.index(n_regr_smiles)] = 'n1cc2ccc3c4c2c(c1)ccc4cnc3'
+				n_regr_sbus.sort()
+				moffles_options['n_smiles_regression'] = assemble_moffles(n_regr_sbus, topology, mof_name=codes['name'])
+
 			return moffles_options
 		else:
 			return None
