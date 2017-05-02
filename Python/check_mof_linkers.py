@@ -317,13 +317,6 @@ class GAMOFs(MOFCompare):
 				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', mof_name=codes['name'])
 
-			n_regr_smiles = '[nH]1cc2ccc3c4c2c(c1)ccc4c[nH]c3'
-			if n_regr_smiles in sbus:  # Open Babel has trouble round-tripping the SMILES below
-				n_regr_sbus = copy.deepcopy(sbus)
-				n_regr_sbus[n_regr_sbus.index(n_regr_smiles)] = 'n1cc2ccc3c4c2c(c1)ccc4cnc3'
-				n_regr_sbus.sort()
-				moffles_options['n_smiles_regression'] = assemble_moffles(n_regr_sbus, topology, mof_name=codes['name'])
-
 			return moffles_options
 		else:
 			return None
@@ -367,7 +360,13 @@ class GAMOFs(MOFCompare):
 
 	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
-		return rdkit_transform(linker_smiles, '[#6]C(=O)[O]', 'N')
+		nitrogen_linker = rdkit_transform(linker_smiles, '[#6]C(=O)[O]', 'N')
+		# Open Babel has trouble round-tripping the aromatic nitrogen ring
+		# n1cc2ccc3c4c2c(c1)ccc4cnc3 or its rdkit equivalent c1cc2cncc3ccc4cncc1c4c23.
+		# Both of these return '[nH]1cc2ccc3c4c2c(c1)ccc4c[nH]c3'
+		# So, for these cases and their functionalizations, etc., give kekulization a hand.
+		nitrogen_linker = nitrogen_linker.replace('[nH]', 'n')
+		return nitrogen_linker
 
 
 class TobaccoMOFs(MOFCompare):
