@@ -26,6 +26,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+void copyMOF(OBMol *src, OBMol *dest);
 void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
@@ -149,15 +150,17 @@ int main(int argc, char* argv[])
 	}
 
 	/* Copy original definition to another variable for later use.
-	 * Perform all copies at once to reduce the performance bottleneck.
-	 * Currently, copying internally calls SSSR through EndModify(), so this statement is ~60% of the total code walltime.
-	 * If the statements are nested together, the compiler is smart enough to amortize the operation.
-	 * The biggest performance boost would come from figuring out a way around this behavior.
+	 * Earlier, we performed all copies at once to reduce the performance bottleneck.
+	 * In that case, copying internally called SSSR through EndModify(), so this statement was ~60% of the total code walltime.
+	 * When these statements were nested together, the compiler was smart enough to amortize the operation.
+	 * The biggest performance boost came from avoiding these perception behaviors altogether, which is the objective of copyMOF.
+	 * As a result, certain structures, like ToBaCCo MOF bct_sym_10_mc_10__L_12.cif, no longer require 2+ minutes.
 	 */
-	OBMol mol = orig_mol;
-	OBMol nodes = orig_mol;
-	OBMol linkers = orig_mol;  // Can't do this by additions, because we need the UC data, etc.
-	OBMol simplified_net = orig_mol;
+	OBMol mol, nodes, linkers, simplified_net;
+	copyMOF(&orig_mol, &mol);
+	copyMOF(&orig_mol, &nodes);
+	copyMOF(&orig_mol, &linkers);  // Can't do this by additions, because we need the UC data, etc.
+	copyMOF(&orig_mol, &simplified_net);
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -272,6 +275,50 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 		conv.AddOption("g");
 	}
 	conv.WriteFile(molp, filepath);
+}
+
+void copyMOF(OBMol *src, OBMol *dest) {
+	// Efficiently duplicates a MOF OBMol with single bonds.
+	// Avoids implicitly calling expensive ring detection code on the full MOF by
+	// temporarily disabling perception routines and filling in placeholder data.
+	bool src_hybridization = src->HasHybridizationPerceived();
+	if (!src_hybridization) {
+		src->SetHybridizationPerceived();
+		// Since bond orders aren't defined yet by OBMol::PerceiveBondOrders, let's set them to a known value so the values are initialized
+		FOR_ATOMS_OF_MOL(a, *src) {
+			a->SetHyb(0);
+		}
+	}
+	bool src_atom_types = src->HasAtomTypesPerceived();
+	if (!src_atom_types) {
+		src->SetAtomTypesPerceived();
+		FOR_ATOMS_OF_MOL(a, *src) {
+			a->SetType("");
+		}
+	}
+	bool src_charges = src->HasPartialChargesPerceived();
+	if (!src_charges) {
+		src->SetPartialChargesPerceived();
+		FOR_ATOMS_OF_MOL(a, *src) {
+			a->SetPartialCharge(0.0);
+		}
+	}
+
+	(*dest) = (*src);  // OBMol copy
+
+	// Restore the original flags
+	if (!src_hybridization) {
+		src->UnsetFlag(OB_HYBRID_MOL);
+		dest->UnsetFlag(OB_HYBRID_MOL);
+	}
+	if (!src_atom_types) {
+		src->UnsetFlag(OB_ATOMTYPES_MOL);
+		dest->UnsetFlag(OB_ATOMTYPES_MOL);
+	}
+	if (!src_charges) {
+		src->UnsetPartialChargesPerceived();
+		dest->UnsetPartialChargesPerceived();
+	}
 }
 
 void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_centers) {
