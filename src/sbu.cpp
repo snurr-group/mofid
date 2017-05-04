@@ -185,15 +185,6 @@ int main(int argc, char* argv[])
 	obconv.SetOutFormat("can");
 	obconv.AddOption("i");  // Ignore SMILES chirality for now
 
-	// Get a list of unique SMILES code
-	std::vector<std::string> unique_smiles = uniqueSMILES(fragments, obconv);
-	std::stringstream fragmentMsg;
-	fragmentMsg << "Unique fragments detected:" << std::endl;
-	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
-		fragmentMsg << *i2;
-	}
-	obErrorLog.ThrowError(__FUNCTION__, fragmentMsg.str(), obDebug);
-
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.
 	nodes.BeginModify();
@@ -204,11 +195,18 @@ int main(int argc, char* argv[])
 	mof_asr.BeginModify();
 	std::stringstream nonmetalMsg;
 	ElementGen linker_conv(false);
-
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		std::string mol_smiles = getSMILES(*it, obconv);
-		// printf(mol_smiles.c_str());
-		if (it->NumAtoms() == 1) {
+		if (uniqueExtAtoms(&simplified_net, &*it).size() == 0) {
+			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
+			nonmetalMsg << "Deleting free solvent " << mol_smiles;
+			free_solvent += *it;
+			subtractMols(&linkers, &*it);
+			subtractMols(&nodes, &*it);
+			subtractMols(&simplified_net, &*it);
+			subtractMols(&mof_fsr, &*it);
+			subtractMols(&mof_asr, &*it);
+		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
 			subtractMols(&linkers, &*it);
 		} else if (mol_smiles == "[OH]\t\n") {
@@ -221,15 +219,6 @@ int main(int argc, char* argv[])
 		} else if (mol_smiles == "[O]O[O]\t\n") {
 			nonmetalMsg << "Found a central oxygen with coordinated solvent" << std::endl;
 			subtractMols(&linkers, &*it);
-		} else if (uniqueExtAtoms(&simplified_net, &*it).size() == 0) {
-			// Assuming solvents are organic, so they'd be lumped together as a linker
-			nonmetalMsg << "Deleting free solvent " << mol_smiles;
-			free_solvent += *it;
-			subtractMols(&linkers, &*it);
-			subtractMols(&nodes, &*it);
-			subtractMols(&simplified_net, &*it);
-			subtractMols(&mof_fsr, &*it);
-			subtractMols(&mof_asr, &*it);
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
