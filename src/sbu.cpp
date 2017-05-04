@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <queue>
+#include <vector>
 #include <map>
 #include <set>
 #include <stdio.h>
@@ -22,6 +23,12 @@
 
 
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
+
+
+// Connections to an atom or fragment, in the form of a set where each element
+// is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
+typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
+
 
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
@@ -38,6 +45,8 @@ bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
+ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
+std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 int collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
@@ -156,11 +165,16 @@ int main(int argc, char* argv[])
 	 * The biggest performance boost came from avoiding these perception behaviors altogether, which is the objective of copyMOF.
 	 * As a result, certain structures, like ToBaCCo MOF bct_sym_10_mc_10__L_12.cif, no longer require 2+ minutes.
 	 */
-	OBMol mol, nodes, linkers, simplified_net;
+	OBMol mol, nodes, linkers, simplified_net, mof_fsr, mof_asr;
 	copyMOF(&orig_mol, &mol);
 	copyMOF(&orig_mol, &nodes);
 	copyMOF(&orig_mol, &linkers);  // Can't do this by additions, because we need the UC data, etc.
 	copyMOF(&orig_mol, &simplified_net);
+	copyMOF(&orig_mol, &mof_fsr);
+	copyMOF(&orig_mol, &mof_asr);
+	OBMol free_solvent;
+	free_solvent.SetPeriodicLattice(orig_mol.GetPeriodicLattice());
+	free_solvent.SetData(free_solvent.GetPeriodicLattice()->Clone(NULL));
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -185,8 +199,12 @@ int main(int argc, char* argv[])
 	nodes.BeginModify();
 	linkers.BeginModify();
 	simplified_net.BeginModify();
+	free_solvent.BeginModify();
+	mof_fsr.BeginModify();
+	mof_asr.BeginModify();
 	std::stringstream nonmetalMsg;
 	ElementGen linker_conv(false);
+
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		std::string mol_smiles = getSMILES(*it, obconv);
 		// printf(mol_smiles.c_str());
@@ -203,6 +221,15 @@ int main(int argc, char* argv[])
 		} else if (mol_smiles == "[O]O[O]\t\n") {
 			nonmetalMsg << "Found a central oxygen with coordinated solvent" << std::endl;
 			subtractMols(&linkers, &*it);
+		} else if (uniqueExtAtoms(&simplified_net, &*it).size() == 0) {
+			// Assuming solvents are organic, so they'd be lumped together as a linker
+			nonmetalMsg << "Deleting free solvent " << mol_smiles;
+			free_solvent += *it;
+			subtractMols(&linkers, &*it);
+			subtractMols(&nodes, &*it);
+			subtractMols(&simplified_net, &*it);
+			subtractMols(&mof_fsr, &*it);
+			subtractMols(&mof_asr, &*it);
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			subtractMols(&nodes, &*it);
@@ -213,6 +240,9 @@ int main(int argc, char* argv[])
 	nodes.EndModify();
 	linkers.EndModify();
 	simplified_net.EndModify();
+	free_solvent.EndModify();
+	mof_fsr.EndModify();
+	mof_asr.EndModify();
 	writeCIF(&simplified_net, "Test/test_partial.cif");
 
 	// Simplify all the node SBUs into single points.
@@ -237,6 +267,10 @@ int main(int argc, char* argv[])
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
 	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
+	// Write out detected solvents
+	writeCIF(&free_solvent, "Test/free_solvent.cif");
+	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
+	// writeCIF(&mof_asr, "Test/mof_asr.cif");
 
 	int simplifications;
 	do {
@@ -599,24 +633,19 @@ OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
 	return NULL;
 }
 
-int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
-	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
-	// with atomic number element, maintaining connections to existing atoms.
-	// If conn_element != 0, then add that element as a spacer at the connection
-	// site (like "X" or "Q" atoms in top-down crystal generators).
-	// Returns the number of external bonds maintained.
-
+ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
+	// What are the external connections to atoms of a fragment?
 	std::vector<OBAtom*> orig_sbu;
 	FOR_ATOMS_OF_MOL(a, *fragment) {
 		OBAtom* orig_atom = atomInOtherMol(&*a, mol);
 		if (!orig_atom) {
-			obErrorLog.ThrowError(__FUNCTION__, "Tried to delete fragment not present in molecule", obError);
-			return 0;
+			obErrorLog.ThrowError(__FUNCTION__, "Tried to access fragment not present in molecule", obError);
+		} else {
+			orig_sbu.push_back(orig_atom);
 		}
-		orig_sbu.push_back(orig_atom);
 	}
 
-	std::set<std::vector<OBAtom*> > connections;  // <External atom, internal atom bonded to it>
+	ConnExtToInt connections;  // <External atom, internal atom bonded to it>
 	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
 		FOR_NBORS_OF_ATOM(np, *it) {
 			if (!inVector<OBAtom*>(&*np, orig_sbu)) {  // External atom: not in fragment
@@ -627,6 +656,32 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 			}
 		}
 	}
+	return connections;
+}
+
+std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment) {
+	// Which unique external atoms does the fragment bind to?
+	// Note: this is not necessarily the total number of external connections for a fragment,
+	// because it could bind to multiple images of an external atom (e.g. hMOF-0/MOF-5)
+	ConnExtToInt connections = getLinksToExt(mol, fragment);
+	std::vector<OBAtom*> ext_atoms;
+	for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
+		OBAtom* ext = (*it)[0];
+		if (!inVector<OBAtom*>(ext, ext_atoms)) {
+			ext_atoms.push_back(ext);
+		}
+	}
+	return ext_atoms;
+}
+
+int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
+	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
+	// with atomic number element, maintaining connections to existing atoms.
+	// If conn_element != 0, then add that element as a spacer at the connection
+	// site (like "X" or "Q" atoms in top-down crystal generators).
+	// Returns the number of external bonds maintained.
+
+	ConnExtToInt connections = getLinksToExt(mol, fragment);
 
 	vector3 centroid = getCentroid(fragment, false);
 
@@ -635,7 +690,7 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 	OBAtom* pseudo_atom = formAtom(mol, centroid, element);
 	if (conn_element == 0) {  // Not using an "X" psuedo-atom
 		std::vector<OBAtom*> new_external_conn;
-		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
+		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
 			OBAtom* external_atom = (*it)[0];
 			if (!inVector<OBAtom*>(external_atom, new_external_conn)) {  // Only form external bonds once
 				formBond(mol, pseudo_atom, external_atom, 1);
@@ -643,7 +698,7 @@ int collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
 			}
 		}
 	} else {
-		for (std::set<std::vector<OBAtom*> >::iterator it = connections.begin(); it != connections.end(); ++it) {
+		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
 			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
 			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
 			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
