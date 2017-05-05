@@ -261,6 +261,27 @@ int main(int argc, char* argv[])
 	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
 	// writeCIF(&mof_asr, "Test/mof_asr.cif");
 
+	// Catenation: check that all interpenetrated nets contain identical components.
+	// If X_CONN tends to be overly inconsistent, we could remove it from the formula and
+	// resimplify the coefficients for just the nodes and linkers.
+	// Note: is this test really necessary if we check for topology later?
+	std::vector<OBMol> net_components = simplified_net.Separate();
+	std::string base_formula = "";
+	if (!net_components.size()) {
+		obErrorLog.ThrowError(__FUNCTION__, "No MOFs found in the simplified net.", obError);
+	} else {
+		base_formula = net_components[0].GetFormula();
+	}
+	for (std::vector<OBMol>::iterator it = net_components.begin(); it != net_components.end(); ++it) {
+		std::string component_formula = it->GetFormula();
+		if (component_formula != base_formula) {
+			std::string err_msg =
+				"Inconsistency in catenated nets.  Net with simplified formula " +
+				component_formula + " does not match " + base_formula;
+			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
+		}
+	}
+
 	int simplifications;
 	do {
 		simplifications = 0;

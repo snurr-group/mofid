@@ -69,6 +69,12 @@ def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HER
 def parse_moffles(moffles):
 	# Deconstruct a MOFFLES string into its pieces
 	components = moffles.split()
+	if len(components) == 1:
+		if moffles.lstrip != moffles:  # Empty SMILES: no MOF found
+			components.append(components[0])  # Move metadata to the right
+			components[0] = ''
+		else:
+			raise ValueError("MOF metadata required")
 	smiles = components[0]
 	if len(components) > 2:
 		print "Bad MOFFLES:", moffles
