@@ -37,7 +37,15 @@ def extract_linkers(mof_path):
 	cpp_output = subprocess.check_output([SBU_BIN, mof_path])
 	fragments = cpp_output.strip().split("\n")
 	fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
-	return sorted(fragments)
+
+	cat = None
+	if "simplified net(s)" in fragments[-1]:
+		cat = fragments.pop()[6]  # "Found x simplified net(s)"
+		cat = str(int(cat) - 1)
+		if cat == "-1":
+			cat = None
+
+	return (sorted(fragments), cat)
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
@@ -72,12 +80,13 @@ def extract_topology(mof_path):
 			return "MISMATCH"
 	return first_net
 
-def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HERE"):
+def assemble_moffles(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	# Assemble the MOFFLES code from its components
 	moffles = ".".join(linkers) + " "
 	moffles = moffles + "f1" + "."
 	moffles = moffles + topology + "."
-	moffles = moffles + cat + "."
+	if cat is not None:
+		moffles = moffles + "cat" + cat + "."
 	moffles = moffles + "F1" + "."
 	moffles = moffles + mof_name
 	return moffles
@@ -154,10 +163,10 @@ def compare_moffles(moffles1, moffles2, names=None):
 
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
-	linkers = extract_linkers(cif_path)
+	linkers, cat = extract_linkers(cif_path)
 	topology = extract_topology(SBU_SYSTRE_PATH)
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
-	return assemble_moffles(linkers, topology, mof_name=mof_name)
+	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 
 def usage():
 	raise SyntaxError("Run this code with a single parameter: path to the CIF file")

@@ -226,7 +226,7 @@ class HypoMOFs(MOFCompare):
 			'i': 'nodes',
 			'j': 'linkers',
 			'k': 'linkers',
-			'm': 'functionalization',
+			'm': 'functionalization'
 		}
 
 		if codes['m'] != "0" or codes["k"] != codes["j"]:
@@ -248,7 +248,8 @@ class HypoMOFs(MOFCompare):
 			sbus.sort()
 
 			topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
-			return assemble_moffles(sbus, topology, mof_name=codes['name'])
+			cat = codes['cat']
+			return assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
 		else:
 			return None
 
@@ -298,6 +299,7 @@ class GAMOFs(MOFCompare):
 			is_component_defined.extend([codes[key] in self.mof_db[code_key[key]]])
 
 		topology = self._topology_from_gene(codes)
+		cat = codes['cat']
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
@@ -314,7 +316,7 @@ class GAMOFs(MOFCompare):
 			sbus.sort()
 
 			moffles_options = dict()
-			moffles_options['default'] = assemble_moffles(sbus, topology, mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				not_fcu_sbus = copy.deepcopy(sbus)  # Lists are a mutable type in Python
@@ -322,7 +324,7 @@ class GAMOFs(MOFCompare):
 				not_fcu_sbus.sort()
 				# FIXME: the MOF should report the **pcu** topology once solvent removal is implemented
 				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
-				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', mof_name=codes['name'])
+				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -432,8 +434,9 @@ class TobaccoMOFs(MOFCompare):
 			topology = codes['topology']
 			if topology.startswith('test.'):
 				topology = topology[5:]
+			cat = "0"  # All ToBaCCo MOFs are uncatenated
 			# Generate a reference MOFFLES based on SBU composition
-			return assemble_moffles(linkers, topology, mof_name=codes['name'])
+			return assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
 		else:
 			return None
 

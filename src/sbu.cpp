@@ -281,6 +281,7 @@ int main(int argc, char* argv[])
 			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
 		}
 	}
+	std::cout << "Found " << net_components.size() << " simplified net(s)";
 
 	int simplifications;
 	do {
