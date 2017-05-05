@@ -285,9 +285,10 @@ int main(int argc, char* argv[])
 	int simplifications;
 	do {
 		simplifications = 0;
-		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 		simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
 		simplifications += collapseXX(&simplified_net, X_CONN);
+		// Do collapsing last, so we can still simplify "trivial loops" like M1-X-L-X-M1
+		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 	} while(simplifications);
 
 	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
