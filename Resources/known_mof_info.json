@@ -34,7 +34,7 @@
 	"NADZEZ-713513-P1" : "[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O].[Y] f1.NEW.CAT_TBD.F1.NADZEZ-713513-P1",
 	
 	"COD_2100028" : " f1.ERROR.CAT_TBD.F1.COD_2100028",
-	"intentionally_messed_up_hmof1" : "[O]C(=O)c1[c]c[c]cc1.[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.NEW.CAT_TBD.F1.intentionally_messed_up_hmof1",
+	"intentionally_messed_up_hmof1" : "[O]C(=O)c1[c]c[c]cc1.[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.MISMATCH.CAT_TBD.F1.intentionally_messed_up_hmof1",
 	
 	"_some_known_issues" : {
 		"hMOF-1" : "Catenated",

@@ -42,19 +42,35 @@ def extract_linkers(mof_path):
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
 	java_output = subprocess.check_output([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path])
-	# Put the BATCH ONE HERE
+
+	topologies = []  # What net(s) are found in the simplified framework(s)?
+	current_component = 0
 	topology_line = False
-	for line in java_output.split("\n"):
+	for raw_line in java_output.split("\n"):
+		line = raw_line.strip()
 		if topology_line:
 			topology_line = False
-			rcsr = line.strip().split()
+			rcsr = line.split()
 			assert rcsr[0] == "Name:"
-			return rcsr[1]
-		elif line.strip() == "Structure was identified with RCSR symbol:":
+			topologies.append(rcsr[1])
+		elif "ERROR" in line:
+			return "ERROR"
+		elif line == "Structure was identified with RCSR symbol:":
 			topology_line = True
-		elif line.strip() == "Structure is new for this run.":
-			return "NEW"
-	return "ERROR"  # unexpected format
+		elif line == "Structure is new for this run.":
+			topologies.append("NEW")
+		elif "Processing component " in line:
+			assert len(topologies) == current_component  # Should extract one topology per component
+			current_component += 1
+			assert line[-2] == str(current_component)
+
+	if len(topologies) == 0:
+		return "ERROR"  # unexpected format
+	first_net = topologies[0]  # Check that all present nets are consistent
+	for net in topologies:
+		if net != first_net:
+			return "MISMATCH"
+	return first_net
 
 def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HERE"):
 	# Assemble the MOFFLES code from its components
