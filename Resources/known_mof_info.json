@@ -20,7 +20,7 @@
 	
 	"super_csq_sym_5_mc_2_sym_8_mc_9_L_12" : "O[Zr]123(O)O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O.[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Cu]#[Cu][O] f1.csq.cat0.F1.super_csq_sym_5_mc_2_sym_8_mc_9_L_12",
 	"ja_512311a_si_007_tobacco" : "[O]C(=O)c1c(F)cc(cc1F)c1cc(cc(c1)c1cc(F)c(c(c1)F)C(=O)[O])c1cc(F)c(c(c1)F)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.qom.cat0.F1.ja_512311a_si_007_tobacco",
-	"ADARAA_clean" : "[Co].[Co]O[Co].[O]C(=O)c1cc(cc(c1)C(=O)[O])C1=C2C=CC(=N2)C(=c2ccc(=C(C3=NC(=C(c4[n]c1cc4)c1c(Br)cccc1Br)C=C3)c1cc(cc(c1)C(=O)[O])C(=O)[O])[n]2)c1c(Br)cccc1Br f1.ERROR.cat0.F1.ADARAA_clean",
+	"ADARAA_clean" : "[Co]O[Co].[O]C(=O)c1cc(cc(c1)C1=c2ccc3n2[Co]24n5c1ccc5C(=c1n2c(cc1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O])C(=O)[O])c1c(Br)cccc1Br)C(=O)[O] f1.nbo.cat0.F1.ADARAA_clean",
 	"ic101935f_si_002_tobacco" : "[O]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O])Nc1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
 	
 	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.NEW.cat0.F1.MIL-47-P1-RASPA",
@@ -38,7 +38,6 @@
 	
 	"_some_known_issues" : {
 		"hMOF-1" : "Catenated",
-		"ADARAA_clean" : "Porphyrinic MOF, though Co ion is currently listed as a separate node.  Topology not found due to multiple connections between linker and porphyrin metal",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"ZIF-69-RASPA" : "Strange radicals in both linkers",
 		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)",
@@ -47,6 +46,7 @@
 	
 	"_regression_tests" : {
 		"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "Multiple representations of the linker fixed by incorporating torsion code in OBBond::IsDoubleBondGeometry",
+		"ADARAA_clean" : "Porphyrinic MOF, which requires inclusion of Co ions into the linkers.  Otherwise the topology is not found.",
 		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"
 	},
 	
