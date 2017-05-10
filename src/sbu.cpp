@@ -37,7 +37,7 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 void copyMOF(OBMol *src, OBMol *dest);
 void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
-void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath);
+void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
 void printFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
@@ -48,6 +48,7 @@ int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 bool isSubMol(OBMol *sub, OBMol *super);
+std::map<int,int> getNumericFormula(OBMol *mol);
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
@@ -117,6 +118,14 @@ class ElementGen
 				elements.push_back(it->second);
 			}
 			return elements;
+		}
+		int remove_key(std::string smiles) {
+			if (_mapping.find(smiles) == _mapping.end()) {
+				return 0;
+			}
+			int old_element = _mapping[smiles];
+			_mapping.erase(smiles);
+			return old_element;
 		}
 };
 
@@ -337,12 +346,37 @@ int main(int argc, char* argv[])
 	writeCIF(&linkers, "Test/linkers.cif");
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
 	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
-	// FIXME: For fragment keys, do we only want to write out the fragments we actually used?
-	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 	// Write out detected solvents
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
 	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
 	// writeCIF(&mof_asr, "Test/mof_asr.cif");
+
+	// Format the fragment keys (psuedo atoms to SMILES) after invalidating unused fragments
+	std::map<int,int> active_pseudo_atoms = getNumericFormula(&simplified_net);
+	std::vector<int> active_pseudo_elements;
+	for (std::map<int,int>::iterator it=active_pseudo_atoms.begin(); it!=active_pseudo_atoms.end(); ++it) {
+		active_pseudo_elements.push_back(it->first);
+	}
+	std::map<std::string,int> removed_keys;
+	std::map<std::string,int> gen = node_conv.get_map();
+	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
+		if (!inVector<int>(it->second, active_pseudo_elements)) {
+			removed_keys[it->first] = it->second;
+		}
+	}
+	gen = linker_conv.get_map();
+	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
+		if (!inVector<int>(it->second, active_pseudo_elements)) {
+			removed_keys[it->first] = it->second;
+		}
+	}
+	for (std::map<std::string,int>::iterator it=removed_keys.begin(); it!=removed_keys.end(); ++it) {
+		// Remove unused SMILES codes.  remove_key does not delete anything if the key does not exist
+		node_conv.remove_key(it->first);
+		linker_conv.remove_key(it->first);
+	}
+	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
+
 
 	// Catenation: check that all interpenetrated nets contain identical components.
 	// If X_CONN tends to be overly inconsistent, we could remove it from the formula and
@@ -567,7 +601,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 	ofs.close();
 }
 
-void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::string filepath) {
+void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath) {
 	// Save fragment identities for condensed_linkers.cif
 	std::string equal_line = "================";
 	std::ofstream out_file;
@@ -584,7 +618,21 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 	for (std::map<std::string,int>::iterator it=linkers.begin(); it!=linkers.end(); ++it) {
 		out_file << etab.GetSymbol(it->second) << ": " << it->first;
 	}
-	out_file << std::endl;
+	out_file << std::endl << std::endl;
+
+	if (X_CONN) {
+		out_file << "Connection atom (\"X\")" << std::endl << equal_line << std::endl;
+		out_file << etab.GetSymbol(X_CONN) << ": " << "<X connector>" << std::endl;
+		out_file << std::endl << std::endl;
+	}
+
+	if (removed.size()) {
+		out_file << "Unused pseudo atom types (see test_partial.cif)" << std::endl << equal_line << std::endl;
+		for (std::map<std::string,int>::iterator it=removed.begin(); it!=removed.end(); ++it) {
+			out_file << etab.GetSymbol(it->second) << ": " << it->first;
+		}
+		out_file << std::endl << std::endl;
+	}
 
 	out_file.close();
 }
@@ -737,6 +785,20 @@ bool isSubMol(OBMol *sub, OBMol *super) {
 		}
 	}
 	return true;
+}
+
+std::map<int,int> getNumericFormula(OBMol *mol) {
+	// What is the molecular formula, based on atomic numbers?
+	// Returns <atomic number of an element, atom count in *mol>
+	std::map<int,int> formula;
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		int element = a->GetAtomicNum();
+		if (formula.find(element) == formula.end()) {
+			formula[element] = 0;
+		}
+		formula[element] += 1;
+	}
+	return formula;
 }
 
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
