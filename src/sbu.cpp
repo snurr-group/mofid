@@ -47,6 +47,7 @@ bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
+bool isSubMol(OBMol *sub, OBMol *super);
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
@@ -287,10 +288,7 @@ int main(int argc, char* argv[])
 
 				// At the end, delete the one-connected "nodes"
 				pseudo_deletions.push_back(&*a);
-
-				// TODO: self-consistency updates to other variables
-				// What to do about ElementGen???  New element for this?  Update the element type in the simplified net based on the new SMILES?
-				// Is the pseudo_map still correct?  Update these atoms as well
+				pseudo_map.erase(&*a);
 
 			} else if (inVector<int>(point_type, linker_conv.used_elements())) {
 				// TODO: bound ligands, e.g. capping agents or bound solvents for ASR removal
@@ -305,6 +303,24 @@ int main(int argc, char* argv[])
 	}
 	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
 		simplified_net.DeleteAtom(*it);
+	}
+	// Self-consistency bookkeeping: update pseudo atom map
+	std::vector<OBMol> split_linkers = linkers.Separate();
+	for (std::map<OBAtom*, OBMol*>::iterator it=pseudo_map.begin(); it!=pseudo_map.end(); ++it) {
+		for (std::vector<OBMol>::iterator it2=split_linkers.begin(); it2!=split_linkers.end(); ++it2) {
+			if (isSubMol(it->second, &*it2)) {
+				it->second = &*it2;  // use the updated linker fragment
+				break;
+			}
+		}
+	}
+	// Also update pseudo-atom element types for the linkers (ignoring nodes and linkers)
+	FOR_ATOMS_OF_MOL(a, simplified_net) {
+		int a_element = a->GetAtomicNum();
+		if (a_element != X_CONN && !inVector<int>(a_element, node_conv.used_elements())) {
+			std::string a_smiles = getSMILES(*(pseudo_map[&*a]), obconv);
+			a->SetAtomicNum(linker_conv.key(a_smiles));  // Looks for an old key, or assigns a new one if it's an updated linker
+		}
 	}
 	simplified_net.EndModify();
 	nodes.EndModify();
@@ -321,6 +337,7 @@ int main(int argc, char* argv[])
 	writeCIF(&linkers, "Test/linkers.cif");
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
 	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
+	// FIXME: For fragment keys, do we only want to write out the fragments we actually used?
 	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), "Test/keys_for_condensed_linkers.txt");
 	// Write out detected solvents
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
@@ -710,6 +727,16 @@ OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
 		}
 	}
 	return NULL;
+}
+
+bool isSubMol(OBMol *sub, OBMol *super) {
+	// Are the atoms in *sub a subset of the atoms in *super?
+	FOR_ATOMS_OF_MOL(a, *sub) {
+		if (!atomInOtherMol(&*a, super)) {  // NULL if atom not found
+			return false;
+		}
+	}
+	return true;
 }
 
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
