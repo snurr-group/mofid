@@ -35,6 +35,7 @@ typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
 // Function prototypes
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+OBMol initMOF(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
 void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
@@ -185,9 +186,7 @@ int main(int argc, char* argv[])
 	copyMOF(&orig_mol, &simplified_net);
 	copyMOF(&orig_mol, &mof_fsr);
 	copyMOF(&orig_mol, &mof_asr);
-	OBMol free_solvent;
-	free_solvent.SetPeriodicLattice(orig_mol.GetPeriodicLattice());
-	free_solvent.SetData(free_solvent.GetPeriodicLattice()->Clone(NULL));
+	OBMol free_solvent = initMOF(&orig_mol);
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -336,30 +335,6 @@ int main(int argc, char* argv[])
 	nodes.EndModify();
 	linkers.EndModify();
 
-	// Format the fragment keys (psuedo atoms to SMILES) after invalidating unused fragments
-	std::map<int,int> active_pseudo_atoms = getNumericFormula(&simplified_net);
-	std::vector<int> active_pseudo_elements;
-	for (std::map<int,int>::iterator it=active_pseudo_atoms.begin(); it!=active_pseudo_atoms.end(); ++it) {
-		active_pseudo_elements.push_back(it->first);
-	}
-	std::map<std::string,int> removed_keys;
-	std::map<std::string,int> gen = node_conv.get_map();
-	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
-		if (!inVector<int>(it->second, active_pseudo_elements)) {
-			removed_keys[it->first] = it->second;
-		}
-	}
-	gen = linker_conv.get_map();
-	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
-		if (!inVector<int>(it->second, active_pseudo_elements)) {
-			removed_keys[it->first] = it->second;
-		}
-	}
-	for (std::map<std::string,int>::iterator it=removed_keys.begin(); it!=removed_keys.end(); ++it) {
-		// Remove unused SMILES codes.  remove_key does not delete anything if the key does not exist
-		node_conv.remove_key(it->first);
-		linker_conv.remove_key(it->first);
-	}
 
 	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 
@@ -412,9 +387,34 @@ int main(int argc, char* argv[])
 	// writeCIF(&mof_asr, "Test/mof_asr.cif");
 
 	// Topologically relevant information about the simplified net
-	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
 	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
 	writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
+
+	// Format the fragment keys (psuedo atoms to SMILES) after invalidating unused fragments
+	std::map<int,int> active_pseudo_atoms = getNumericFormula(&simplified_net);
+	std::vector<int> active_pseudo_elements;
+	for (std::map<int,int>::iterator it=active_pseudo_atoms.begin(); it!=active_pseudo_atoms.end(); ++it) {
+		active_pseudo_elements.push_back(it->first);
+	}
+	std::map<std::string,int> removed_keys;
+	std::map<std::string,int> gen = node_conv.get_map();
+	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
+		if (!inVector<int>(it->second, active_pseudo_elements)) {
+			removed_keys[it->first] = it->second;
+		}
+	}
+	gen = linker_conv.get_map();
+	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
+		if (!inVector<int>(it->second, active_pseudo_elements)) {
+			removed_keys[it->first] = it->second;
+		}
+	}
+	for (std::map<std::string,int>::iterator it=removed_keys.begin(); it!=removed_keys.end(); ++it) {
+		// Remove unused SMILES codes.  remove_key does not delete anything if the key does not exist
+		node_conv.remove_key(it->first);
+		linker_conv.remove_key(it->first);
+	}
+	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
 
 	return(0);
 }
@@ -442,6 +442,14 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 		conv.AddOption("g");
 	}
 	conv.WriteFile(molp, filepath);
+}
+
+OBMol initMOF(OBMol *orig_in_uc) {
+	// Initializes a MOF with the same lattice params as *orig_in_uc
+	OBMol dest;
+	dest.SetPeriodicLattice(orig_in_uc->GetPeriodicLattice());
+	dest.SetData(dest.GetPeriodicLattice()->Clone(NULL));
+	return dest;
 }
 
 void copyMOF(OBMol *src, OBMol *dest) {
