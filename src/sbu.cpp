@@ -187,6 +187,7 @@ int main(int argc, char* argv[])
 	copyMOF(&orig_mol, &mof_fsr);
 	copyMOF(&orig_mol, &mof_asr);
 	OBMol free_solvent = initMOF(&orig_mol);
+	OBMol bound_solvent = initMOF(&orig_mol);
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -369,7 +370,52 @@ int main(int argc, char* argv[])
 		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 	} while(simplifications);
 
-	// REMOVAL OF BOUND SOLVENTS GOES HERE
+	// Remove ligands one-connected to a node.
+	// Currently classify these as bound solvents, but they could represent
+	// post-synthetic modification or organic parts of the node.
+	// TODO: check with experimentalists if MOF nodes are always metal oxides, which
+	// we are currently assuming.
+	bound_solvent.BeginModify();
+	mof_asr.BeginModify();
+	linkers.BeginModify();
+	pseudo_deletions.clear();  // Reset this reused variable
+	FOR_ATOMS_OF_MOL(a, simplified_net) {
+		if (a->GetValence() == 1) {
+			int point_type = a->GetAtomicNum();
+			if (inVector<int>(point_type, linker_conv.used_elements())) {  // Metal-containing linker
+				if (X_CONN) {  // Simplify by removing the connection point, simplifying the problem to the base case
+					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
+					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
+					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
+						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
+					}
+					formBond(&simplified_net, *(a_nbors.begin()), &*a);
+				}
+
+				// Delete the bound ligands
+				OBMol* fragment_mol = pseudo_map[&*a];
+				bound_solvent += *fragment_mol;
+				subtractMols(&linkers, fragment_mol);
+
+				// At the end, delete the one-connected "nodes"
+				pseudo_deletions.push_back(&*a);
+				pseudo_map.erase(&*a);
+
+			} else {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
+			}
+		}
+	}
+	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
+		simplified_net.DeleteAtom(*it);
+	}
+	// Other bookkeeping on atom types is unnecessary, because we're not forming
+	// new connections between the bound solvents and the nodes.
+	subtractMols(&mof_asr, &bound_solvent);
+	bound_solvent.EndModify();
+	mof_asr.EndModify();
+	linkers.EndModify();
+
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
 	printFragments(uniqueSMILES(nodes.Separate(), obconv));
@@ -383,8 +429,9 @@ int main(int argc, char* argv[])
 
 	// Write out detected solvents
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
+	writeCIF(&bound_solvent, "Test/bound_solvent.cif");
 	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
-	// writeCIF(&mof_asr, "Test/mof_asr.cif");
+	writeCIF(&mof_asr, "Test/mof_asr.cif");
 
 	// Topologically relevant information about the simplified net
 	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");

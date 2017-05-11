@@ -29,24 +29,24 @@
 	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O]C(=O)C=CC=CC(=O)[O] f1.fcu.cat0.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
 	"hypotheticalMOF_2000756_0_0_2_32_32_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O])c1ccc(cc1)C(=O)[O] f1.tbo.cat0.F1.hypotheticalMOF_2000756_0_0_2_32_32_0",
 	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_5026325_3_0_0_27_27_0",
-	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O].[O]C(=O)c1ccccc1 f1.ERROR.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
+	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O] f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
 	
 	"NADZEZ-713513-P1" : "[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O].[Y] f1.NEW.cat0.F1.NADZEZ-713513-P1",
 	
 	"COD_2100028" : " f1.ERROR.F1.COD_2100028",
-	"intentionally_messed_up_hmof1" : "[O]C(=O)c1[c]c[c]cc1.[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
+	"intentionally_messed_up_hmof1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
 	
 	"_some_known_issues" : {
 		"hMOF-1" : "Catenated",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"ZIF-69-RASPA" : "Strange radicals in both linkers",
-		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)",
-		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "Will likely be pcu topology once we remove bound solvents"
+		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)"
 	},
 	
 	"_regression_tests" : {
 		"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "Multiple representations of the linker fixed by incorporating torsion code in OBBond::IsDoubleBondGeometry",
 		"ADARAA_clean" : "Porphyrinic MOF, which requires inclusion of Co ions into the linkers.  Otherwise the topology is not found.",
+		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "pcu topology after bound solvents are removed/simplified",
 		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"
 	},
 	

@@ -319,12 +319,8 @@ class GAMOFs(MOFCompare):
 			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
-				not_fcu_sbus = copy.deepcopy(sbus)  # Lists are a mutable type in Python
-				not_fcu_sbus.append('[O]C(=O)c1ccccc1')  # Benzoic acid capping agent
-				not_fcu_sbus.sort()
-				# FIXME: the MOF should report the **pcu** topology once solvent removal is implemented
-				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
-				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', cat, mof_name=codes['name'])
+				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
+				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
