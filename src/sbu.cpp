@@ -300,8 +300,9 @@ int main(int argc, char* argv[])
 				pseudo_map.erase(&*a);
 
 			} else if (inVector<int>(point_type, linker_conv.used_elements())) {
-				// TODO: bound ligands, e.g. capping agents or bound solvents for ASR removal
-				// Probably will involve refactoring the node->linker case above
+				// Bound ligands, such as capping agents or bound solvents for ASR removal
+				// This will be handled below after the nets are fully simplified
+				continue;
 			} else if (point_type == X_CONN) {
 				obErrorLog.ThrowError(__FUNCTION__, "Found singly-connected connection atom in the simplified net.", obError);
 			} else {
@@ -335,22 +336,6 @@ int main(int argc, char* argv[])
 	nodes.EndModify();
 	linkers.EndModify();
 
-
-	// For now, just print the SMILES of the nodes and linkers.
-	// Eventually, this may become the basis for MOFFLES.
-	printFragments(uniqueSMILES(nodes.Separate(), obconv));
-	printFragments(uniqueSMILES(linkers.Separate(), obconv));
-
-	// Write out the decomposed and simplified MOF
-	writeCIF(&nodes, "Test/nodes.cif");
-	writeCIF(&linkers, "Test/linkers.cif");
-	writeCIF(&orig_mol, "Test/orig_mol.cif");
-	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
-	// Write out detected solvents
-	writeCIF(&free_solvent, "Test/free_solvent.cif");
-	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
-	// writeCIF(&mof_asr, "Test/mof_asr.cif");
-
 	// Format the fragment keys (psuedo atoms to SMILES) after invalidating unused fragments
 	std::map<int,int> active_pseudo_atoms = getNumericFormula(&simplified_net);
 	std::vector<int> active_pseudo_elements;
@@ -375,7 +360,8 @@ int main(int argc, char* argv[])
 		node_conv.remove_key(it->first);
 		linker_conv.remove_key(it->first);
 	}
-	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
+
+	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
 
 
 	// Catenation: check that all interpenetrated nets contain identical components.
@@ -398,7 +384,6 @@ int main(int argc, char* argv[])
 			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
 		}
 	}
-	std::cout << "Found " << net_components.size() << " simplified net(s)";
 
 	int simplifications;
 	do {
@@ -409,6 +394,25 @@ int main(int argc, char* argv[])
 		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 	} while(simplifications);
 
+	// REMOVAL OF BOUND SOLVENTS GOES HERE
+
+	// Print out the SMILES for nodes and linkers, and the detected catenation
+	printFragments(uniqueSMILES(nodes.Separate(), obconv));
+	printFragments(uniqueSMILES(linkers.Separate(), obconv));
+	std::cout << "Found " << net_components.size() << " simplified net(s)";
+
+	// Write out the decomposed and simplified MOF
+	writeCIF(&nodes, "Test/nodes.cif");
+	writeCIF(&linkers, "Test/linkers.cif");
+	writeCIF(&orig_mol, "Test/orig_mol.cif");
+
+	// Write out detected solvents
+	writeCIF(&free_solvent, "Test/free_solvent.cif");
+	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
+	// writeCIF(&mof_asr, "Test/mof_asr.cif");
+
+	// Topologically relevant information about the simplified net
+	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
 	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
 	writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
 
