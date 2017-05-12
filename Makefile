@@ -12,7 +12,7 @@ bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
-openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/formats/systreformat.cpp
+openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/formats/systreformat.cpp openbabel/src/mol.cpp
 	cd openbabel/build; \
 	make cifformat; \
 	make systreformat; \

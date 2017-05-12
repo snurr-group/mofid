@@ -189,6 +189,8 @@ int main(int argc, char* argv[])
 	OBMol free_solvent = initMOF(&orig_mol);
 	OBMol bound_solvent = initMOF(&orig_mol);
 
+	writeCIF(&orig_mol, "Test/orig_mol.cif");
+
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
 	deleteBonds(&mol, true);
@@ -425,7 +427,6 @@ int main(int argc, char* argv[])
 	// Write out the decomposed and simplified MOF
 	writeCIF(&nodes, "Test/nodes.cif");
 	writeCIF(&linkers, "Test/linkers.cif");
-	writeCIF(&orig_mol, "Test/orig_mol.cif");
 
 	// Write out detected solvents
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
