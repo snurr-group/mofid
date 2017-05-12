@@ -11,7 +11,6 @@ ToBACCo or hMOF structures against their "recipe."
 """
 
 import os, sys
-import subprocess
 import glob
 import json
 import time
@@ -317,6 +316,7 @@ class GAMOFs(MOFCompare):
 
 			moffles_options = dict()
 			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
+			moffles_options['err_timeout'] = assemble_moffles(sbus, 'TIMEOUT', cat, mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?

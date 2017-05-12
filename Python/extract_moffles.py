@@ -10,7 +10,8 @@ together.
 @author: Ben Bucior
 """
 
-import subprocess
+import subprocess  # No support for timeouts except in Python 3.x, so do not use this for Systre
+from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
 import glob
 import json
 # import re
@@ -18,6 +19,7 @@ import json
 import sys, os
 
 # Some default settings for my computer.  Adjust these based on your configuration:
+SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_SYSTRE_PATH = "Test/topology.cgd"
 if sys.platform == "win32":
 	SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
@@ -34,7 +36,7 @@ else:
 
 def extract_linkers(mof_path):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_output = subprocess.check_output([SBU_BIN, mof_path])
+	cpp_output = subprocess.check_output([SBU_BIN, mof_path])  # Use subprocess so we get stdout
 	fragments = cpp_output.strip().split("\n")
 	fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
 
@@ -49,7 +51,10 @@ def extract_linkers(mof_path):
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
-	java_output = subprocess.check_output([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path])
+	java_run = EasyProcess([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path]).call(timeout=SYSTRE_TIMEOUT)
+	java_output = java_run.stdout
+	if java_run.timeout_happened:
+		return "TIMEOUT"
 
 	topologies = []  # What net(s) are found in the simplified framework(s)?
 	current_component = 0
