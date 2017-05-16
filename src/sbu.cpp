@@ -61,6 +61,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 bool isPeriodicChain(OBMol *mol);
+int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
 vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
@@ -257,22 +258,22 @@ int main(int argc, char* argv[])
 	// Simplify all the node SBUs into single points.
 	ElementGen node_conv(true);
 	simplified_net.BeginModify();
-	std::vector<OBMol> sep_nodes = nodes.Separate();
 
 	bool mil_type_mof = false;
-	//std::cout << "Linkers: " << isPeriodicChain(&linkers) << std::endl;
-	//std::cout << "Network: " << isPeriodicChain(&simplified_net) << std::endl;
-	// TODO: ADD AN IF STATEMENT SOMEWHERE IN HERE TO DETECT 1D PERIODIC RODS.
-	// IF IT'S MIL-47-LIKE, THEN DISCONNECT METAL-OXYGEN BONDS (and set mof_with_rods).
-	// THEN OF COURSE WE NEED TO RENAME IT AS A "PSEUDO ATOM" IN THE SIMPLIFIED_NET.
-	// Note: the pseudo atom conversion will mostly take care of it.
-	// We should check if the collapseSBU call will need X_CONN defined to handle the MIL-types
-	// regardless, the two-connected will be properly abstracted away
+	if (sepPeriodicChains(&nodes)) {
+		mil_type_mof = true;
+	}
 
+	std::vector<OBMol> sep_nodes = nodes.Separate();
 	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
 		std::string node_smiles = getSMILES(*it, obconv);
-		// Only calculating the connection points on the linkers
-		OBAtom* pseudo_node = collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles));
+		OBAtom* pseudo_node;
+		if (node_smiles == "[O]\t\n") {  // These oxygen atoms behave more like linkers
+			pseudo_node = collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles), X_CONN);
+		} else {
+			// Don't need extra connection atoms from the nodes
+			pseudo_node = collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles));
+		}
 		pseudo_map[pseudo_node] = &*it;
 	}
 	simplified_net.EndModify();
@@ -1265,6 +1266,55 @@ bool isPeriodicChain(OBMol *mol) {
 		return true;
 	}
 	return false;
+}
+
+int sepPeriodicChains(OBMol *nodes) {
+	// Separate periodic chains (rods like MIL-47) by disconnecting the M1-O-M2 bonds in *nodes.
+	// Returns the number of rods detected and simplified.
+
+	int simplifications = 0;
+	std::vector<OBBond*> delbonds;
+
+	std::vector<OBMol> sep_nodes = nodes->Separate();
+	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
+		if (isPeriodicChain(&*it)) {
+			FOR_ATOMS_OF_MOL(a, *it) {
+				if (a->GetAtomicNum() == 8) {
+					bool all_metals = true;
+					FOR_NBORS_OF_ATOM(n, *a) {
+						if (!isMetal(&*n)) {
+							all_metals = false;
+						}
+					}
+					if (all_metals) {
+						OBAtom* orig_atom = atomInOtherMol(&*a, nodes);
+						FOR_BONDS_OF_ATOM(b, *orig_atom) {
+							if (!inVector(&*b, delbonds)) {
+								delbonds.push_back(&*b);
+							}
+						}
+					}
+				}
+			}
+			simplifications += 1;
+		}
+	}
+
+	nodes->BeginModify();
+	for (std::vector<OBBond*>::iterator it=delbonds.begin(); it!=delbonds.end(); ++it) {
+		nodes->DeleteBond(*it);
+	}
+	nodes->EndModify();
+	if (simplifications) {  // Check that the periodic nodes are actually separated
+		std::vector<OBMol> fixed_sep_nodes = nodes->Separate();
+		for (std::vector<OBMol>::iterator it=fixed_sep_nodes.begin(); it!=fixed_sep_nodes.end(); ++it) {
+			if (isPeriodicChain(&*it)) {
+				std::string err_msg = "Node with formula " + it->GetFormula() + " still periodic after separations";
+				obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
+			}
+		}
+	}
+	return simplifications;
 }
 
 std::vector<int> makeVector(int a, int b, int c) {

@@ -23,7 +23,7 @@
 	"ADARAA_clean" : "[Co]O[Co].[O]C(=O)c1cc(cc(c1)C1=c2ccc3n2[Co]24n5c1ccc5C(=c1n2c(cc1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O])C(=O)[O])c1c(Br)cccc1Br)C(=O)[O] f1.nbo.cat0.F1.ADARAA_clean",
 	"ic101935f_si_002_tobacco" : "[O]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O])Nc1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
 	
-	"MIL-47-P1-RASPA" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[V]1O[V]O1 f1.NEW.cat0.F1.MIL-47-P1-RASPA",
+	"MIL-47-P1-RASPA" : "[O].[O]C(=O)c1ccc(cc1)C(=O)[O].[V] f1.NEW.cat0.F1.MIL-47-P1-RASPA",
 	
 	"hypotheticalMOF_27262_1_0_2_9_9_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)C(=O)[O].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_27262_1_0_2_9_9_0",
 	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O]C(=O)C=CC=CC(=O)[O] f1.fcu.cat0.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
@@ -40,7 +40,7 @@
 		"hMOF-1" : "Catenated",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"ZIF-69-RASPA" : "Strange radicals in both linkers",
-		"MIL-47-P1-RASPA" : "Chains are currently size dependent (without a detected topology)"
+		"MIL-47-P1-RASPA" : "Still need to detect the **rna** topology"
 	},
 	
 	"_regression_tests" : {
