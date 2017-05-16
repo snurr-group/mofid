@@ -30,6 +30,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
 
 typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
+typedef std::map<OBAtom*, std::vector<int> > UCMap;
 
 
 // Function prototypes
@@ -57,7 +58,9 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_ele
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
+UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
 vector3 getCentroid(OBMol *fragment, bool weighted);
+bool isPeriodicChain(OBMol *mol);
 std::vector<int> makeVector(int a, int b, int c);
 vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
@@ -255,6 +258,17 @@ int main(int argc, char* argv[])
 	ElementGen node_conv(true);
 	simplified_net.BeginModify();
 	std::vector<OBMol> sep_nodes = nodes.Separate();
+
+	bool mil_type_mof = false;
+	//std::cout << "Linkers: " << isPeriodicChain(&linkers) << std::endl;
+	//std::cout << "Network: " << isPeriodicChain(&simplified_net) << std::endl;
+	// TODO: ADD AN IF STATEMENT SOMEWHERE IN HERE TO DETECT 1D PERIODIC RODS.
+	// IF IT'S MIL-47-LIKE, THEN DISCONNECT METAL-OXYGEN BONDS (and set mof_with_rods).
+	// THEN OF COURSE WE NEED TO RENAME IT AS A "PSEUDO ATOM" IN THE SIMPLIFIED_NET.
+	// Note: the pseudo atom conversion will mostly take care of it.
+	// We should check if the collapseSBU call will need X_CONN defined to handle the MIL-types
+	// regardless, the two-connected will be properly abstracted away
+
 	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
 		std::string node_smiles = getSMILES(*it, obconv);
 		// Only calculating the connection points on the linkers
@@ -417,6 +431,10 @@ int main(int argc, char* argv[])
 	bound_solvent.EndModify();
 	mof_asr.EndModify();
 	linkers.EndModify();
+
+	if (mil_type_mof) {
+		// TODO: INVOKE THE FUNCTION TO SPLIT 4-CONNECTED INTO 3+3, BY ROD CONVENTION.
+	}
 
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
@@ -1135,6 +1153,59 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 	return to_delete.size();
 }
 
+UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
+	// Starting with a random atom, traverse the fragment atom-by-atom to determine
+	// which unit cell each atom belongs to in a self-consistent manner.
+	// Includes an optional parameter to allow 1D periodic fragments (e.g. MIL-47).
+	// By default, these are forbidden (since the ordering is undefined) and returns an empty map.
+
+	std::queue<OBAtom*> to_visit;
+	std::map<OBAtom*, std::vector<int> > unit_cells;
+	// Start at whichever atom is (randomly?) saved first
+	// Note: atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
+	OBAtom* start_atom = fragment->GetAtom(1);
+	to_visit.push(start_atom);
+	unit_cells[start_atom] = makeVector(0, 0, 0);  // original unit cell
+
+	while (!to_visit.empty()) {
+		OBAtom* current = to_visit.front();
+		to_visit.pop();
+		FOR_NBORS_OF_ATOM(nbr, current) {
+			OBBond* nbr_bond = fragment->GetBond(current, &*nbr);
+			std::vector<int> uc = nbr_bond->GetPeriodicDirection();  // TODO: Consider implementing GetPeriodicDirection in atom.cpp as well
+			if (nbr_bond->GetBeginAtom() == &*nbr) {  // opposite bond direction as expected
+				uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
+			}
+
+			std::vector<int> current_uc = unit_cells[current];
+			uc = makeVector(current_uc[0] + uc[0], current_uc[1] + uc[1], current_uc[2] + uc[2]);
+
+			if (unit_cells.find(&*nbr) == unit_cells.end()) {  // Unvisited atom
+				// Make sure to visit the neighbor (and its neighbors, etc.)
+				// Each atom will only be traversed once, since we've already added it to unit_cells
+				to_visit.push(&*nbr);
+				unit_cells[&*nbr] = uc;
+			} else {  // Visited atom: check for loops across periodic boundaries
+				if (unit_cells[&*nbr] != uc) {
+					if (warn_rod) {
+						obErrorLog.ThrowError(__FUNCTION__, "Found periodic loop when unwrapping fragment.  Unit cells are may not be self-consistent.", obWarning);
+					}
+					if (!allow_rod) {
+						unit_cells.clear();
+						return unit_cells;
+					}
+				}
+			}
+		}
+	}
+
+	if (fragment->NumAtoms() != unit_cells.size()) {  // Note: will not run if periodic loops are found and !allow_rod
+		obErrorLog.ThrowError(__FUNCTION__, "More than one fragment found.  Behavior is undefined.", obError);
+		unit_cells.clear();
+	}
+	return unit_cells;
+}
+
 vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// Calculate the centroid of a fragment, optionally weighted by the atomic mass
 	// (which would give the center of mass).  Consider periodicity as needed, and
@@ -1156,53 +1227,15 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 		return (center / total_weight);
 	}
 
-	// Otherwise, for periodic systems, we should build the fragment up atom-by-atom
-	std::queue<OBAtom*> to_visit;
-	std::map<OBAtom*, std::vector<int> > unit_cells;
+	// The more complicated periodic case requires "unwrapping" the molecular fragment
+	UCMap unit_cells = unwrapFragmentUC(fragment, true, true);
 	OBUnitCell* lattice = fragment->GetPeriodicLattice();
-
-	// Start at whichever atom is (randomly?) saved first
-	// Note: atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
-	OBAtom* start_atom = fragment->GetAtom(1);
-	to_visit.push(start_atom);
-	unit_cells[start_atom] = makeVector(0, 0, 0);  // original unit cell
-	// Traverse the molecular graph until we run out of atoms
-	while (!to_visit.empty()) {
-		OBAtom* current = to_visit.front();
-		to_visit.pop();
-		FOR_NBORS_OF_ATOM(nbr, current) {
-			if (unit_cells.find(&*nbr) == unit_cells.end()) {  // Unvisited atom
-				// TODO: Consider implementing GetPeriodicDirection in atom.cpp as well
-				OBBond* nbr_bond = fragment->GetBond(current, &*nbr);
-				std::vector<int> uc = nbr_bond->GetPeriodicDirection();
-				if (nbr_bond->GetBeginAtom() == &*nbr) {  // opposite bond direction as expected
-					uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
-				}
-
-				std::vector<int> current_uc = unit_cells[current];
-				uc = makeVector(current_uc[0] + uc[0], current_uc[1] + uc[1], current_uc[2] + uc[2]);
-				unit_cells[&*nbr] = uc;
-
-				// Make sure to visit the neighbor (and its neighbors, etc.)
-				// Each atom will only be traversed once, since we've already added it to unit_cells
-				to_visit.push(&*nbr);
-			}
-		}
-	}
-
-	// We're assuming distinct, connected fragment SBUs, unless the system is nonperiodic.
-	if (fragment->NumAtoms() != unit_cells.size()) {
-		obErrorLog.ThrowError(__FUNCTION__, "getCentroid assumes one connected fragment for periodic systems.  Behavior is undefined.", obWarning);
-		return vector3(0.0, 0.0, 0.0);
-	}
-
-	// Now that we've "unwrapped" the molecular fragment, calculate the centroid
-	for (std::map<OBAtom*, std::vector<int> >::iterator it=unit_cells.begin(); it!=unit_cells.end(); ++it) {
+	for (UCMap::iterator it=unit_cells.begin(); it!=unit_cells.end(); ++it) {
 		double weight = 1.0;
 		if (weighted) {
 			weight = it->first->GetAtomicMass();
 		}
-		std::vector<int> uc_shift = it->second;  // first: second = key: value of a map/dict.
+		std::vector<int> uc_shift = it->second;  // <first: second> = <key: value> of a map/dict.
 		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
 		vector3 coord_shift = lattice->FractionalToCartesian(uc_shift_frac);
 		center += weight * (it->first->GetVector() + coord_shift);
@@ -1211,6 +1244,27 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	center /= total_weight;
 	center = lattice->WrapCartesianCoordinate(center);  // Keep result in the [0,1] unit cell
 	return center;
+}
+
+bool isPeriodicChain(OBMol *mol) {
+	// Is this molecule/fragment 1D periodic?
+	// For example, 1D periodic rods (MIL-47 and related topologies).
+	// Implements an algorithm similar to dimensionality of channel systems in Zeo++.
+	// See description in Sections 2.2.2-2.2.3 of 10.1016/j.micromeso.2011.08.020
+
+	if (!mol || mol->NumAtoms() == 0) {
+		return false;
+	}
+	if (mol->Separate().size() != 1) {
+		obErrorLog.ThrowError(__FUNCTION__, "Not processing multi-fragment OBMol", obInfo);
+		return false;
+	}
+	// Unwrapping the fragment will return an empty map if there's UC inconsistencies,
+	// which are indicative of a periodic chain (or pore).
+	if (unwrapFragmentUC(mol, false, false).size() == 0) {
+		return true;
+	}
+	return false;
 }
 
 std::vector<int> makeVector(int a, int b, int c) {
