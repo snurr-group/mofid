@@ -58,8 +58,11 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_ele
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
+int fourToTwoThree(OBMol *net, int X_CONN);
+OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
 vector3 getCentroid(OBMol *fragment, bool weighted);
+vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
 bool isPeriodicChain(OBMol *mol);
 int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
@@ -433,8 +436,10 @@ int main(int argc, char* argv[])
 	mof_asr.EndModify();
 	linkers.EndModify();
 
-	if (mil_type_mof) {
-		// TODO: INVOKE THE FUNCTION TO SPLIT 4-CONNECTED INTO 3+3, BY ROD CONVENTION.
+	if (mil_type_mof) {  // Split 4-coordinated linkers into 3+3 by convention
+		if (!fourToTwoThree(&simplified_net, X_CONN)) {
+			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly did not convert 4-coordinated linkers in MIL-like MOF", obWarning);
+		}
 	}
 
 
@@ -1154,6 +1159,101 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 	return to_delete.size();
 }
 
+int fourToTwoThree(OBMol *net, int X_CONN) {
+	// Transforms four-connected atoms to two three-connected pseudo atoms.
+	// This satisfies the convention used for MIL-47-like topologies.
+	// Returns the number of simplified linkers
+
+	int changes = 0;
+	std::queue<OBAtom*> to_change;
+
+	FOR_ATOMS_OF_MOL(a, *net) {
+		if (a->GetValence() == 4) {
+			to_change.push(&*a);
+		}
+	}
+
+	net->BeginModify();
+	while (!to_change.empty()) {
+		OBAtom* current = to_change.front();
+		to_change.pop();
+		std::vector<OBAtom*> nbors;
+		FOR_NBORS_OF_ATOM(n, *current) {
+			nbors.push_back(&*n);
+		}
+
+		// The four-connected node will have two sides to break apart the one node into two
+		std::vector<OBAtom*> side1;
+		side1.push_back(nbors[0]);
+		side1.push_back(minAngleNbor(current, side1[0]));
+		std::vector<OBAtom*> side2;
+		for(std::vector<OBAtom*>::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
+			if (!inVector<OBAtom*>(*it, side1)) {
+				side2.push_back(*it);
+			}
+		}
+
+		if ((side1[0])->GetAngle(current, side1[1]) > 85) {
+			obErrorLog.ThrowError(__FUNCTION__, "Trying to simplify a square-like four-connected pseudo atom", obWarning);
+		}
+		bool mismatch = false;  // Verify that the pairings are self-consistent for all four atoms
+		for (std::vector<OBAtom*>::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
+			if (inVector<OBAtom*>(*it, side1)) {
+				if (!inVector<OBAtom*>(minAngleNbor(current, *it), side1)) {
+					mismatch = true;
+				}
+			} else {
+				if (inVector<OBAtom*>(minAngleNbor(current, *it), side1)) {
+					mismatch = true;
+				}
+			}
+		}
+		if (mismatch) {
+			obErrorLog.ThrowError(__FUNCTION__, "Mismatched neighbors when assigning the split", obWarning);
+		}
+
+		int pseudo_element = current->GetAtomicNum();
+		vector3 current_loc = current->GetVector();
+		vector3 pseudo_loc;
+		OBAtom* pseudo_1 = formAtom(net, getMidpoint(side1[0], side1[1]), pseudo_element);
+		OBAtom* pseudo_2 = formAtom(net, getMidpoint(side2[0], side2[1]), pseudo_element);
+		formBond(net, pseudo_1, side1[0], 1);
+		formBond(net, pseudo_1, side1[1], 1);
+		formBond(net, pseudo_2, side2[0], 1);
+		formBond(net, pseudo_2, side2[1], 1);
+
+		if (X_CONN) {
+			OBAtom* conn_atom = formAtom(net, current_loc, X_CONN);
+			formBond(net, pseudo_1, conn_atom, 1);
+			formBond(net, pseudo_2, conn_atom, 1);
+		} else {  // Note: usage without X_CONN is untested.
+			formBond(net, pseudo_1, pseudo_2, 1);
+		}
+		net->DeleteAtom(current);
+		changes += 1;
+	}
+	net->EndModify();
+
+	return changes;
+}
+
+OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn) {
+	// Which neighbor to base has the smallest first-base-nbor bond angle?
+	// (excluding first_conn, of course)
+	OBAtom* min_nbor = NULL;
+	double min_angle = 360.0;
+	FOR_NBORS_OF_ATOM(n, *base) {
+		if (&*n != first_conn) {
+			double test_angle = first_conn->GetAngle(base, &*n);
+			if (test_angle < min_angle) {
+				min_angle = test_angle;
+				min_nbor = &*n;
+			}
+		}
+	}
+	return min_nbor;
+}
+
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 	// Starting with a random atom, traverse the fragment atom-by-atom to determine
 	// which unit cell each atom belongs to in a self-consistent manner.
@@ -1245,6 +1345,27 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 	center /= total_weight;
 	center = lattice->WrapCartesianCoordinate(center);  // Keep result in the [0,1] unit cell
 	return center;
+}
+
+vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted) {
+	// Returns the midpoint between two atoms, accounting for PBC if present
+
+	vector3 a1_raw = a1->GetVector();
+	vector3 a2_raw = a2->GetVector();
+	double wt_1 = 1.0;
+	double wt_2 = 1.0;
+	if (weighted) {
+		wt_1 = a1->GetAtomicMass();
+		wt_2 = a2->GetAtomicMass();
+	}
+
+	OBUnitCell* lattice = a1->GetParent()->GetPeriodicLattice();
+	if (lattice) {
+		vector3 a2_unwrap = unwrapCartNear(a2_raw, a1_raw, lattice);
+		return lattice->WrapCartesianCoordinate((wt_1 * a1_raw + wt_2 * a2_unwrap) / (wt_1 + wt_2));
+	} else {
+		return (wt_1 * a1_raw + wt_2 * a2_raw) / (wt_1 + wt_2);
+	}
 }
 
 bool isPeriodicChain(OBMol *mol) {
