@@ -2,6 +2,7 @@
 	"nodes" : {
 		"0" : "[Zn]O([Zn])([Zn])[Zn]",
 		"2" : "[Cu][Cu]",
+		"3" : "[O].[V]",
 		"4" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43"
 	},
 	"linkers" : {
@@ -49,7 +50,6 @@
 		"0" : "Oxalic acid does not yet simplify properly due to the X-L-X angle",
 		"4" : "[O]C(=O)c1cc2C3=C[CH]C=CC3OC(=O)c2cc1c1ccccc1 for many pcu MOFs",
 		"34--37" : "Come back to the tetrahedral tetracoordinated linkers later, since they are likely nitrogen-terminated due to topological/SBU constraints",
-		"node 1" : "Skip Zn paddlewheels until simplification of the Zn-Zn node is resolved",
-		"node 3" : "Skip Vanadium chain until a topology is implemented"
+		"node 1" : "Skip Zn paddlewheels until simplification of the Zn-Zn node is resolved"
 	}
 }

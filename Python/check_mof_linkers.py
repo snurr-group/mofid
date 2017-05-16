@@ -304,12 +304,14 @@ class GAMOFs(MOFCompare):
 			sbus = []
 			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization
 			for part in sbu_codes:
-				smiles = self.mof_db[code_key[part]][codes[part]]
-				if smiles not in sbus:
-					sbus.append(smiles)
+				full_smiles = self.mof_db[code_key[part]][codes[part]].split('.')
+				for smiles in full_smiles:
+					if smiles not in sbus:
+						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
 				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
-					n_smi = self._carboxylate_to_nitrogen(smiles)
+					assert len(full_smiles) == 1
+					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in sbus:
 						sbus.append(n_smi)
 			sbus.sort()
@@ -348,7 +350,7 @@ class GAMOFs(MOFCompare):
 			return "pcu"
 
 		elif nodes == v_node:  # Vanadium nodes
-			return "ERROR"  # FIXME: will be **sra** or something similar once implemented
+			return "rna"  # **sra** in the table, but the **rna** representation is more consistent with the ID scheme
 		elif nodes == zr_node and linker1 == linker2:  # Zr nodes and one type of linker
 			return "fcu"
 
