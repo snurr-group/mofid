@@ -10,7 +10,8 @@ together.
 @author: Ben Bucior
 """
 
-import subprocess
+import subprocess  # No support for timeouts except in Python 3.x, so do not use this for Systre
+from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
 import glob
 import json
 # import re
@@ -18,6 +19,7 @@ import json
 import sys, os
 
 # Some default settings for my computer.  Adjust these based on your configuration:
+SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_SYSTRE_PATH = "Test/topology.cgd"
 if sys.platform == "win32":
 	SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
@@ -34,34 +36,62 @@ else:
 
 def extract_linkers(mof_path):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_output = subprocess.check_output([SBU_BIN, mof_path])
+	cpp_output = subprocess.check_output([SBU_BIN, mof_path])  # Use subprocess so we get stdout
 	fragments = cpp_output.strip().split("\n")
 	fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
-	return sorted(fragments)
+
+	cat = None
+	if "simplified net(s)" in fragments[-1]:
+		cat = fragments.pop()[6]  # "Found x simplified net(s)"
+		cat = str(int(cat) - 1)
+		if cat == "-1":
+			cat = None
+
+	return (sorted(fragments), cat)
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
-	java_output = subprocess.check_output([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path])
-	# Put the BATCH ONE HERE
+	java_run = EasyProcess([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path]).call(timeout=SYSTRE_TIMEOUT)
+	java_output = java_run.stdout
+	if java_run.timeout_happened:
+		return "TIMEOUT"
+
+	topologies = []  # What net(s) are found in the simplified framework(s)?
+	current_component = 0
 	topology_line = False
-	for line in java_output.split("\n"):
+	for raw_line in java_output.split("\n"):
+		line = raw_line.strip()
 		if topology_line:
 			topology_line = False
-			rcsr = line.strip().split()
+			rcsr = line.split()
 			assert rcsr[0] == "Name:"
-			return rcsr[1]
-		elif line.strip() == "Structure was identified with RCSR symbol:":
+			topologies.append(rcsr[1])
+		elif "ERROR" in line:
+			return "ERROR"
+		elif line == "Structure was identified with RCSR symbol:":
 			topology_line = True
-		elif line.strip() == "Structure is new for this run.":
-			return "NEW"
-	return "ERROR"  # unexpected format
+		elif line == "Structure is new for this run.":
+			topologies.append("NEW")
+		elif "Processing component " in line:
+			assert len(topologies) == current_component  # Should extract one topology per component
+			current_component += 1
+			assert line[-2] == str(current_component)
 
-def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HERE"):
+	if len(topologies) == 0:
+		return "ERROR"  # unexpected format
+	first_net = topologies[0]  # Check that all present nets are consistent
+	for net in topologies:
+		if net != first_net:
+			return "MISMATCH"
+	return first_net
+
+def assemble_moffles(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	# Assemble the MOFFLES code from its components
 	moffles = ".".join(linkers) + " "
 	moffles = moffles + "f1" + "."
 	moffles = moffles + topology + "."
-	moffles = moffles + cat + "."
+	if cat is not None:
+		moffles = moffles + "cat" + cat + "."
 	moffles = moffles + "F1" + "."
 	moffles = moffles + mof_name
 	return moffles
@@ -69,6 +99,12 @@ def assemble_moffles(linkers, topology, cat = "CAT_TBD", mof_name="NAME_GOES_HER
 def parse_moffles(moffles):
 	# Deconstruct a MOFFLES string into its pieces
 	components = moffles.split()
+	if len(components) == 1:
+		if moffles.lstrip != moffles:  # Empty SMILES: no MOF found
+			components.append(components[0])  # Move metadata to the right
+			components[0] = ''
+		else:
+			raise ValueError("MOF metadata required")
 	smiles = components[0]
 	if len(components) > 2:
 		print "Bad MOFFLES:", moffles
@@ -132,10 +168,10 @@ def compare_moffles(moffles1, moffles2, names=None):
 
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
-	linkers = extract_linkers(cif_path)
+	linkers, cat = extract_linkers(cif_path)
 	topology = extract_topology(SBU_SYSTRE_PATH)
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
-	return assemble_moffles(linkers, topology, mof_name=mof_name)
+	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 
 def usage():
 	raise SyntaxError("Run this code with a single parameter: path to the CIF file")

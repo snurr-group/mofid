@@ -11,7 +11,6 @@ ToBACCo or hMOF structures against their "recipe."
 """
 
 import os, sys
-import subprocess
 import glob
 import json
 import time
@@ -226,7 +225,7 @@ class HypoMOFs(MOFCompare):
 			'i': 'nodes',
 			'j': 'linkers',
 			'k': 'linkers',
-			'm': 'functionalization',
+			'm': 'functionalization'
 		}
 
 		if codes['m'] != "0" or codes["k"] != codes["j"]:
@@ -248,7 +247,8 @@ class HypoMOFs(MOFCompare):
 			sbus.sort()
 
 			topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
-			return assemble_moffles(sbus, topology, mof_name=codes['name'])
+			cat = codes['cat']
+			return assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
 		else:
 			return None
 
@@ -298,31 +298,31 @@ class GAMOFs(MOFCompare):
 			is_component_defined.extend([codes[key] in self.mof_db[code_key[key]]])
 
 		topology = self._topology_from_gene(codes)
+		cat = codes['cat']
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
 			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization
 			for part in sbu_codes:
-				smiles = self.mof_db[code_key[part]][codes[part]]
-				if smiles not in sbus:
-					sbus.append(smiles)
+				full_smiles = self.mof_db[code_key[part]][codes[part]].split('.')
+				for smiles in full_smiles:
+					if smiles not in sbus:
+						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
 				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
-					n_smi = self._carboxylate_to_nitrogen(smiles)
+					assert len(full_smiles) == 1
+					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in sbus:
 						sbus.append(n_smi)
 			sbus.sort()
 
 			moffles_options = dict()
-			moffles_options['default'] = assemble_moffles(sbus, topology, mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
+			moffles_options['err_timeout'] = assemble_moffles(sbus, 'TIMEOUT', cat, mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
-				not_fcu_sbus = copy.deepcopy(sbus)  # Lists are a mutable type in Python
-				not_fcu_sbus.append('[O]C(=O)c1ccccc1')  # Benzoic acid capping agent
-				not_fcu_sbus.sort()
-				# FIXME: the MOF should report the **pcu** topology once solvent removal is implemented
-				# TODO: Will we have to add the benzoic acid agent to the **pcu** MOFs above?
-				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(not_fcu_sbus, 'ERROR', mof_name=codes['name'])
+				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
+				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -350,7 +350,7 @@ class GAMOFs(MOFCompare):
 			return "pcu"
 
 		elif nodes == v_node:  # Vanadium nodes
-			return "ERROR"  # FIXME: will be **sra** or something similar once implemented
+			return "rna"  # **sra** in the table, but the **rna** representation is more consistent with the ID scheme
 		elif nodes == zr_node and linker1 == linker2:  # Zr nodes and one type of linker
 			return "fcu"
 
@@ -432,8 +432,9 @@ class TobaccoMOFs(MOFCompare):
 			topology = codes['topology']
 			if topology.startswith('test.'):
 				topology = topology[5:]
+			cat = "0"  # All ToBaCCo MOFs are uncatenated
 			# Generate a reference MOFFLES based on SBU composition
-			return assemble_moffles(linkers, topology, mof_name=codes['name'])
+			return assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
 		else:
 			return None
 
