@@ -1110,9 +1110,9 @@ int collapseXX(OBMol *net, int element_x) {
 }
 
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x) {
-	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction
-	// TODO: Consider averaging the positions (midpoint) instead of selecting one of the two at random.
-	// Returns the number of L-X bonds deleted
+	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction.
+	// Simplify the pair of L-X bonds with a new X connector at the midpoint of the two X's.
+	// Returns the number of modifications to L-X bonds.
 
 	std::vector<OBAtom*> to_delete;
 
@@ -1134,7 +1134,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 			// Iterate through the bonded L-X's to find redundant pairs
 			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
 				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
-					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant copy.
+					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant X's.
 					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
 					if ( *x1 != *x2
 						&& !inVector<OBAtom*>(*x1, to_delete)
@@ -1142,7 +1142,11 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 						&& metals[*x1] == metals[*x2]
 						&& (net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL) )
 					{
+						to_delete.push_back(*x1);
 						to_delete.push_back(*x2);
+						OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
+						formBond(net, x_mid, metals[*x1], 1);
+						formBond(net, x_mid, &*L, 1);
 					}
 				}
 			}
