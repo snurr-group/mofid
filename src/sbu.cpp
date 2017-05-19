@@ -448,7 +448,9 @@ int main(int argc, char* argv[])
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 	std::cout << "Found " << net_components.size() << " simplified net(s)";
 
-	// Write out the decomposed and simplified MOF
+	// Write out the decomposed and simplified MOF, including bond orders
+	resetBonds(&nodes);
+	resetBonds(&linkers);
 	writeCIF(&nodes, "Test/nodes.cif");
 	writeCIF(&linkers, "Test/linkers.cif");
 
