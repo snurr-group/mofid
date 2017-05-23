@@ -471,6 +471,8 @@ class AutoCompare:
 			return None
 
 
+os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
+
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
 	args = sys.argv[1:]
