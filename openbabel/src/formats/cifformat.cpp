@@ -1646,6 +1646,7 @@ namespace OpenBabel
     if (pConv->IsOption("g", OBConversion::OUTOPTIONS))
       {
         if (pmol->NumBonds() > 0) {
+            obErrorLog.ThrowError(__FUNCTION__, "Writing bonds to output CIF", obDebug);
             ofs << "loop_"                            << endl
                 << "    _geom_bond_atom_site_label_1" << endl
                 << "    _geom_bond_atom_site_label_2" << endl
@@ -1653,7 +1654,7 @@ namespace OpenBabel
                 << "    _geom_bond_site_symmetry_2"   << endl
                 << "    _ccdc_geom_bond_type"         << endl;
         } else {
-            obErrorLog.ThrowError(__FUNCTION__, "No bonds defined in molecule for CIF export", obWarning);
+            obErrorLog.ThrowError(__FUNCTION__, "No bonds defined in molecule for CIF export", obDebug);
         }
 
         FOR_BONDS_OF_MOL(bond, *pmol)

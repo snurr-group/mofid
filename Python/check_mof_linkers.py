@@ -133,15 +133,25 @@ class MOFCompare:
 		# Returns a formatted JSON string with the results
 		start = time.time()
 		moffles_from_name = self.expected_moffles(cif_path)
+
 		if moffles_from_name is None:  # missing SBU info in the DB file
 			return None  # Currently, skip reporting of structures with undefined nodes/linkers
-		else:
-			# Calculate the MOFFLES derived from the CIF structure itself
-			moffles_auto = cif2moffles(cif_path)
-			comparison = self.compare_multi_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
-			comparison['time'] = time.time() - start
-			comparison['name_parser'] = self.__class__.__name__
-			return comparison
+
+		# Add common classes of error
+		if type(moffles_from_name) in [str, unicode]:
+			orig_moffles = moffles_from_name
+			moffles_from_name = dict()
+			moffles_from_name['default'] = orig_moffles
+		default = parse_moffles(moffles_from_name['default'])
+		linkers = default['smiles'].split('.')
+		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
+
+		# Calculate the MOFFLES derived from the CIF structure itself
+		moffles_auto = cif2moffles(cif_path)
+		comparison = self.compare_multi_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
+		comparison['time'] = time.time() - start
+		comparison['name_parser'] = self.__class__.__name__
+		return comparison
 
 	def compare_multi_moffles(self, multi_moffles1, moffles2, names=None):
 		# Allow multiple reference MOFFLES for comparison against the extracted version
@@ -318,7 +328,6 @@ class GAMOFs(MOFCompare):
 
 			moffles_options = dict()
 			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
-			moffles_options['err_timeout'] = assemble_moffles(sbus, 'TIMEOUT', cat, mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
@@ -470,6 +479,8 @@ class AutoCompare:
 			mof_log("...unable to find a suitable rule automatically\n")
 			return None
 
+
+os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
 
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename

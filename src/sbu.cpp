@@ -448,7 +448,9 @@ int main(int argc, char* argv[])
 	printFragments(uniqueSMILES(linkers.Separate(), obconv));
 	std::cout << "Found " << net_components.size() << " simplified net(s)";
 
-	// Write out the decomposed and simplified MOF
+	// Write out the decomposed and simplified MOF, including bond orders
+	resetBonds(&nodes);
+	resetBonds(&linkers);
 	writeCIF(&nodes, "Test/nodes.cif");
 	writeCIF(&linkers, "Test/linkers.cif");
 
@@ -1082,15 +1084,11 @@ int collapseXX(OBMol *net, int element_x) {
 						continue;
 					}
 
-					// Make a new atom at the X-X midpoint
-					vector3 unwrapped2 = unwrapCartNear(x2->GetVector(), x1->GetVector(), lattice);
-					vector3 midpoint = (x1->GetVector() + unwrapped2) / 2.0;
-					OBAtom* mid_atom = formAtom(net, midpoint, element_x);
-					// Form bonds between the new midpoint atom and neighbors of X-X
+					// Replace X-X with a new atom at the midpointMake a new atom at the X-X midpoint
+					OBAtom* mid_atom = formAtom(net, getMidpoint(x1, x2), element_x);
 					for (std::vector<OBAtom*>::iterator it = x_nbors.begin(); it != x_nbors.end(); ++it) {
 						formBond(net, mid_atom, *it, 1);
 					}
-					// Delete old X-X atoms
 					net->DeleteAtom(x1);
 					net->DeleteAtom(x2);
 
@@ -1110,9 +1108,9 @@ int collapseXX(OBMol *net, int element_x) {
 }
 
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x) {
-	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction
-	// TODO: Consider averaging the positions (midpoint) instead of selecting one of the two at random.
-	// Returns the number of L-X bonds deleted
+	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction.
+	// Simplify the pair of L-X bonds with a new X connector at the midpoint of the two X's.
+	// Returns the number of modifications to L-X bonds.
 
 	std::vector<OBAtom*> to_delete;
 
@@ -1134,7 +1132,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 			// Iterate through the bonded L-X's to find redundant pairs
 			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
 				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
-					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant copy.
+					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant X's.
 					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
 					if ( *x1 != *x2
 						&& !inVector<OBAtom*>(*x1, to_delete)
@@ -1142,7 +1140,11 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 						&& metals[*x1] == metals[*x2]
 						&& (net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL) )
 					{
+						to_delete.push_back(*x1);
 						to_delete.push_back(*x2);
+						OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
+						formBond(net, x_mid, metals[*x1], 1);
+						formBond(net, x_mid, &*L, 1);
 					}
 				}
 			}
