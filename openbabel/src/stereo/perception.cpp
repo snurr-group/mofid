@@ -2091,6 +2091,7 @@ namespace OpenBabel {
       const OBStereoUnitSet &stereoUnits, bool addToMol)
   {
     std::vector<OBTetrahedralStereo*> configs;
+    OBUnitCell *uc = mol->GetPeriodicLattice();
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::TetrahedralFrom3D", obAuditMsg);
 
     // find all tetrahedral centers
@@ -2132,10 +2133,18 @@ namespace OpenBabel {
       if (bond->IsWedgeOrHash() && bond->GetBeginAtom()==center)
         config.specified = false;
 
-      nbrCoords.push_back(from->GetVector());
+      vector3 center_coord = center->GetVector();
+
+      if (uc)
+        nbrCoords.push_back(uc->UnwrapCartesianNear(from->GetVector(), center_coord));
+      else
+        nbrCoords.push_back(from->GetVector());
       for (OBStereo::RefIter id = config.refs.begin(); id != config.refs.end(); ++id) {
         OBAtom *nbr = mol->GetAtomById(*id);
-        nbrCoords.push_back(nbr->GetVector());
+        if (uc)
+          nbrCoords.push_back(uc->UnwrapCartesianNear(nbr->GetVector(), center_coord));
+        else
+          nbrCoords.push_back(nbr->GetVector());
         OBBond *bond = mol->GetBond(nbr, center);
         if (bond->IsWedgeOrHash() && bond->GetBeginAtom()==center)
           config.specified = false;
@@ -2160,7 +2169,7 @@ namespace OpenBabel {
       // If we have three heavy atoms we can use the chiral center atom itself for the fourth
       // will always give same sign (for tetrahedron), magnitude will be smaller.
       if ((config.refs.size() == 2) || use_central_atom) {
-        nbrCoords.push_back(center->GetVector());
+        nbrCoords.push_back(center_coord);
         config.refs.push_back(OBStereo::ImplicitRef); // need to add largest number on end to work
       }
 
@@ -2337,8 +2346,15 @@ namespace OpenBabel {
   {
    vector3 v1,v2;
 
-    v1 = a->GetVector() - b->GetVector();
-    v2 = c->GetVector() - b->GetVector();
+    if (!a->IsPeriodic()) {  // Adapted from OBAtom.GetAngle
+      v1 = a->GetVector() - b->GetVector();
+      v2 = c->GetVector() - b->GetVector();
+    } else {
+      OBMol *mol = (OBMol*)a->GetParent();
+      OBUnitCell *box = (OBUnitCell*)mol->GetPeriodicLattice();
+      v1 = box->PBCCartesianDifference(a->GetVector(), b->GetVector());
+      v2 = box->PBCCartesianDifference(c->GetVector(), b->GetVector());
+    }
     if (IsNearZero(v1.length(), 1.0e-3)
       || IsNearZero(v2.length(), 1.0e-3)) {
         return(0.0);
@@ -2732,6 +2748,7 @@ namespace OpenBabel {
 
     // This loop sets one bond of each tet stereo to up or to down (2D only)
     std::set <OBBond *> alreadyset;
+    OBUnitCell *uc = mol.GetPeriodicLattice();
     for (std::vector<OBGenericData*>::iterator data = vdata.begin(); data != vdata.end(); ++data)
       if (((OBStereoBase*)*data)->GetType() == OBStereo::Tetrahedral) {
         OBTetrahedralStereo *ts = dynamic_cast<OBTetrahedralStereo*>(*data);
@@ -2740,6 +2757,7 @@ namespace OpenBabel {
         if (cfg.specified) {
           OBBond* chosen = (OBBond*) NULL;
           OBAtom* center = mol.GetAtomById(cfg.center);
+          vector3 center_coord = center->GetVector();
 
           // Find the two bonds closest in angle and remember them if
           // they are closer than DELTA_ANGLE_FOR_OVERLAPPING_BONDS
@@ -2838,9 +2856,17 @@ namespace OpenBabel {
               // Put the ref for the stereo bond second
               while (test_cfg.refs[1] != chosen->GetNbrAtom(center)->GetId())
                 std::rotate(test_cfg.refs.begin(), test_cfg.refs.begin() + 2, test_cfg.refs.end());
-              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
-                mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
-                center->GetVector());
+              if (uc)
+                anticlockwise_order = AngleOrder(
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[0])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[1])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[2])->GetVector(), center_coord),
+                  center_coord
+                  );
+              else
+                anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+                  mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
+                  center->GetVector());
               // Get the angle between the plane bonds
               double angle = GetAngle(mol.GetAtomById(test_cfg.refs[0]), center, mol.GetAtomById(test_cfg.refs[2]));
               if ((angle<0 && anticlockwise_order) || (angle>0 && !anticlockwise_order)) // Is the stereobond in the bigger angle?
@@ -2852,9 +2878,17 @@ namespace OpenBabel {
               }
             else {
               test_cfg = OBTetrahedralStereo::ToConfig(test_cfg, chosen->GetNbrAtom(center)->GetId());
-              anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
-                mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
-                center->GetVector());
+              if (uc)
+                anticlockwise_order = AngleOrder(
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[0])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[1])->GetVector(), center_coord),
+                  uc->UnwrapCartesianNear(mol.GetAtomById(test_cfg.refs[2])->GetVector(), center_coord),
+                  center_coord
+                  );
+              else
+                anticlockwise_order = AngleOrder(mol.GetAtomById(test_cfg.refs[0])->GetVector(),
+                  mol.GetAtomById(test_cfg.refs[1])->GetVector(), mol.GetAtomById(test_cfg.refs[2])->GetVector(),
+                  center->GetVector());
               if (anticlockwise_order)
                 useup = false;
               else
