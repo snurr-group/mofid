@@ -2184,6 +2184,7 @@ namespace OpenBabel {
       const OBStereoUnitSet &stereoUnits, bool addToMol)
   {
     std::vector<OBCisTransStereo*> configs;
+    OBUnitCell *uc = mol->GetPeriodicLattice();
     obErrorLog.ThrowError(__FUNCTION__, "Ran OpenBabel::CisTransFrom3D", obAuditMsg);
 
     // find all cis/trans bonds
@@ -2207,27 +2208,43 @@ namespace OpenBabel {
         if (nbr->GetId() == end->GetId())
           continue;
         config.refs.push_back(nbr->GetId());
-        bondVecs.push_back(nbr->GetVector() - begin->GetVector());
+        if (uc)
+          bondVecs.push_back(uc->PBCCartesianDifference(nbr->GetVector(), begin->GetVector()));
+        else
+          bondVecs.push_back(nbr->GetVector() - begin->GetVector());
       }
       if (config.refs.size() == 1) {
         config.refs.push_back(OBStereo::ImplicitRef);
         vector3 pos;
         mol->GetAtomById(config.refs.at(0))->GetNewBondVector(pos, 1.0);
-        bondVecs.push_back(pos - begin->GetVector());
+        // WARNING: GetNewBondVector code has not yet been checked, since it's part of builder.cpp
+        if (uc)
+          bondVecs.push_back(uc->PBCCartesianDifference(pos, begin->GetVector()));
+        else
+          bondVecs.push_back(pos - begin->GetVector());
       }
       // end
       config.end = end->GetId();
+      vector3 end_vec = end->GetVector();
+      if (uc)
+        end_vec = uc->UnwrapCartesianNear(end_vec, begin->GetVector());
       FOR_NBORS_OF_ATOM (nbr, end) {
         if (nbr->GetId() == begin->GetId())
           continue;
         config.refs.push_back(nbr->GetId());
-        bondVecs.push_back(nbr->GetVector() - end->GetVector());
+        if (uc)
+          bondVecs.push_back(uc->PBCCartesianDifference(nbr->GetVector(), end_vec));
+        else
+          bondVecs.push_back(nbr->GetVector() - end_vec);
       }
       if (config.refs.size() == 3) {
         config.refs.push_back(OBStereo::ImplicitRef);
         vector3 pos;
         mol->GetAtomById(config.refs.at(2))->GetNewBondVector(pos, 1.0);
-        bondVecs.push_back(pos - end->GetVector());
+        if (uc)
+          bondVecs.push_back(uc->PBCCartesianDifference(pos, end_vec));
+        else
+          bondVecs.push_back(pos - end_vec);
       }
 
       // 0      3     Get signed distance of 0 and 2 to the plane
@@ -2236,12 +2253,18 @@ namespace OpenBabel {
       //  /    \      If the two signed distances have the same sign
       // 1      2     then they are cis; if not, then trans.
 
-      vector3 dbl_bond = end->GetVector() - begin->GetVector();
+      vector3 dbl_bond = end_vec - begin->GetVector();
       vector3 above_plane = cross(dbl_bond, bondVecs[0]);
       double d0 = Point2PlaneSigned( mol->GetAtomById(config.refs[0])->GetVector(),
-                               begin->GetVector(), end->GetVector(), above_plane);
+                                     begin->GetVector(), end->GetVector(), above_plane);
       double d2 = Point2PlaneSigned( mol->GetAtomById(config.refs[2])->GetVector(),
-                               begin->GetVector(), end->GetVector(), above_plane);
+                                     begin->GetVector(), end->GetVector(), above_plane);
+      if (uc) {  // Overwrite with the PBC version
+        d0 = Point2PlaneSigned(uc->UnwrapCartesianNear(mol->GetAtomById(config.refs[0])->GetVector(), begin->GetVector()),
+                                      begin->GetVector(), end_vec, above_plane);
+        d2 = Point2PlaneSigned(uc->UnwrapCartesianNear(mol->GetAtomById(config.refs[2])->GetVector(), begin->GetVector()),
+                                      begin->GetVector(), end_vec, above_plane);
+      }
 
       if ((d0 > 0 && d2 > 0) || (d0 < 0 && d2 < 0))
         config.shape = OBStereo::ShapeZ;

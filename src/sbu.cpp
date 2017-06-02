@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
 
 	OBConversion obconv;
 	obconv.SetOutFormat("can");
-	obconv.AddOption("i");  // Ignore SMILES chirality for now
+	//obconv.AddOption("i");  // Ignore SMILES chirality for now
 
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.
