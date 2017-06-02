@@ -402,6 +402,18 @@ namespace OpenBabel
     return vector3(x, y, z);
   }
 
+  vector3 OBUnitCell::UnwrapCartesianNear(vector3 new_loc, vector3 ref_loc) const
+  {
+    vector3 bond_dir = PBCCartesianDifference(new_loc, ref_loc);
+    return ref_loc + bond_dir;
+  }
+
+  vector3 OBUnitCell::UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc) const
+  {
+    vector3 bond_dir = PBCFractionalDifference(new_loc, ref_loc);
+    return ref_loc + bond_dir;
+  }
+
   vector3 OBUnitCell::PBCCartesianDifference(vector3 cart1, vector3 cart2) const
   {
     vector3 frac1 = CartesianToFractional(cart1);
@@ -688,6 +700,8 @@ namespace OpenBabel
   { \
     return const_cast<const OBUnitCell*>(this)->_name(arg1, arg2); \
   }
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapCartesianNear, vector3, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapFractionalNear, vector3, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, PBCFractionalDifference, vector3, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, PBCCartesianDifference, vector3, vector3);
 

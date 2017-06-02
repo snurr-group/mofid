@@ -66,8 +66,6 @@ vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
 bool isPeriodicChain(OBMol *mol);
 int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
-vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
-vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 
@@ -618,7 +616,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 				vector3 x_coords = uc->CartesianToFractional(x->GetVector());
 				FOR_NBORS_OF_ATOM(n, *x) {
 					vector3 raw_n_coords = uc->CartesianToFractional(n->GetVector());
-					vector3 unwrap_n_coords = unwrapFracNear(raw_n_coords, x_coords, uc);
+					vector3 unwrap_n_coords = uc->UnwrapFractionalNear(raw_n_coords, x_coords);
 					if (n->GetAtomicNum() == element_x) {  // X-X present, so find the next connector.
 						visited_x.push_back(&*n);
 						// FIXME: This doesn't work due to the nature of unwrapping
@@ -631,7 +629,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 									obErrorLog.ThrowError(__FUNCTION__, "Unexpected X-X-X connection in simplified net.", obWarning);
 								}
 								vector3 raw_v2_coords = uc->CartesianToFractional(n2->GetVector());
-								vector3 unwrap_v2_coords = unwrapFracNear(raw_v2_coords, unwrap_n_coords, uc);
+								vector3 unwrap_v2_coords = uc->UnwrapFractionalNear(raw_v2_coords, unwrap_n_coords);
 								vertices.push_back(unwrap_v2_coords);
 							}
 						}
@@ -995,7 +993,7 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) 
 			OBAtom* external_atom = (*it)[0];
 			OBAtom* internal_atom = (*it)[1];
 
-			vector3 internal_atom_loc = unwrapCartNear(internal_atom->GetVector(), centroid, lattice);
+			vector3 internal_atom_loc = lattice->UnwrapCartesianNear(internal_atom->GetVector(), centroid);
 			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
 
 			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
@@ -1363,7 +1361,7 @@ vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted) {
 
 	OBUnitCell* lattice = a1->GetParent()->GetPeriodicLattice();
 	if (lattice) {
-		vector3 a2_unwrap = unwrapCartNear(a2_raw, a1_raw, lattice);
+		vector3 a2_unwrap = lattice->UnwrapCartesianNear(a2_raw, a1_raw);
 		return lattice->WrapCartesianCoordinate((wt_1 * a1_raw + wt_2 * a2_unwrap) / (wt_1 + wt_2));
 	} else {
 		return (wt_1 * a1_raw + wt_2 * a2_raw) / (wt_1 + wt_2);
@@ -1448,22 +1446,6 @@ std::vector<int> makeVector(int a, int b, int c) {
 	v.push_back(b);
 	v.push_back(c);
 	return v;
-}
-
-vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
-	// Unwraps periodic, fractional coordinates (atom, etc.) at new_loc to be close to the reference
-	// ref_loc, so you don't have to think about crossing box boundaries, etc.
-	// i.e. unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
-	vector3 bond_dir = uc->PBCFractionalDifference(new_loc, ref_loc);
-	return ref_loc + bond_dir;
-}
-
-vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
-	// Unwraps periodic, Cartesian coordinates (atom, etc.) at new_loc to be close to the reference
-	// ref_loc, so you don't have to think about crossing box boundaries, etc.
-	// Similar ideas as unwrapFracNear
-	vector3 bond_dir = uc->PBCCartesianDifference(new_loc, ref_loc);
-	return ref_loc + bond_dir;
 }
 
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {

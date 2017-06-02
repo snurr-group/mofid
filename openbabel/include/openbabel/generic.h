@@ -494,6 +494,19 @@ namespace OpenBabel
     //! \todo Make OBUnitCell::WrapFractionalCoordinate static in the next ABI break
     vector3 WrapFractionalCoordinate(vector3 frac);
     vector3 WrapFractionalCoordinate(vector3 frac) const;
+    //! Unwraps Cartesian coordinates near a reference location.
+    //! \param new_loc Cartesian coordinates of target
+    //! \param ref_loc Cartesian coordinates of the reference location
+    //! \return Unwrapped coordinates of new_loc near ref_loc
+    vector3 UnwrapCartesianNear(vector3 new_loc, vector3 ref_loc);
+    vector3 UnwrapCartesianNear(vector3 new_loc, vector3 ref_loc) const;
+    //! Unwraps fractional coordinates near a reference location.
+    //! \param new_loc Fractional coordinates of target
+    //! \param ref_loc Fractional coordinates of the reference location
+    //! \return Unwrapped coordinates of new_loc near ref_loc
+    //! \todo Add a simple test case/example, like unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
+    vector3 UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc);
+    vector3 UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc) const;
     //! Calculates the difference of two Cartesian coordinates accounting for periodic boundaries.
     //! \param cart1 First vector of cartesian coordinates
     //! \param cart2 Second vector of cartesian coordinates to be subtracted
