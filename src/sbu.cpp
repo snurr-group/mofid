@@ -61,13 +61,12 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
+bool unwrapFragmentMol(OBMol* fragment);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
 bool isPeriodicChain(OBMol *mol);
 int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
-vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
-vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc);
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 
@@ -137,6 +136,11 @@ class ElementGen
 		}
 };
 
+struct MinimalAtom {
+	vector3 loc;
+	int element;
+};
+
 
 template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
 bool inVector(const T &element, const std::vector<T> &vec) {
@@ -204,6 +208,15 @@ int main(int argc, char* argv[])
 	fragments = mol.Separate();
 
 	OBConversion obconv;
+	// Universal SMILES:
+	//obconv.SetOutFormat("smi");
+	//obconv.AddOption("U");
+	// InChI or InChIKey, with same flags as Universal SMILES:
+	//obconv.SetOutFormat("inchi");
+	//obconv.SetOutFormat("inchikey");
+	//obconv.AddOption("F");
+	//obconv.AddOption("M");
+	// Open Babel canonical SMILES:
 	obconv.SetOutFormat("can");
 	obconv.AddOption("i");  // Ignore SMILES chirality for now
 
@@ -618,7 +631,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 				vector3 x_coords = uc->CartesianToFractional(x->GetVector());
 				FOR_NBORS_OF_ATOM(n, *x) {
 					vector3 raw_n_coords = uc->CartesianToFractional(n->GetVector());
-					vector3 unwrap_n_coords = unwrapFracNear(raw_n_coords, x_coords, uc);
+					vector3 unwrap_n_coords = uc->UnwrapFractionalNear(raw_n_coords, x_coords);
 					if (n->GetAtomicNum() == element_x) {  // X-X present, so find the next connector.
 						visited_x.push_back(&*n);
 						// FIXME: This doesn't work due to the nature of unwrapping
@@ -631,7 +644,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 									obErrorLog.ThrowError(__FUNCTION__, "Unexpected X-X-X connection in simplified net.", obWarning);
 								}
 								vector3 raw_v2_coords = uc->CartesianToFractional(n2->GetVector());
-								vector3 unwrap_v2_coords = unwrapFracNear(raw_v2_coords, unwrap_n_coords, uc);
+								vector3 unwrap_v2_coords = uc->UnwrapFractionalNear(raw_v2_coords, unwrap_n_coords);
 								vertices.push_back(unwrap_v2_coords);
 							}
 						}
@@ -736,6 +749,7 @@ std::string getSMILES(OBMol fragment, OBConversion obconv) {
 	// Prints SMILES based on OBConversion parameters
 	OBMol canon = fragment;
 	resetBonds(&canon);
+	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
 }
 
@@ -768,18 +782,25 @@ bool isMetal(const OBAtom* atom) {
 
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
+	// Starting with a "clean" OBMol is the easiest way to handle this
 
-	// TODO: consider destroying all the bonds and starting from scratch
-	// Also see https://sourceforge.net/p/openbabel/mailman/message/6229244/
-	// For whatever reason, deleting all the bonds doesn't work out (disconnected fragments, etc.).  Need to diagnose why that's the case.
-	// It fails for porphyrins.  I am guessing the cause is that Separate() does not copy over UC information, which is causing problems with PBC.
-	// deleteBonds(mol, false);
-
-	mol->BeginModify();
+	std::queue<MinimalAtom> orig_atoms;
 	FOR_ATOMS_OF_MOL(a, *mol) {
-		a->SetFormalCharge(0);  // Not a specific reason for doing this, but it doesn't seem to make a difference.
-		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
-		a->SetHyb(0);  // Also reset hybridization in case that is causing problems
+		MinimalAtom sa;
+		sa.loc = a->GetVector();
+		sa.element = a->GetAtomicNum();
+		orig_atoms.push(sa);
+	}
+
+	OBUnitCell uc_copy = *mol->GetPeriodicLattice();
+	mol->Clear();
+	mol->SetPeriodicLattice(&uc_copy);
+	mol->BeginModify();
+	while (!orig_atoms.empty()) {
+		MinimalAtom curr_atom = orig_atoms.front();
+		orig_atoms.pop();
+		formAtom(mol, curr_atom.loc, curr_atom.element);
+		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
 	}
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
@@ -995,7 +1016,7 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) 
 			OBAtom* external_atom = (*it)[0];
 			OBAtom* internal_atom = (*it)[1];
 
-			vector3 internal_atom_loc = unwrapCartNear(internal_atom->GetVector(), centroid, lattice);
+			vector3 internal_atom_loc = lattice->UnwrapCartesianNear(internal_atom->GetVector(), centroid);
 			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
 
 			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
@@ -1309,6 +1330,28 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 	return unit_cells;
 }
 
+bool unwrapFragmentMol(OBMol* fragment) {
+	// Starting with a random atom in a fragment, unwrap the atomic coordinates
+	// to all belong to the same unit cell.
+	// Modifies fragment unless it contains a rod; otherwise return false.
+	// TODO: consider refactoring getCentroid and other codes related to UCMap?
+
+	UCMap rel_uc = unwrapFragmentUC(fragment, false, false);
+	if (rel_uc.size() == 0) {
+		return false;
+	}
+
+	for (UCMap::iterator it=rel_uc.begin(); it!=rel_uc.end(); ++it) {
+		OBAtom* curr_atom = it->first;
+		std::vector<int> uc_shift = it->second;
+
+		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
+		vector3 coord_shift = fragment->GetPeriodicLattice()->FractionalToCartesian(uc_shift_frac);
+		curr_atom->SetVector(curr_atom->GetVector() + coord_shift);
+	}
+	return true;
+}
+
 vector3 getCentroid(OBMol *fragment, bool weighted) {
 	// Calculate the centroid of a fragment, optionally weighted by the atomic mass
 	// (which would give the center of mass).  Consider periodicity as needed, and
@@ -1363,7 +1406,7 @@ vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted) {
 
 	OBUnitCell* lattice = a1->GetParent()->GetPeriodicLattice();
 	if (lattice) {
-		vector3 a2_unwrap = unwrapCartNear(a2_raw, a1_raw, lattice);
+		vector3 a2_unwrap = lattice->UnwrapCartesianNear(a2_raw, a1_raw);
 		return lattice->WrapCartesianCoordinate((wt_1 * a1_raw + wt_2 * a2_unwrap) / (wt_1 + wt_2));
 	} else {
 		return (wt_1 * a1_raw + wt_2 * a2_raw) / (wt_1 + wt_2);
@@ -1448,22 +1491,6 @@ std::vector<int> makeVector(int a, int b, int c) {
 	v.push_back(b);
 	v.push_back(c);
 	return v;
-}
-
-vector3 unwrapFracNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
-	// Unwraps periodic, fractional coordinates (atom, etc.) at new_loc to be close to the reference
-	// ref_loc, so you don't have to think about crossing box boundaries, etc.
-	// i.e. unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
-	vector3 bond_dir = uc->PBCFractionalDifference(new_loc, ref_loc);
-	return ref_loc + bond_dir;
-}
-
-vector3 unwrapCartNear(vector3 new_loc, vector3 ref_loc, OBUnitCell *uc) {
-	// Unwraps periodic, Cartesian coordinates (atom, etc.) at new_loc to be close to the reference
-	// ref_loc, so you don't have to think about crossing box boundaries, etc.
-	// Similar ideas as unwrapFracNear
-	vector3 bond_dir = uc->PBCCartesianDifference(new_loc, ref_loc);
-	return ref_loc + bond_dir;
 }
 
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
