@@ -61,6 +61,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
+bool unwrapFragmentMol(OBMol* fragment);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
 bool isPeriodicChain(OBMol *mol);
@@ -202,7 +203,7 @@ int main(int argc, char* argv[])
 	fragments = mol.Separate();
 
 	OBConversion obconv;
-	// Canonical SMILES:
+	// Universal SMILES:
 	//obconv.SetOutFormat("smi");
 	//obconv.AddOption("U");
 	// InChI or InChIKey, with same flags as Universal SMILES:
@@ -743,6 +744,7 @@ std::string getSMILES(OBMol fragment, OBConversion obconv) {
 	// Prints SMILES based on OBConversion parameters
 	OBMol canon = fragment;
 	resetBonds(&canon);
+	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
 }
 
@@ -1314,6 +1316,28 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 		unit_cells.clear();
 	}
 	return unit_cells;
+}
+
+bool unwrapFragmentMol(OBMol* fragment) {
+	// Starting with a random atom in a fragment, unwrap the atomic coordinates
+	// to all belong to the same unit cell.
+	// Modifies fragment unless it contains a rod; otherwise return false.
+	// TODO: consider refactoring getCentroid and other codes related to UCMap?
+
+	UCMap rel_uc = unwrapFragmentUC(fragment, false, false);
+	if (rel_uc.size() == 0) {
+		return false;
+	}
+
+	for (UCMap::iterator it=rel_uc.begin(); it!=rel_uc.end(); ++it) {
+		OBAtom* curr_atom = it->first;
+		std::vector<int> uc_shift = it->second;
+
+		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
+		vector3 coord_shift = fragment->GetPeriodicLattice()->FractionalToCartesian(uc_shift_frac);
+		curr_atom->SetVector(curr_atom->GetVector() + coord_shift);
+	}
+	return true;
 }
 
 vector3 getCentroid(OBMol *fragment, bool weighted) {
