@@ -1,9 +1,9 @@
 {
 	"nodes" : {
-		"sym_5_mc_2"   : "[O][Cu]#[Cu][O]",
+		"sym_5_mc_2"   : "[Cu][Cu]",
 		"sym_6_mc_3"   : "[Zn]O([Zn])([Zn])[Zn]",
-		"sym_7_mc_4"   : "[O][Cr]O([Cr][O])[Cr][O]",
-		"sym_8_mc_7"   : "[O][Co]O([O])([O])([Co][O])([Co][O])[Co][O]",
+		"sym_7_mc_4"   : "[Cr]O([Cr])[Cr]",
+		"sym_8_mc_7"   : "[Co]O([Co])([Co])[Co]",
 		"sym_8_mc_9"   : "O[Zr]123(O)O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O",
 		"sym_9_mc_5"   : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O)(O)O)(O)O",
 		"sym_10_mc_10" : "O[Zr]123O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)O)O)O",
@@ -13,6 +13,11 @@
 	"linkers" : {
 		"L__"  : "None",
 		"L_12" : "[O]C(=O)c1ccc(cc1)C(=O)[O]"
+	},
+	"_solvated_nodes" : {
+		"sym_5_mc_2"   : "[O][Cu]#[Cu][O]",
+		"sym_7_mc_4"   : "[O][Cr]O([Cr][O])[Cr][O]",
+		"sym_8_mc_7"   : "[O][Co]O([O])([O])([Co][O])([Co][O])[Co][O]"
 	},
 	"functionalization" : {}
 }

@@ -446,6 +446,8 @@ class TobaccoMOFs(MOFCompare):
 			topology = codes['topology']
 			if topology.startswith('test.'):
 				topology = topology[5:]
+			if len(topology) == 4 and topology.endswith('b'):
+				topology = topology[0:3]  # Remove binary designation
 			cat = "0"  # All ToBaCCo MOFs are uncatenated
 			# Generate a reference MOFFLES based on SBU composition
 			return assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
