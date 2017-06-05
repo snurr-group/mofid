@@ -136,6 +136,11 @@ class ElementGen
 		}
 };
 
+struct MinimalAtom {
+	vector3 loc;
+	int element;
+};
+
 
 template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
 bool inVector(const T &element, const std::vector<T> &vec) {
@@ -777,28 +782,26 @@ bool isMetal(const OBAtom* atom) {
 
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
+	// Starting with a "clean" OBMol is the easiest way to handle this
 
-	// TODO: also consider copying the lattice and atom element/positions,
-	// then re-perceiving everything else.
-
-	mol->BeginModify();
+	std::queue<MinimalAtom> orig_atoms;
 	FOR_ATOMS_OF_MOL(a, *mol) {
-		a->SetFormalCharge(0);  // Not a specific reason for doing this, but it doesn't seem to make a difference.
-		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
-		a->SetHyb(0);  // Also reset hybridization in case that is causing problems
-	}
-	// Cannot delete bonds within the iterator: https://sourceforge.net/p/openbabel/mailman/message/6229244/
-	std::queue<OBBond*> to_delete;
-	FOR_BONDS_OF_MOL(b, *mol) {
-		to_delete.push(&*b);
-	}
-	while (!to_delete.empty()) {
-		mol->DeleteBond(to_delete.front());
-		to_delete.pop();
+		MinimalAtom sa;
+		sa.loc = a->GetVector();
+		sa.element = a->GetAtomicNum();
+		orig_atoms.push(sa);
 	}
 
-	mol->SetFlags(mol->GetFlags() & (OB_PATTERN_STRUCTURE | OB_PERIODIC_MOL));  // Reset flags like OBMol::Clear
-
+	OBUnitCell uc_copy = *mol->GetPeriodicLattice();
+	mol->Clear();
+	mol->SetPeriodicLattice(&uc_copy);
+	mol->BeginModify();
+	while (!orig_atoms.empty()) {
+		MinimalAtom curr_atom = orig_atoms.front();
+		orig_atoms.pop();
+		formAtom(mol, curr_atom.loc, curr_atom.element);
+		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
+	}
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
 	mol->EndModify();
