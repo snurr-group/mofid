@@ -332,6 +332,11 @@ class GAMOFs(MOFCompare):
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
+			if topology == 'rna':  # Some large V nodes are geometrically disconnected
+				v_sbus = copy.deepcopy(sbus)
+				v_sbus.append('[O]C(=O)c1ccccc1')
+				v_sbus.sort()
+				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -451,18 +456,19 @@ class AutoCompare:
 	# Automatically selects the appropriate MOF comparison class using filename-based heuristics
 	# Note: this is not a full implementation of MOFCompare--just a wrapper for test_cif
 	# TODO: allow the user to manually specify the MOF class using a command line flag
-	def __init__(self):
+	def __init__(self, recalculate=False):
 		self.known = KnownMOFs()
 		self.precalculated = self.known.mof_db.keys()
 		self.hmof = HypoMOFs()
 		self.ga = GAMOFs()
 		self.tobacco = TobaccoMOFs()
 		# Maybe also a NullMOFs class eventually, which is just a calculator sans comparisons?
+		self.recalculate = recalculate  # Should MOFFLES be recalculated even if known?
 
 	def test_cif(self, cif_path):
 		# Dispatch to the class corresponding to the source of the input CIF
 		mof_info = basename(cif_path)
-		if mof_info in self.precalculated:
+		if (not self.recalculate) and (mof_info in self.precalculated):
 			mof_log("...using precompiled table of known MOFs\n")
 			return self.known.test_cif(cif_path)
 		elif "hypotheticalmof" in mof_info.lower() or "hmof" in mof_info.lower():
@@ -491,6 +497,7 @@ if __name__ == "__main__":
 	elif len(args) == 1 and args[0].endswith("/"):
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
+		comparer = AutoCompare(True)  # Do not use database of known MOFs
 	else:
 		inputs = args
 
