@@ -778,11 +778,8 @@ bool isMetal(const OBAtom* atom) {
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
 
-	// TODO: consider destroying all the bonds and starting from scratch
-	// Also see https://sourceforge.net/p/openbabel/mailman/message/6229244/
-	// For whatever reason, deleting all the bonds doesn't work out (disconnected fragments, etc.).  Need to diagnose why that's the case.
-	// It fails for porphyrins.  I am guessing the cause is that Separate() does not copy over UC information, which is causing problems with PBC.
-	// deleteBonds(mol, false);
+	// TODO: also consider copying the lattice and atom element/positions,
+	// then re-perceiving everything else.
 
 	mol->BeginModify();
 	FOR_ATOMS_OF_MOL(a, *mol) {
@@ -790,6 +787,18 @@ void resetBonds(OBMol *mol) {
 		a->SetSpinMultiplicity(0);  // Reset radicals so that linker SMILES are consistent.
 		a->SetHyb(0);  // Also reset hybridization in case that is causing problems
 	}
+	// Cannot delete bonds within the iterator: https://sourceforge.net/p/openbabel/mailman/message/6229244/
+	std::queue<OBBond*> to_delete;
+	FOR_BONDS_OF_MOL(b, *mol) {
+		to_delete.push(&*b);
+	}
+	while (!to_delete.empty()) {
+		mol->DeleteBond(to_delete.front());
+		to_delete.pop();
+	}
+
+	mol->SetFlags(mol->GetFlags() & (OB_PATTERN_STRUCTURE | OB_PERIODIC_MOL));  // Reset flags like OBMol::Clear
+
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
 	mol->EndModify();
