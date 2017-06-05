@@ -795,6 +795,9 @@ void resetBonds(OBMol *mol) {
 	OBUnitCell uc_copy = *mol->GetPeriodicLattice();
 	mol->Clear();
 	mol->SetPeriodicLattice(&uc_copy);
+	OBUnitCell* uc_data = new OBUnitCell;
+	*uc_data = uc_copy;
+	mol->SetData(uc_data);
 	mol->BeginModify();
 	while (!orig_atoms.empty()) {
 		MinimalAtom curr_atom = orig_atoms.front();
