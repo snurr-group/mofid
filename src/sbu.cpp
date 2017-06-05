@@ -202,8 +202,17 @@ int main(int argc, char* argv[])
 	fragments = mol.Separate();
 
 	OBConversion obconv;
+	// Canonical SMILES:
+	//obconv.SetOutFormat("smi");
+	//obconv.AddOption("U");
+	// InChI or InChIKey, with same flags as Universal SMILES:
+	//obconv.SetOutFormat("inchi");
+	//obconv.SetOutFormat("inchikey");
+	//obconv.AddOption("F");
+	//obconv.AddOption("M");
+	// Open Babel canonical SMILES:
 	obconv.SetOutFormat("can");
-	//obconv.AddOption("i");  // Ignore SMILES chirality for now
+	obconv.AddOption("i");  // Ignore SMILES chirality for now
 
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.

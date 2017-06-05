@@ -73,8 +73,7 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	rd_smiles = Chem.MolToSmiles(rms[0])
 
 	ob_mol = pybel.readstring("smi", rd_smiles)
-	#return ob_mol.write("can", opt={'i': True}).rstrip()  # Use the same format and parameters as sbu.cpp
-	return ob_mol.write("can").rstrip()  # Use the same format and parameters as sbu.cpp
+	return ob_mol.write("can", opt={'i': True}).rstrip()  # Use the same format and parameters as sbu.cpp
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
