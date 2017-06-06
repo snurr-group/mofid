@@ -145,6 +145,7 @@ class MOFCompare:
 		default = parse_moffles(moffles_from_name['default'])
 		linkers = default['smiles'].split('.')
 		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
+		moffles_from_name['err_systre_error'] = assemble_moffles(linkers, 'ERROR', default['cat'], mof_name=default['name'])
 
 		# Calculate the MOFFLES derived from the CIF structure itself
 		moffles_auto = cif2moffles(cif_path)
@@ -438,9 +439,7 @@ class TobaccoMOFs(MOFCompare):
 				smiles = self.mof_db['nodes'][node]
 				if smiles not in linkers:
 					linkers.append(smiles)
-			smiles = self.mof_db['linkers'][codes['linker']]
-			if smiles != "None":
-				linkers.append(smiles)
+			linkers.append(self.mof_db['linkers'][codes['linker']])  # May have to revise this if we switch nodes/linkers to "sticky ends"
 			linkers.sort()
 
 			topology = codes['topology']

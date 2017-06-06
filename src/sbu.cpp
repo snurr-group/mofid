@@ -1066,7 +1066,6 @@ int collapseTwoConn(OBMol *net, int ignore_element) {
 
 int collapseXX(OBMol *net, int element_x) {
 	// Simplify X-X bonds in the simplified net with their midpoint
-	// FIXME: bond drawings in CIF are inconsistent due to ambiguity of unit cells for coordinates at 0.0
 	// Returns the number of X-X bonds simplified
 	int simplifications = 0;
 	OBUnitCell* lattice = net->GetPeriodicLattice();
@@ -1157,18 +1156,22 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
 				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
 					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant X's.
+					// For tiny linkers (e.g. oxalic acid), use a distance-based criterion.
 					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
 					if ( *x1 != *x2
 						&& !inVector<OBAtom*>(*x1, to_delete)
 						&& !inVector<OBAtom*>(*x2, to_delete)
-						&& metals[*x1] == metals[*x2]
-						&& (net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL) )
+						&& metals[*x1] == metals[*x2] )
 					{
-						to_delete.push_back(*x1);
-						to_delete.push_back(*x2);
-						OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
-						formBond(net, x_mid, metals[*x1], 1);
-						formBond(net, x_mid, &*L, 1);
+						if ( net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL
+							|| (false /*dists from center*/ && false /*dists from each other*/) )
+						{  // Skeleton for small linkers, like oxalic acid (TODO)
+							to_delete.push_back(*x1);
+							to_delete.push_back(*x2);
+							OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
+							formBond(net, x_mid, metals[*x1], 1);
+							formBond(net, x_mid, &*L, 1);
+						}
 					}
 				}
 			}

@@ -11,7 +11,7 @@
 		"sym_16_mc_14" : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)(O)O)O)(O)(O)O)O"
 	},
 	"linkers" : {
-		"L__"  : "None",
+		"L__"  : "[O]C(=O)C(=O)[O]",
 		"L_12" : "[O]C(=O)c1ccc(cc1)C(=O)[O]"
 	},
 	"_solvated_nodes" : {
