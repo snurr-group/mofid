@@ -3,7 +3,7 @@
 	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.cat1.F1.hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
 	"VUSKEA_clean" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[Zn]O([Zn])([Zn])[Zn] f1.pcu.cat0.F1.VUSKEA_clean",
 	
-	"Zn4O_cluster_with_hydrogen" : "[O]C=O.[Zn]O([Zn])([Zn])[Zn] f1.ERROR.cat0.F1.Zn4O_cluster_with_hydrogen",
+	"Zn4O_cluster_with_hydrogen" : "[Zn]O([Zn])([Zn])[Zn] f1.ERROR.cat0.F1.Zn4O_cluster_with_hydrogen",
 	
 	"hypotheticalMOF_5071180_i_2_j_25_k_1_m_0" : "[Cu][Cu].[O]C(=O)c1ccc(cc1)c1ccc(cc1)C(=O)[O].n1ccc(cc1)c1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_5071180_i_2_j_25_k_1_m_0",
 	
@@ -37,7 +37,6 @@
 	"intentionally_messed_up_hmof1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
 	
 	"_some_known_issues" : {
-		"hMOF-1" : "Catenated",
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
 		"ZIF-69-RASPA" : "Strange radicals in both linkers"
 	},

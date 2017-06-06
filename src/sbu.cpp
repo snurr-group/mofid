@@ -73,8 +73,6 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
 const int X_CONN = 52;
-// Max. degrees between redundant L-X bonds.  Oxalic acid (extreme case) is < 85 degrees.
-const int LX_ANGLE_TOL = 66;  // don't make this a round number without justification
 
 
 class ElementGen
@@ -1152,20 +1150,32 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 				}
 			}
 
-			// Iterate through the bonded L-X's to find redundant pairs
+			// Iterate through the bonded L-X's to find redundant pairs: two X's
+			// that connect to the same node in the same unit cell are deleted here.
 			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
 				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
-					// If the two X's are within an angle tolerance (and not already scheduled for deletion), delete the redundant X's.
-					// For tiny linkers (e.g. oxalic acid), use a distance-based criterion.
 					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
 					if ( *x1 != *x2
 						&& !inVector<OBAtom*>(*x1, to_delete)
 						&& !inVector<OBAtom*>(*x2, to_delete)
 						&& metals[*x1] == metals[*x2] )
 					{
-						if ( net->GetAngle(*x1, &*L, *x2) < LX_ANGLE_TOL
-							|| (false /*dists from center*/ && false /*dists from each other*/) )
-						{  // Skeleton for small linkers, like oxalic acid (TODO)
+						OBMol x_test = initMOF(net);
+						x_test.BeginModify();
+						std::vector<OBAtom*> test_atoms;  // Copy of M1-X1-L-X2-M2, where M2 might equal M1
+						test_atoms.push_back(formAtom(&x_test, metals[*x1]->GetVector(), metals[*x1]->GetAtomicNum()));
+						test_atoms.push_back(formAtom(&x_test, (*x1)->GetVector(), (*x1)->GetAtomicNum()));
+						test_atoms.push_back(formAtom(&x_test, (&*L)->GetVector(), (&*L)->GetAtomicNum()));
+						test_atoms.push_back(formAtom(&x_test, (*x2)->GetVector(), (*x2)->GetAtomicNum()));
+						// M2 atom is already defined by metals[*x1].  See parent conditional statement.
+						formBond(&x_test, test_atoms[0], test_atoms[1], 1);
+						formBond(&x_test, test_atoms[1], test_atoms[2], 1);
+						formBond(&x_test, test_atoms[2], test_atoms[3], 1);
+						formBond(&x_test, test_atoms[3], test_atoms[0], 1);
+						x_test.EndModify();
+
+						// If x_test is periodic, then M2 is in a different UC than M1, thus X1-X2 is a bridge.
+						if (!isPeriodicChain(&x_test)) {
 							to_delete.push_back(*x1);
 							to_delete.push_back(*x2);
 							OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
@@ -1178,7 +1188,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 		}
 	}
 
-	// Delete the redundant X's (which will also remove its X-L and X-M bonds)
+	// Delete the redundant (original) X's (which will also remove their X-L and X-M bonds)
 	net->BeginModify();
 	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
 		net->DeleteAtom(*it);
