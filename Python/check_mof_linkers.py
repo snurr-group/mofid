@@ -20,6 +20,7 @@ import copy  # copy.deepcopy(x)
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
 from rdkit import Chem  # Use rdkit substructure transforms since they can easily add atoms
+from rdkit.Chem import AllChem  # Advanced features like reaction transforms
 
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
@@ -55,6 +56,11 @@ def mof_log(msg):
 	if PRINT_CURRENT_MOF:
 		sys.stderr.write(msg)
 
+def ob_normalize(smiles):
+	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
+	ob_mol = pybel.readstring("smi", smiles)
+	return ob_mol.write("can", opt={'i': True}).rstrip()
+
 def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	# Perform an rdkit chemical transformation and renormalize to Open Babel SMILES
 	# http://www.rdkit.org/docs/GettingStartedInPython.html#chemical-transformations
@@ -72,8 +78,7 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	rms = Chem.ReplaceSubstructs(rd_mol, patt, repl, replaceAll = replace_all)
 	rd_smiles = Chem.MolToSmiles(rms[0])
 
-	ob_mol = pybel.readstring("smi", rd_smiles)
-	return ob_mol.write("can", opt={'i': True}).rstrip()  # Use the same format and parameters as sbu.cpp
+	return ob_normalize(rd_smiles)
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
@@ -424,22 +429,21 @@ class TobaccoMOFs(MOFCompare):
 	def expected_moffles(self, cif_path):
 		# What is the expected MOFFLES based on the information in a MOF's filename?
 		codes = self.parse_filename(cif_path)
-		# CHALLENGE: ToBACCo has "organic nodes" as defined by ToBACCo that won't be picked up by MOFFLES
-		# Combinining _on_ with linkers will have to wait.  In the meantime, just consider the pure metal cases.
-		# Also skip B-containing sym_13_mc_12 and sym_16_mc_6, or Si-containing sym_4_on_14
+		# Currently skipping B-containing sym_13_mc_12 and sym_16_mc_6, or Si-containing sym_4_on_14
 		# sym_24_mc_13 will also be incompatible with our current decomposition scheme
 		# For now, also sym_3_mc_0, sym_4_mc_1, sym_8_mc_7, sym_8_mc_8
-		# TODO: Combine _on_ with the linker somehow
-		# TODO: Consider challenges with combining certain metal+nitrogen nodes with carboxylates.
-		# We might need SMIRKS transforms for those structures, too.
+
 		if not any(False, [x in self.mof_db['nodes'] for x in codes['nodes']]):
-			# Skip structures with tricky nodes (undefined for now)
-			linkers = []
-			for node in codes['nodes']:
-				smiles = self.mof_db['nodes'][node]
-				if smiles not in linkers:
-					linkers.append(smiles)
-			linkers.append(self.mof_db['linkers'][codes['linker']])  # May have to revise this if we switch nodes/linkers to "sticky ends"
+			# Skip structures with tricky nodes (undefined in the table for now)
+			# Apply "sticky ends" to node/linker definitions
+			assert len(codes['nodes']) in [1,2]
+			node1 = self.mof_db['nodes'][codes['nodes'][0]]
+			if len(codes['nodes']) == 1:
+				node2 = self.mof_db['nodes'][codes['nodes'][0]]
+			else:
+				node2 = self.mof_db['nodes'][codes['nodes'][1]]
+			linker = self.mof_db['linkers'][codes['linker']]
+			linkers = self.assemble_linkers(node1, node2, linker)
 			linkers.sort()
 
 			topology = codes['topology']
@@ -452,6 +456,36 @@ class TobaccoMOFs(MOFCompare):
 			return assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
 		else:
 			return None
+
+	def assemble_linkers(self, node1, node2, linker):
+		# Assemble the expected nodes and linkers based on the designated compositions in the database,
+		# plus transformations to join "sticky ends" together (using an [Lr] pseudo atom).
+		# Returns a list of the SMILES components
+		smiles = []
+		sticky_ends = []
+		for node in [node1, node2]:
+			subnodes = node.split('.')
+			for part in subnodes:
+				if '[Lr]' in part:
+					sticky_ends.append(part)
+				else:
+					if part not in smiles:
+						smiles.append(part)
+
+		if len(sticky_ends) != 2:
+			raise ValueError("Both nodes must contain one sticky end")
+		if linker.count('[Lr]') != 2:
+			raise ValueError("Linker must contain two sticky ends")
+
+		rxn = AllChem.ReactionFromSmarts('[Lr][*:1].[Lr][*:2]>>[*:1][*:2]')
+		partial = rxn.RunReactants((Chem.MolFromSmiles(sticky_ends[0]), Chem.MolFromSmiles(linker)))
+		ps = rxn.RunReactants((partial[0][0], Chem.MolFromSmiles(sticky_ends[1])))
+		organic = ob_normalize(Chem.MolToSmiles(ps[0][0]))
+
+		smiles.append(organic)
+		smiles.sort()
+		return smiles
+
 
 class AutoCompare:
 	# Automatically selects the appropriate MOF comparison class using filename-based heuristics
