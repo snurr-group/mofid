@@ -477,12 +477,34 @@ class TobaccoMOFs(MOFCompare):
 		if linker.count('[Lr]') != 2:
 			raise ValueError("Linker must contain two sticky ends")
 
-		rxn = AllChem.ReactionFromSmarts('[Lr][*:1].[Lr][*:2]>>[*:1][*:2]')
-		partial = rxn.RunReactants((Chem.MolFromSmiles(sticky_ends[0]), Chem.MolFromSmiles(linker)))
-		ps = rxn.RunReactants((partial[0][0], Chem.MolFromSmiles(sticky_ends[1])))
-		organic = ob_normalize(Chem.MolToSmiles(ps[0][0]))
+		# We need to loop the reactions to apply them to all available sticky ends on the nodes.
+		# For example, metal nodes will contribute one carboxylate, but organic nodes may contain 6+ reaction ends
 
-		smiles.append(organic)
+		def react_all(rxn, base_smiles, mod_smiles):
+			# Run reactions on the base component with the modifier until it's completely reacted
+			mod_mol = Chem.MolFromSmiles(mod_smiles)
+			result = base_smiles
+			counter = 1
+			while True:
+				ps = rxn.RunReactants((Chem.MolFromSmiles(result), mod_mol))
+				if len(ps) == 0:
+					break
+				else:
+					result = Chem.MolToSmiles(ps[0][0])
+				counter += 1
+				if counter > 100:
+					raise ValueError("Infinite loop suspected")
+			return result
+
+		mod_linker = linker.replace('[Lr]', '[No]')  # differentiate node and linker sticky ends
+		rxn = AllChem.ReactionFromSmarts('[Lr][*:1].[No][*:2]>>[*:1][*:2]')
+		rxn_rev = AllChem.ReactionFromSmarts('[No][*:3].[Lr][*:4]>>[*:3][*:4]')
+		partial = react_all(rxn, sticky_ends[0], mod_linker)  # attach linkers to all [Lr] connections
+		organic = react_all(rxn_rev, react_all(rxn, sticky_ends[1], partial), sticky_ends[1])
+		# Attach the second node to all reactive sites, and vice versa.
+		# We don't know if the first and/or second sticky_end is multiply reactive, so run it in both directions.
+
+		smiles.append(ob_normalize(organic))
 		smiles.sort()
 		return smiles
 

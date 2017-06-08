@@ -8,7 +8,9 @@
 		"sym_9_mc_5"   : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O)(O)O)(O)O.[Lr]C(=O)[O]",
 		"sym_10_mc_10" : "O[Zr]123O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)O)O)O.[Lr]C(=O)[O]",
 		"sym_12_mc_11" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[Lr]C(=O)[O]",
-		"sym_16_mc_14" : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)(O)O)O)(O)(O)O)O.[Lr]C(=O)[O]"
+		"sym_16_mc_14" : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)(O)O)O)(O)(O)O)O.[Lr]C(=O)[O]",
+		"sym_4_mc_1"   : "[Zn].n1ccc(cc1)[Lr]",
+		"sym_3_on_0"   : "N([Lr])([Lr])([Lr])"
 	},
 	"linkers" : {
 		"L__"  : "[Lr][Lr]",
