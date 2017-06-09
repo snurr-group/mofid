@@ -36,9 +36,14 @@ else:
 
 def extract_linkers(mof_path):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_output = subprocess.check_output([SBU_BIN, mof_path])  # Use subprocess so we get stdout
-	fragments = cpp_output.strip().split("\n")
-	fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
+	cpp_run = EasyProcess([SBU_BIN, mof_path]).call()
+	cpp_output = cpp_run.stdout
+	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
+	if cpp_run.return_code:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
+		fragments = ["ERROR"]
+	else:
+		fragments = cpp_output.strip().split("\n")
+		fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
 
 	cat = None
 	if "simplified net(s)" in fragments[-1]:
@@ -169,7 +174,10 @@ def compare_moffles(moffles1, moffles2, names=None):
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers, cat = extract_linkers(cif_path)
-	topology = extract_topology(SBU_SYSTRE_PATH)
+	if cat is not None:
+		topology = extract_topology(SBU_SYSTRE_PATH)
+	else:
+		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
 	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 

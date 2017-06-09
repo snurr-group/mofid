@@ -151,6 +151,7 @@ class MOFCompare:
 		linkers = default['smiles'].split('.')
 		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
 		moffles_from_name['err_systre_error'] = assemble_moffles(linkers, 'ERROR', default['cat'], mof_name=default['name'])
+		moffles_from_name['err_cpp_error'] = assemble_moffles(['ERROR'], 'NA', None, mof_name=default['name'])
 
 		# Calculate the MOFFLES derived from the CIF structure itself
 		moffles_auto = cif2moffles(cif_path)
@@ -429,11 +430,12 @@ class TobaccoMOFs(MOFCompare):
 	def expected_moffles(self, cif_path):
 		# What is the expected MOFFLES based on the information in a MOF's filename?
 		codes = self.parse_filename(cif_path)
-		# Currently skipping B-containing sym_13_mc_12 and sym_16_mc_6, or Si-containing sym_4_on_14
-		# sym_24_mc_13 will also be incompatible with our current decomposition scheme
-		# For now, also sym_3_mc_0, sym_4_mc_1, sym_8_mc_7, sym_8_mc_8
+		# Currently skipping B-containing sym_13_mc_12 and sym_16_mc_6
+		# sym_24_mc_13 will be incompatible with our current decomposition scheme
+		# sym_3_mc_0 is currently causing segfaults, so diagnose this node
+		# Also skipping a few more nodes until consistency issues are figured out.
 
-		if not any(False, [x in self.mof_db['nodes'] for x in codes['nodes']]):
+		if (not any(False, [x in self.mof_db['nodes'] for x in codes['nodes']])) and (codes['linker'] in self.mof_db['linkers']):
 			# Skip structures with tricky nodes (undefined in the table for now)
 			# Apply "sticky ends" to node/linker definitions
 			assert len(codes['nodes']) in [1,2]
