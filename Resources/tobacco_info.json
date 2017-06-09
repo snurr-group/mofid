@@ -1,5 +1,6 @@
 {
 	"nodes" : {
+		"sym_4_mc_1"   : "[Zn].n1ccc(cc1)[Lr]",
 		"sym_5_mc_2"   : "[Cu][Cu].[Lr]C(=O)[O]",
 		"sym_6_mc_3"   : "[Zn]O([Zn])([Zn])[Zn].[Lr]C(=O)[O]",
 		"sym_7_mc_4"   : "[Cr]O([Cr])[Cr].[Lr]C(=O)[O]",
@@ -9,8 +10,18 @@
 		"sym_10_mc_10" : "O[Zr]123O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)O)O)O.[Lr]C(=O)[O]",
 		"sym_12_mc_11" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[Lr]C(=O)[O]",
 		"sym_16_mc_14" : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)(O)O)O)(O)(O)O)O.[Lr]C(=O)[O]",
-		"sym_4_mc_1"   : "[Zn].n1ccc(cc1)[Lr]",
-		"sym_3_on_0"   : "N([Lr])([Lr])([Lr])"
+		"sym_3_on_0"   : "N([Lr])([Lr])([Lr])",
+		"sym_3_on_2"   : "[Lr]c1cc([Lr])cc(c1)[Lr]",
+		"sym_3_on_5"   : "[Lr]n1cc2c(c1)c1cn(cc1c1c2cn(c1)[Lr])[Lr]",
+		"sym_4_on_6"   : "[Lr]C([Lr])([Lr])[Lr]",
+		"sym_4_on_7"   : "[Lr]C1=CC2(C=C(C1C(=C2)[Lr])[Lr])[Lr]",
+		"sym_4_on_8"   : "[Lr]c1cc(cc(c1)[Lr])c1cc(cc(c1)[Lr])[Lr]",
+		"sym_5_on_9"   : "[Lr]c1cc([Lr])c(cc1[Lr])[Lr]",
+		"sym_5_on_10"  : "[Lr]c1cc(cc(c1)[Lr])c1cc(cc(c1)[Lr])[Lr]",
+		"sym_5_on_11"  : "[Lr]c1cc([Lr])c2c3c1ccc1c3c(cc2)c(cc1[Lr])[Lr]",
+		"sym_5_on_12"  : "[Lr]C1=C2C=CC(C([Lr])=c(cc3)[nH]c3=C([Lr])C4=NC(C=C4)=C([Lr])c5ccc1[nH]5)=N2",
+		"sym_5_on_13"  : "[Lr]c1ccc(cc1)C(=C(c1ccc(cc1)[Lr])c1ccc(cc1)[Lr])c1ccc(cc1)[Lr]",
+		"sym_0_on_14"  : "[Lr]c1c([Lr])c([Lr])c(c(c1[Lr])[Lr])[Lr]"
 	},
 	"linkers" : {
 		"L__"  : "[Lr][Lr]",
