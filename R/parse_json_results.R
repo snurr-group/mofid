@@ -25,6 +25,15 @@ inlist <- function(s, x) {
   unlist  # lapply returns a list, but we want a vector of logicals
 }
 
+length_list <- function(x) {
+  # For each element in a vector of list of elements, gets the length of the contained vector
+  lapply(
+    x,
+    function(y) {length(unlist(y))}
+  ) %>% 
+  unlist
+}
+
 # Examples:
 # filter(import_err_df("Notebooks/20170605-tobacco/very_first_big_tobacco.json"), inlist("err_smiles", errors)) %>% View
 # "Notebooks/20170605-tobacco/tobacco_with_codes.json" %>% import_err_df %>% filter(inlist("sym_8_mc_7", code.nodes)) %>% View
