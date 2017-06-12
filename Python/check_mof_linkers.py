@@ -35,6 +35,7 @@ TOBACCO_DEFAULT_CIFS = "../Data/tobacco_L_12/quick"
 HMOF_DEFAULT_CIFS = "../Data/hmofs_i_0_no_cat"
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
+EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a "_codes" field in the output JSON?
 
 
 def any(member, list):
@@ -170,17 +171,21 @@ class MOFCompare:
 		assert type(multi_moffles1) == dict  # Else, let's handle multiple references
 		assert 'default' in multi_moffles1
 		default_comparison = compare_moffles(multi_moffles1['default'], moffles2, names)
+		if EXPORT_CODES and '_codes' in multi_moffles1:
+			default_comparison['_codes'] = multi_moffles1['_codes']
 		if default_comparison['match']:
 			return default_comparison
 
 		for test in multi_moffles1.keys():
-			if test == 'default':
+			if test in ['default', '_codes']:
 				continue
 			test_moffles = multi_moffles1[test]
 			test_comparison = compare_moffles(test_moffles, moffles2, names)
 			if test_comparison['match']:
 				test_comparison['match'] = False  # Should it be reported as a match if we know the source of error?
 				test_comparison['errors'] = [test]
+				if EXPORT_CODES and '_codes' in multi_moffles1:
+					test_comparison['_codes'] = multi_moffles1['_codes']
 				return test_comparison
 
 		return default_comparison  # No special cases apply
@@ -454,8 +459,16 @@ class TobaccoMOFs(MOFCompare):
 			if len(topology) == 4 and topology.endswith('b'):
 				topology = topology[0:3]  # Remove binary designation
 			cat = "0"  # All ToBaCCo MOFs are uncatenated
+
+			moffles_options = dict()
+
 			# Generate a reference MOFFLES based on SBU composition
-			return assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
+			# Known classes of issues go here
+			if EXPORT_CODES:
+				moffles_options['_codes'] = codes
+
+			return moffles_options
 		else:
 			return None
 

@@ -33,7 +33,7 @@
 	
 	"NADZEZ-713513-P1" : "[O]C(=O)c1cc(cc(c1)C(=O)[O])C(=O)[O].[Y] f1.NEW.cat0.F1.NADZEZ-713513-P1",
 	
-	"COD_2100028" : " f1.ERROR.F1.COD_2100028",
+	"COD_2100028" : " f1.NA.F1.COD_2100028",
 	"intentionally_messed_up_hmof1" : "[O]C(=O)c1ccc(cc1)C(=O)[O].[O][Zn]O([Zn][O])([Zn])[Zn].[Zn]O([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
 	
 	"_some_known_issues" : {
