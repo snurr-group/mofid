@@ -84,7 +84,7 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
 	summarized = {'mofs': results, 'errors': dict()}
-	error_types = {'err_topology': 0, 'err_smiles': 0, 'both': 0, 'success': 0, 'undefined': 0}
+	error_types = {'err_topology': 0, 'err_smiles': 0, 'two': 0, 'three_plus': 0, 'success': 0, 'undefined': 0}
 	for match in results:
 		if match['match'] == 'NA':  # NA cases where we don't know the nodes and linkers
 			assert 'Undefined composition' in match['errors']
@@ -92,7 +92,9 @@ def summarize(results):
 		elif match['match']:
 			error_types['success'] += 1
 		elif len(match['errors']) == 2:
-			error_types['both'] += 1
+			error_types['two'] += 1
+		elif len(match['errors']) > 2:
+			error_types['three_plus'] += 1
 		elif len(match['errors']) == 1:  # Other class of known issue with MOFFLES generation and/or naming scheme
 			known_issue = match['errors'][0]
 			if known_issue not in error_types:
