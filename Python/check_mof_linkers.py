@@ -467,6 +467,9 @@ class TobaccoMOFs(MOFCompare):
 			# Generate a reference MOFFLES based on SBU composition
 			moffles_options['default'] = assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
 			# Known classes of issues go here
+			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
+				moffles_options['stp_from_tpt'] = assemble_moffles(linkers, "stp", cat, mof_name=codes['name'])
+
 			if EXPORT_CODES:
 				moffles_options['_codes'] = codes
 
