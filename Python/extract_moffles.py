@@ -18,6 +18,8 @@ import json
 # import openbabel  # for visualization only, since my changes aren't backported to the python library
 import sys, os
 
+from smiles_diff import multi_smiles_diff as diff
+
 # Some default settings for my computer.  Adjust these based on your configuration:
 SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_SYSTRE_PATH = "Test/topology.cgd"
@@ -169,6 +171,13 @@ def compare_moffles(moffles1, moffles2, names=None):
 			comparison[key] = False
 			comparison['match'] = False
 			comparison['errors'].append("err_" + key)
+
+	# Deeper investigation of SMILES-type errors
+	if "err_smiles" in comparison['errors']:
+		comparison['errors'].remove("err_smiles")
+		for err in diff(parsed[0]['smiles'], parsed[1]['smiles']):
+			comparison['errors'].append("err_" + err)
+
 	return comparison
 
 def cif2moffles(cif_path):

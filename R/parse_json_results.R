@@ -2,6 +2,7 @@
 
 library(jsonlite)
 library(dplyr)
+library(stringr)
 
 import_err_df <- function(filename) {
   df <- fromJSON(filename)$mofs
@@ -33,6 +34,20 @@ length_list <- function(x) {
   ) %>% 
   unlist
 }
+
+get_before_space <- function(x) {
+  # What is the content before a space in a column?
+  # E.g. if you have a column of full SMILES, what is the chemical part of that column?
+  # Example: three %>% filter(inlist("err_smiles", errors)) %>% mutate(cif_smiles = get_before_space(from_cif)) %>% View
+  lapply(
+    x,
+    function(y) {
+      str_split(y, " ")[[1]][1]
+      }
+    ) %>%
+    unlist
+}
+
 
 # Examples:
 # filter(import_err_df("Notebooks/20170605-tobacco/very_first_big_tobacco.json"), inlist("err_smiles", errors)) %>% View
