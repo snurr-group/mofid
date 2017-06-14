@@ -20,19 +20,23 @@ os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
 import pybel  # Read SMILES to calculate molecular formulas, etc.
 
 
+DIFF_LEVELS = dict({
+	'same' : 0,
+	'formula' : 50,
+	'linker_bond_orders' : 10,
+	'node_bond_orders' : 11,
+	'linker_single_bonds' : 20,
+	'node_single_bonds' : 21,
+	'ERROR' : 99,
+	'ERR_MAX' : 99999
+})
+
+
 def multi_smiles_diff(smiles1, smiles2):
 	# What are the differences between two dot-separated SMILES codes, a reference and candidate?
 	# Just bond orders?  The entire bond structure?  Nothing similar?
-
 	if smiles1 == smiles2:
 		return []
-	else:
-		return ["smiles"]  # STUB: Let's focus on single diff's, then come back to the more complicated case
-
-	# TODO: complete this function
-	diffs = []
-	# Consider making the results from single_smiles_diff as an enum, class, or other rankable level of error for
-	# prioritizing which "match" is closest
 
 	parts1 = smiles1.split('.')
 	parts2 = smiles2.split('.')
@@ -46,22 +50,36 @@ def multi_smiles_diff(smiles1, smiles2):
 		parts1.remove(match[1])
 		parts2.remove(match[2])
 
-	print categorized
-	print parts1, parts2
 
-	processed1 = [x[1] for x in categorized]
-	processed2 = [x[2] for x in categorized]
+	# TODO: refactor inner parts of loop possibly as:
+	# find_closest_match(smiles, unmatched_list, extra_list)
 
+	while len(parts2):
+		current = parts2.pop()  # MAYBE ENCAPSULATE THE REST AS A SEMI-LOOP, THEN RE-INCORPORATE??
+		best_match = ['ERR_MAX', '', True]  # Error level, SMILES, unpaired
 
+		processed1 = [x[1] for x in categorized]
+		processed2 = [x[2] for x in categorized]
 
-	# LOOP OVER THINGS LEFT OVER
-	# First diff the two codes to see if it eliminates one of smiles2
-	# If not, extract the opposite node from "categorized" and see if it belongs to that (fallback?)
-	# If that fails, report an "extra" smiles component
+		for unpaired in parts1:
+			test_err = single_smiles_diff(current, unpaired)
+			if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
+				best_match = [test_err, unpaired, True]
+		for repeat in processed1:
+			test_err = single_smiles_diff(current, repeat)
+			if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
+				best_match = [test_err, repeat, False]
 
+		if not best_match[2]:
+			best_match[0] = best_match[0] + "_extra"  # Duplicated node/linker, likely from inconsistent representations
+		if best_match[0] != 'ERR_MAX':
+			categorized.append([best_match[0], best_match[1], current])
 
-	diffs.append("smiles")  # Maybe something about extracting all the categorized[x][0] terms?
-	return diffs
+	# I'm doing parts2 first, but the same process applies to parts1
+	# Rewrite as a function, which includes an index of which element to pursue????
+
+	#For a stub, just return ["smiles"]
+	return [x[0] for x in categorized if x[0] != 'equal']
 
 
 def single_smiles_diff(smiles1, smiles2):
@@ -69,7 +87,7 @@ def single_smiles_diff(smiles1, smiles2):
 	if '.' in smiles1 or '.' in smiles2:
 		raise ValueError("Only a single component is allowed")
 	if smiles1 == smiles2:
-		return "none"
+		return "equal"
 	error_codes = ["ERROR", "NA", ""]
 	if smiles1 in error_codes or smiles2 in error_codes:
 		return "ERROR"
@@ -112,4 +130,4 @@ if __name__ == "__main__":
 	if len(args) != 2:
 		usage()
 
-	print single_smiles_diff(args[0], args[1])  # FIXME: use multi_ once implemented
+	print multi_smiles_diff(args[0], args[1])
