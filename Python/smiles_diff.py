@@ -32,6 +32,29 @@ DIFF_LEVELS = dict({
 })
 
 
+def find_closest_match(smiles, preferred_list, extra_list):
+	# Find the closest match for a SMILES in two candidate lists.
+	# For each candidate, run single_smiles_diff, and rank the
+	# possible errors by their value in DIFF_LEVELS.
+	best_match = ['ERR_MAX', '', True]  # [Error level, SMILES, is this from the extra list?]
+
+	for option in preferred_list:
+		test_err = single_smiles_diff(smiles, option)
+		if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
+			best_match = [test_err, option, False]
+	for repeat in extra_list:
+		test_err = single_smiles_diff(smiles, repeat)
+		if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
+			best_match = [test_err, repeat, True]
+
+	if best_match[2]:
+		best_match[0] = best_match[0] + "_extra"  # Duplicated node/linker, likely from inconsistent representations
+	if best_match[0] == 'ERR_MAX_extra':
+		best_match = None
+
+	return best_match
+
+
 def multi_smiles_diff(smiles1, smiles2):
 	# What are the differences between two dot-separated SMILES codes, a reference and candidate?
 	# Just bond orders?  The entire bond structure?  Nothing similar?
@@ -50,36 +73,30 @@ def multi_smiles_diff(smiles1, smiles2):
 		parts1.remove(match[1])
 		parts2.remove(match[2])
 
-
-	# TODO: refactor inner parts of loop possibly as:
-	# find_closest_match(smiles, unmatched_list, extra_list)
+	while len(parts1):
+		current = parts1.pop()
+		processed2 = [x[2] for x in categorized]
+		best_match = find_closest_match(current, parts2, processed2)
+		if best_match is not None:
+			categorized.append([best_match[0], current, best_match[1]])
+			if not best_match[2]:  # If part of the "preferred list" (parts2)
+				parts2.remove(best_match[1])
 
 	while len(parts2):
-		current = parts2.pop()  # MAYBE ENCAPSULATE THE REST AS A SEMI-LOOP, THEN RE-INCORPORATE??
-		best_match = ['ERR_MAX', '', True]  # Error level, SMILES, unpaired
-
+		current = parts2.pop()
 		processed1 = [x[1] for x in categorized]
-		processed2 = [x[2] for x in categorized]
-
-		for unpaired in parts1:
-			test_err = single_smiles_diff(current, unpaired)
-			if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
-				best_match = [test_err, unpaired, True]
-		for repeat in processed1:
-			test_err = single_smiles_diff(current, repeat)
-			if DIFF_LEVELS[test_err] < DIFF_LEVELS[best_match[0]]:
-				best_match = [test_err, repeat, False]
-
-		if not best_match[2]:
-			best_match[0] = best_match[0] + "_extra"  # Duplicated node/linker, likely from inconsistent representations
-		if best_match[0] != 'ERR_MAX':
+		best_match = find_closest_match(current, parts1, processed1)
+		if best_match is not None:
 			categorized.append([best_match[0], best_match[1], current])
-
-	# I'm doing parts2 first, but the same process applies to parts1
-	# Rewrite as a function, which includes an index of which element to pursue????
+			assert best_match[2]  # parts1 is empty, so the best match must have already been added to categorized
 
 	#For a stub, just return ["smiles"]
-	return [x[0] for x in categorized if x[0] != 'equal']
+	err_codes = []
+	for x in categorized:
+		err = x[0]
+		if err != 'equal' and err not in err_codes:
+			err_codes.append(err)
+	return err_codes
 
 
 def single_smiles_diff(smiles1, smiles2):
