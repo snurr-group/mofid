@@ -19,7 +19,7 @@
 		"sym_5_on_9"   : "[Lr]c1cc([Lr])c(cc1[Lr])[Lr]",
 		"sym_5_on_10"  : "[Lr]c1cc(cc(c1)[Lr])c1cc(cc(c1)[Lr])[Lr]",
 		"sym_5_on_11"  : "[Lr]c1cc([Lr])c2c3c1ccc1c3c(cc2)c(cc1[Lr])[Lr]",
-		"sym_5_on_12"  : "[Lr]C1=C2C=CC(C([Lr])=c(cc3)[nH]c3=C([Lr])C4=NC(C=C4)=C([Lr])c5ccc1[nH]5)=N2",
+		"sym_5_on_12"  : "[Lr]C1=C2C=CC(=N2)C(=c2ccc(=C(C3=NC(=C(c4[nH]c1cc4)[Lr])C=C3)[Lr])[nH]2)[Lr]",
 		"sym_5_on_13"  : "[Lr]c1ccc(cc1)C(=C(c1ccc(cc1)[Lr])c1ccc(cc1)[Lr])c1ccc(cc1)[Lr]",
 		"sym_0_on_14"  : "[Lr]c1c([Lr])c([Lr])c(c(c1[Lr])[Lr])[Lr]"
 	},

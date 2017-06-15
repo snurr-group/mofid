@@ -9,6 +9,7 @@ Report common classes of errors in the calculated MOFid.
 """
 
 import sys, os
+import re
 
 # TODO: Refactor the OpenBabel loading as another helper import
 def path_to_resource(resource):
@@ -112,7 +113,11 @@ def single_smiles_diff(smiles1, smiles2):
 	mol1 = pybel.readstring("smi", smiles1)
 	mol2 = pybel.readstring("smi", smiles2)
 
-	if mol1.formula != mol2.formula:
+	def strip_h(formula):
+		# Strip hydrogens from molecular formula.
+		# We don't have to worry about greatest common factor, etc., since it's absolute atom counts.
+		return re.sub(r'H\d+', '', formula)
+	if strip_h(mol1.formula) != strip_h(mol2.formula):
 		return "formula"
 
 	def is_organic(mol):
