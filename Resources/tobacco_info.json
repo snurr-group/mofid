@@ -1,5 +1,6 @@
 {
 	"nodes" : {
+		"skip_sym_3_mc_0"   : "[CuH].[Cu].n1[n]cc(c1)[Lr]",
 		"sym_4_mc_1"   : "[Zn].n1ccc(cc1)[Lr]",
 		"sym_5_mc_2"   : "[Cu][Cu].[Lr]C(=O)[O]",
 		"sym_6_mc_3"   : "[Zn]O([Zn])([Zn])[Zn].[Lr]C(=O)[O]",

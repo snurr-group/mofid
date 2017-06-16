@@ -1140,15 +1140,23 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 		if (inVector<int>(L->GetAtomicNum(), linker_elements)) {  // if linker atom
 			std::vector<OBAtom*> connectors;
 			std::map<OBAtom*,OBAtom*> metals;  // <Atom X, M of L-X-M>
+			bool found_metals = true;  // Checks if L-X-M format is actually valid
 			FOR_NBORS_OF_ATOM(n, *L) {
 				if (n->GetAtomicNum() == element_x) {  // connection site
 					connectors.push_back(&*n);
 					FOR_NBORS_OF_ATOM(M, *n) {  // So we can compare the node connections later
-						if (!inVector<int>(M->GetAtomicNum(), linker_elements)) {
+						if (!inVector<int>(M->GetAtomicNum(), linker_elements) && M->GetAtomicNum() != element_x) {
 							metals[&*n] = &*M;
 						}
 					}
+					if (metals.find(&*n) == metals.end()) {
+						found_metals = false;
+					}
 				}
+			}
+			if (!found_metals) {
+				obErrorLog.ThrowError(__FUNCTION__, "Cannot simplify LX: no metal at other end of L-X-M", obDebug);
+				continue;
 			}
 
 			// Iterate through the bonded L-X's to find redundant pairs: two X's
