@@ -15,6 +15,7 @@ import glob
 import json
 import time
 import copy  # copy.deepcopy(x)
+import warnings
 # import re
 
 import openbabel  # for visualization only, since my changes aren't backported to the python library
@@ -62,10 +63,15 @@ def ob_normalize(smiles):
 	ob_mol = pybel.readstring("smi", smiles)
 	return ob_mol.write("can", opt={'i': True}).rstrip()
 
+def rdkit_deprecation():
+	warnings.warn("rdkit usage is deprecated to avoid inconsistencies with kekulization.")
+
 def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	# Perform an rdkit chemical transformation and renormalize to Open Babel SMILES
 	# http://www.rdkit.org/docs/GettingStartedInPython.html#chemical-transformations
 	# http://www.rdkit.org/Python_Docs/rdkit.Chem.rdmolopule.html#ReplaceSubstructs
+	rdkit_deprecation()
+
 	rd_mol = Chem.MolFromSmiles(mol_smiles)
 	repl = Chem.MolFromSmiles(replacement)
 	patt = Chem.MolFromSmarts(query)
@@ -80,6 +86,70 @@ def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
 	rd_smiles = Chem.MolToSmiles(rms[0])
 
 	return ob_normalize(rd_smiles)
+
+def openbabel_replace(mol_smiles, query, replacement):
+	# Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
+	# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
+	# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
+	# and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
+	transform = pybel.ob.OBChemTsfm()
+	success = transform.Init(query, replacement)
+	assert success
+	mol = pybel.readstring("smi", mol_smiles)
+	transform.Apply(mol.OBMol)
+	mol.OBMol.UnsetAromaticPerceived()
+	mol.OBMol.Kekulize()
+	return ob_normalize(mol.write("can"))
+
+def _get_first_atom(smiles):
+	# Extract the first atom from a SMILES string, coarsely
+	if smiles[0] == '[':
+		close_bracket = smiles.find(']')
+		return smiles[0:(close_bracket+1)]
+	elif smiles[0] in ['c', 'b', 'n', 'o', 's', 'p']:  # Aromatic
+		return smiles[0]
+	elif not smiles[0].isupper():  # Numbers, parentheses, etc.
+		raise ValueError("Unexpected beginning to SMILES string")
+
+	if smiles[1].islower():  # e.g. Cu
+		return smiles[0:2]
+	else:
+		return smiles[0]
+
+def extend_molecule(base, extension, connection_start=20, pseudo_atom='[Lr]'):
+	# Extends "base" SMILES by "extension" at pseudo atom sites.
+	# Implemented through appending dot-separated components, which are linked together
+	# through ring IDs.  Starting with %20 will be large enough for most ring systems.
+	if pseudo_atom not in base or pseudo_atom not in extension:
+		raise ValueError("Pseudo atom not found in SMILES!")
+	if connection_start < 10 or connection_start > 90:
+		raise ValueError("Invalid connection numbers.  Must be two-digit with buffer!")
+
+	base_parts = base.split(pseudo_atom)
+	assert len(base_parts) > 1
+	extension_parts = extension.split(pseudo_atom)
+	assert len(extension_parts) == 2
+
+	def normalize_parts(parts):
+		if parts[0] == '':  # SMILES starts with the pseudo atoms
+			first = _get_first_atom(parts[1])
+			parts[0] = first  # Attachment point is on the first atom
+			parts[1] = parts[1][len(first):]
+	normalize_parts(base_parts)
+	normalize_parts(extension_parts)
+
+	extended = ''
+	connection = connection_start
+	while len(base_parts):
+		extended += base_parts.pop(0)
+		if len(base_parts):  # not the list item in the list
+			extended += '%' + str(connection)
+			connection += 1
+
+	for link in range(connection_start, connection):  # connection is last used + 1
+		extended += '.' + extension_parts[0] + '%' + str(link) + extension_parts[1]
+
+	return extended
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
@@ -395,11 +465,13 @@ class GAMOFs(MOFCompare):
 
 	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
-		nitrogen_linker = rdkit_transform(linker_smiles, '[#6]C(=O)[O]', 'N')
+		# Implement by deleting the carboxylate and transforming C->N
+		nitrogen_linker = openbabel_replace(linker_smiles, '[#6:1][C:2](=[O:3])[O:4]', '[#7:1]')
 		# Open Babel has trouble round-tripping the aromatic nitrogen ring
 		# n1cc2ccc3c4c2c(c1)ccc4cnc3 or its rdkit equivalent c1cc2cncc3ccc4cncc1c4c23.
 		# Both of these return '[nH]1cc2ccc3c4c2c(c1)ccc4c[nH]c3'
 		# So, for these cases and their functionalizations, etc., give kekulization a hand.
+		# Note: this bug may be temporary and fixed by new community efforts on kekulization and implicit H.
 		nitrogen_linker = nitrogen_linker.replace('[nH]', 'n')
 		return nitrogen_linker
 
@@ -492,39 +564,23 @@ class TobaccoMOFs(MOFCompare):
 					if part not in smiles:
 						smiles.append(part)
 
-		if len(sticky_ends) != 2:
-			raise ValueError("Both nodes must contain one sticky end")
 		if linker.count('[Lr]') != 2:
 			raise ValueError("Linker must contain two sticky ends")
+		if len(sticky_ends) != 2:
+			raise ValueError("Both nodes must contain sticky end(s)")
+		# Ensure the second component only has to react once in both transformations (node1 + linker, intermediate + node2)
+		if sticky_ends[1].count('[Lr]') > 1:
+			sticky_ends = [sticky_ends[1], sticky_ends[0]]
+		if sticky_ends[1].count('[Lr]') != 1:
+			raise ValueError("Both nodes cannot contain multiple sticky ends")
 
-		# We need to loop the reactions to apply them to all available sticky ends on the nodes.
-		# For example, metal nodes will contribute one carboxylate, but organic nodes may contain 6+ reaction ends
+		# React all of the sticky ends.  Temporarily make the linker reactive only on one end, then extend in a second step.
+		mod_linker = linker.replace('[Lr]', '[No]').replace('[No]', '[Lr]', 1)  # sub the second [Lr] with [No]
+		intermediate = ob_normalize(extend_molecule(sticky_ends[0], mod_linker))
+		intermediate = intermediate.replace('[No]', '[Lr]')  # "Reactivate" the second sticky end of the linker
+		organic = ob_normalize(extend_molecule(intermediate, sticky_ends[1]))
 
-		def react_all(rxn, base_smiles, mod_smiles):
-			# Run reactions on the base component with the modifier until it's completely reacted
-			mod_mol = Chem.MolFromSmiles(mod_smiles)
-			result = base_smiles
-			counter = 1
-			while True:
-				ps = rxn.RunReactants((Chem.MolFromSmiles(result), mod_mol))
-				if len(ps) == 0:
-					break
-				else:
-					result = Chem.MolToSmiles(ps[0][0])
-				counter += 1
-				if counter > 100:
-					raise ValueError("Infinite loop suspected")
-			return result
-
-		mod_linker = linker.replace('[Lr]', '[No]')  # differentiate node and linker sticky ends
-		rxn = AllChem.ReactionFromSmarts('[Lr][*:1].[No][*:2]>>[*:1][*:2]')
-		rxn_rev = AllChem.ReactionFromSmarts('[No][*:3].[Lr][*:4]>>[*:3][*:4]')
-		partial = react_all(rxn, sticky_ends[0], mod_linker)  # attach linkers to all [Lr] connections
-		organic = react_all(rxn_rev, react_all(rxn, sticky_ends[1], partial), sticky_ends[1])
-		# Attach the second node to all reactive sites, and vice versa.
-		# We don't know if the first and/or second sticky_end is multiply reactive, so run it in both directions.
-
-		smiles.append(ob_normalize(organic))
+		smiles.append(organic)
 		smiles.sort()
 		return smiles
 
