@@ -12,7 +12,7 @@ import_err_df <- function(filename) {
     colnames(code_info) <- paste0("code.", colnames(code_info))
     df <- bind_cols(df, code_info)
   }
-  df %>% select(name, errors, everything())
+  df %>% select(name, errors, everything()) %>% as_data_frame
 }
 
 inlist <- function(s, x) {
