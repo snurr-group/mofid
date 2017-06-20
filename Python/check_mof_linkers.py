@@ -20,8 +20,6 @@ import warnings
 
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
-from rdkit import Chem  # Use rdkit substructure transforms since they can easily add atoms
-from rdkit.Chem import AllChem  # Advanced features like reaction transforms
 
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
 
@@ -62,30 +60,6 @@ def ob_normalize(smiles):
 	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
 	ob_mol = pybel.readstring("smi", smiles)
 	return ob_mol.write("can", opt={'i': True}).rstrip()
-
-def rdkit_deprecation():
-	warnings.warn("rdkit usage is deprecated to avoid inconsistencies with kekulization.")
-
-def rdkit_transform(mol_smiles, query, replacement, replace_all=True):
-	# Perform an rdkit chemical transformation and renormalize to Open Babel SMILES
-	# http://www.rdkit.org/docs/GettingStartedInPython.html#chemical-transformations
-	# http://www.rdkit.org/Python_Docs/rdkit.Chem.rdmolopule.html#ReplaceSubstructs
-	rdkit_deprecation()
-
-	rd_mol = Chem.MolFromSmiles(mol_smiles)
-	repl = Chem.MolFromSmiles(replacement)
-	patt = Chem.MolFromSmarts(query)
-	if rd_mol is None:
-		raise ValueError("Molecule rejected by rdkit: " + mol_smiles)
-	if patt is None:
-		raise ValueError("SMARTS pattern rejected by rdkit: " + query)
-	if repl is None:
-		raise ValueError("SMILES replacement rejected by rdkit: " + replacement)
-
-	rms = Chem.ReplaceSubstructs(rd_mol, patt, repl, replaceAll = replace_all)
-	rd_smiles = Chem.MolToSmiles(rms[0])
-
-	return ob_normalize(rd_smiles)
 
 def openbabel_replace(mol_smiles, query, replacement):
 	# Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
