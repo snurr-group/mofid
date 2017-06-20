@@ -18,6 +18,8 @@ import json
 # import openbabel  # for visualization only, since my changes aren't backported to the python library
 import sys, os
 
+from smiles_diff import multi_smiles_diff as diff
+
 # Some default settings for my computer.  Adjust these based on your configuration:
 SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_SYSTRE_PATH = "Test/topology.cgd"
@@ -36,9 +38,14 @@ else:
 
 def extract_linkers(mof_path):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_output = subprocess.check_output([SBU_BIN, mof_path])  # Use subprocess so we get stdout
-	fragments = cpp_output.strip().split("\n")
-	fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
+	cpp_run = EasyProcess([SBU_BIN, mof_path]).call()
+	cpp_output = cpp_run.stdout
+	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
+	if cpp_run.return_code:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
+		fragments = ["ERROR"]
+	else:
+		fragments = cpp_output.strip().split("\n")
+		fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
 
 	cat = None
 	if "simplified net(s)" in fragments[-1]:
@@ -164,12 +171,22 @@ def compare_moffles(moffles1, moffles2, names=None):
 			comparison[key] = False
 			comparison['match'] = False
 			comparison['errors'].append("err_" + key)
+
+	# Deeper investigation of SMILES-type errors
+	if "err_smiles" in comparison['errors']:
+		comparison['errors'].remove("err_smiles")
+		for err in diff(parsed[0]['smiles'], parsed[1]['smiles']):
+			comparison['errors'].append("err_" + err)
+
 	return comparison
 
 def cif2moffles(cif_path):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers, cat = extract_linkers(cif_path)
-	topology = extract_topology(SBU_SYSTRE_PATH)
+	if cat is not None:
+		topology = extract_topology(SBU_SYSTRE_PATH)
+	else:
+		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
 	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 
