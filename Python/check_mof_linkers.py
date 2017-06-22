@@ -21,7 +21,8 @@ import warnings
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
 
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
+from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
+from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
 HMOF_DB = "../Resources/hmof_linker_info.json"
@@ -124,6 +125,47 @@ def extend_molecule(base, extension, connection_start=20, pseudo_atom='[Lr]'):
 		extended += '.' + extension_parts[0] + '%' + str(link) + extension_parts[1]
 
 	return extended
+
+def compare_moffles(moffles1, moffles2, names=None):
+	# Compares MOFFLES strings to identify sources of difference, if any
+	if names is None:
+		names = ['mof1', 'mof2']
+	if moffles1 is None or moffles2 is None:
+		mof_name = 'Undefined'
+		for x in [moffles1, moffles2]:
+			if x is not None:
+				mof_name = parse_moffles(x)['name']
+		return {'match': 'NA',
+		        'errors': ['Undefined composition'],
+		        'topology': None,
+		        'smiles': None,
+		        'cat': None,
+		        names[0]: moffles1,
+		        names[1]: moffles2,
+		        'name': mof_name
+		        }
+	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	comparison = dict()
+	comparison['match'] = True
+	comparison['errors'] = []
+	comparison[names[0]] = moffles1
+	comparison[names[1]] = moffles2
+	for key in parsed[0]:
+		expected = parsed[0][key]
+		if parsed[1][key] == expected:
+			comparison[key] = expected
+		else:
+			comparison[key] = False
+			comparison['match'] = False
+			comparison['errors'].append("err_" + key)
+
+	# Deeper investigation of SMILES-type errors
+	if "err_smiles" in comparison['errors']:
+		comparison['errors'].remove("err_smiles")
+		for err in diff(parsed[0]['smiles'], parsed[1]['smiles']):
+			comparison['errors'].append("err_" + err)
+
+	return comparison
 
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
