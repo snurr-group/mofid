@@ -13,3 +13,4 @@ bin/
 !openbabel/data/
 ob_changes.patch
 openbabel/installed
+Resources/External/

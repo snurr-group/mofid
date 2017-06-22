@@ -18,18 +18,20 @@ import json
 # import openbabel  # for visualization only, since my changes aren't backported to the python library
 import sys, os
 
+def path_to_resource(resource):
+	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
+	python_path = os.path.dirname(__file__)
+	return os.path.join(python_path, resource)
+
 # Some default settings for my computer.  Adjust these based on your configuration:
 SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_SYSTRE_PATH = "Test/topology.cgd"
+GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
+SBU_BIN = path_to_resource("../bin/sbu")
 if sys.platform == "win32":
-	SBU_BIN = "C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
-	# Settings for Systre
 	JAVA_LOC = "C:/Program Files/Java/jre1.8.0_102/bin/java"
-	GAVROG_LOC = "C:/Users/Benjamin/Software/Gavrog-0.6.0/Systre.jar"
 elif sys.platform.startswith("linux"):
-	SBU_BIN = "/home/bbucior/Git/mofid/bin/sbu"
 	JAVA_LOC = "java"
-	GAVROG_LOC = "/home/bbucior/Software/Gavrog-0.6.0/Systre.jar"
 else:
 	raise ValueError("Unknown platform.  Please specify file paths in Python/extract_moffles.py")
 
@@ -56,7 +58,7 @@ def extract_linkers(mof_path):
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
-	java_run = EasyProcess([JAVA_LOC, "-Xmx512m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path]).call(timeout=SYSTRE_TIMEOUT)
+	java_run = EasyProcess([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path]).call(timeout=SYSTRE_TIMEOUT)
 	java_output = java_run.stdout
 	if java_run.timeout_happened:
 		return "TIMEOUT"
