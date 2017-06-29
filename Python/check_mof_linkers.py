@@ -332,7 +332,7 @@ class HypoMOFs(MOFCompare):
 
 	def parse_filename(self, hmof_path):
 		# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
-		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": 0}
+		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": '0'}
 		mof_name = basename(hmof_path)  # Get the basename without file extension
 		parts = mof_name.split("_")
 		flag = None
@@ -668,7 +668,8 @@ class AutoCompare:
 		if (not self.recalculate) and (cif_name in self.precalculated):
 			mof_log("...using precompiled table of known MOFs\n")
 			return self.known
-		elif "hypotheticalmof" in cif_name.lower() or "hmof" in cif_name.lower():
+		elif "hypotheticalmof_" in cif_name.lower() or "hmof_" in cif_name.lower():
+			# Underscore suffix prevents false positives in structures named optimized_hmof1.cif, etc.
 			if "_i_" in cif_name.lower():
 				mof_log("...parsing file with rules for Wilmer hypothetical MOFs\n")
 				return self.hmof
