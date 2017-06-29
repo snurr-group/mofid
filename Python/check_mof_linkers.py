@@ -222,10 +222,32 @@ class MOFCompare:
 		for id in linkers:
 			print(linkers[id] + " " + id)
 
+	def test_auto(self, spec):
+		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
+		if 'f1' in spec and 'F1' in spec:
+			return self.test_moffles(spec)
+		elif os.path.exists(spec):
+			return self.test_cif(spec)
+		else:
+			raise ValueError("Unknown specification for testing: " + spec)
+
+	def test_moffles(self, moffles):
+		# Test a generated MOFFLES string against the expectation based on the CIF filename
+		start = time.time()
+		cif_path = parse_moffles(moffles)['name']
+		return self._test_generated(cif_path, moffles, start, "from_moffles")
+
 	def test_cif(self, cif_path):
 		# Compares an arbitrary CIF file against its expected specification
-		# Returns a formatted JSON string with the results
+		# Returns a formatted JSON string with the result
 		start = time.time()
+		moffles_auto = cif2moffles(cif_path)
+		return self._test_generated(cif_path, moffles_auto, start, "from_cif")
+
+	def _test_generated(self, cif_path, generated_moffles, start_time = None, generation_type = "from_generated"):
+		# Compares an arbitrary MOFFLES string against the value generated,
+		# either locally in the script (cif2moffles) or from an external .smi file.
+		# Also tests for common classes of error
 		moffles_from_name = self.expected_moffles(cif_path)
 
 		if moffles_from_name is None:  # missing SBU info in the DB file
@@ -243,9 +265,11 @@ class MOFCompare:
 		moffles_from_name['err_cpp_error'] = assemble_moffles(['ERROR'], 'NA', None, mof_name=default['name'])
 
 		# Calculate the MOFFLES derived from the CIF structure itself
-		moffles_auto = cif2moffles(cif_path)
-		comparison = self.compare_multi_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
-		comparison['time'] = time.time() - start
+		comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
+		if start_time is None:
+			comparison['time'] = 0
+		else:
+			comparison['time'] = time.time() - start_time
 		comparison['name_parser'] = self.__class__.__name__
 		return comparison
 
@@ -617,19 +641,43 @@ class AutoCompare:
 	def test_cif(self, cif_path):
 		# Dispatch to the class corresponding to the source of the input CIF
 		mof_info = basename(cif_path)
-		if (not self.recalculate) and (mof_info in self.precalculated):
+		parser = self._choose_parser(mof_info)
+		if parser is None:
+			return None
+		return parser.test_cif(cif_path)
+
+	def test_moffles(self, moffles):
+		assert 'f1' in moffles and 'F1' in moffles
+		parser = self._choose_parser(parse_moffles(moffles)['name'])
+		if parser is None:
+			return None
+		return parser.test_moffles(moffles)
+
+	def test_auto(self, spec):
+		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
+		# See also the implementation in MOFCompare
+		if 'f1' in spec and 'F1' in spec:
+			return self.test_moffles(spec)
+		elif os.path.exists(spec):
+			return self.test_cif(spec)
+		else:
+			raise ValueError("Unknown specification for testing: " + spec)
+
+	def _choose_parser(self, cif_name):
+		# Determine the appropriate MOFCompare class based on a MOF's name
+		if (not self.recalculate) and (cif_name in self.precalculated):
 			mof_log("...using precompiled table of known MOFs\n")
-			return self.known.test_cif(cif_path)
-		elif "hypotheticalmof" in mof_info.lower() or "hmof" in mof_info.lower():
-			if "_i_" in mof_info.lower():
+			return self.known
+		elif "hypotheticalmof" in cif_name.lower() or "hmof" in cif_name.lower():
+			if "_i_" in cif_name.lower():
 				mof_log("...parsing file with rules for Wilmer hypothetical MOFs\n")
-				return self.hmof.test_cif(cif_path)
+				return self.hmof
 			else:
 				mof_log("...parsing file with rules for GA hypothetical MOFs\n")
-				return self.ga.test_cif(cif_path)
-		elif "_sym_" in mof_info:
+				return self.ga
+		elif "_sym_" in cif_name:
 			mof_log("...parsing file with rules for ToBACCo MOFs\n")
-			return self.tobacco.test_cif(cif_path)
+			return self.tobacco
 		else:
 			mof_log("...unable to find a suitable rule automatically\n")
 			return None
@@ -639,6 +687,7 @@ os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
 
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
+	input_type = "CIF"
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs
 		inputs = glob.glob(path_to_resource(NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
@@ -647,13 +696,27 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
+	elif len(args) == 1 and (args[0].endswith('.txt') or args[0].endswith('.smi')):
+		input_type = "MOFid line"
+		with open(args[0], "r") as f:
+			inputs = f.readlines()
+			inputs = [x.rstrip("\n") for x in inputs]
 	else:
+		input_type = "Auto"
 		inputs = args
 
 	moffles_results = []
-	for num_cif, cif_file in enumerate(inputs):
-		mof_log(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
-		result = comparer.test_cif(cif_file)
+	for num_cif, curr_input in enumerate(inputs):
+		display_input = curr_input
+		if input_type == "MOFid line":
+			display_input = curr_input.split(".F1.")[1]
+		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of", str(len(inputs)), ":", display_input]) + "\n")
+		if input_type == "CIF":
+			result = comparer.test_cif(curr_input)
+		elif input_type == "MOFid line":
+			result = comparer.test_moffles(curr_input)
+		else:
+			result = comparer.test_auto(curr_input)
 		if result is not None:
 			moffles_results.append(result)
 
