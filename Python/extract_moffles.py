@@ -66,6 +66,7 @@ def extract_topology(mof_path):
 	topologies = []  # What net(s) are found in the simplified framework(s)?
 	current_component = 0
 	topology_line = False
+	repeat_line = False
 	for raw_line in java_output.split("\n"):
 		line = raw_line.strip()
 		if topology_line:
@@ -73,12 +74,20 @@ def extract_topology(mof_path):
 			rcsr = line.split()
 			assert rcsr[0] == "Name:"
 			topologies.append(rcsr[1])
+		elif repeat_line:
+			repeat_line = False
+			assert line.split()[0] == "Name:"
+			components = line.split("_")  # Line takes the form "Name:    refcode_clean_component_x"
+			assert components[-2] == "component"
+			topologies.append(topologies[int(components[-1]) - 1])  # Subtract one since Systre is one-indexed
 		elif "ERROR" in line:
 			return "ERROR"
 		elif line == "Structure was identified with RCSR symbol:":
 			topology_line = True
 		elif line == "Structure is new for this run.":
 			topologies.append("NEW")
+		elif line == "Structure already seen in this run.":
+			repeat_line = True
 		elif "Processing component " in line:
 			assert len(topologies) == current_component  # Should extract one topology per component
 			current_component += 1
