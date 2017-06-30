@@ -458,7 +458,7 @@ class GAMOFs(MOFCompare):
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
-				v_sbus.append('[O]C(=O)c1ccccc1')
+				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
 				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
 

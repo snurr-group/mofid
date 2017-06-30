@@ -19,6 +19,7 @@
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
+#include <openbabel/phmodel.h>
 #include "config_sbu.h"
 
 
@@ -69,6 +70,7 @@ int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
+bool normalizeCharges(OBMol *mol);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
@@ -807,6 +809,7 @@ void resetBonds(OBMol *mol) {
 	mol->ConnectTheDots();
 	mol->PerceiveBondOrders();
 	mol->EndModify();
+	normalizeCharges(mol);
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
@@ -1545,4 +1548,32 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
 	atom->SetAtomicNum(element);
 	atom->SetType(etab.GetName(element));
 	return atom;
+}
+
+bool normalizeCharges(OBMol *mol) {
+	// Correct formal charges on carboxylic acids, imidazolate, etc.
+	// Returns if any changes were made to the molecule.
+
+	bool changed = false;
+	std::queue<std::pair<std::string, std::string> > reactions;
+	// Carboxylate: "OD1-0" means oxygen with one explicit connection, zero charge
+	reactions.push(std::make_pair("O=C[OD1-0:1]", "O=C[O-:1]"));
+	// TODO: Imidazolate, center nitrogen rings, etc. can go here
+
+	while (!reactions.empty()) {
+		std::string reactants = reactions.front().first;
+		std::string products = reactions.front().second;
+		reactions.pop();
+
+		OBChemTsfm tsfm;
+		if (!tsfm.Init(reactants, products)) {
+			obErrorLog.ThrowError(__FUNCTION__, "Internal error: could not parse reaction transform", obError);
+			return false;
+		}
+		if (tsfm.Apply(*mol)) {
+			changed = true;
+		}
+	}
+
+	return changed;
 }

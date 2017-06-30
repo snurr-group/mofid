@@ -1,4 +1,7 @@
 {
+	"_warning" : {
+		"new" : "This file has not been maintained.  For example, the carboxylate charges have not been added.  Use GA MOFs instead"
+	},
 	"nodes" : {
 		"0" : "[Zn]O([Zn])([Zn])[Zn]"
 	},
