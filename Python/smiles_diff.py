@@ -14,7 +14,6 @@ import re
 # TODO: Refactor the OpenBabel loading as another helper import
 def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	# However, some absolute paths are still present in extract_moffles.py since they're system-wide
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
 os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
@@ -28,6 +27,8 @@ DIFF_LEVELS = dict({
 	'node_bond_orders' : 11,
 	'linker_single_bonds' : 20,
 	'node_single_bonds' : 21,
+	'charges' : 40,
+	'order' : 90,
 	'ERROR' : 99,
 	'ERR_MAX' : 99999
 })
@@ -97,6 +98,10 @@ def multi_smiles_diff(smiles1, smiles2):
 		err = x[0]
 		if err != 'equal' and err not in err_codes:
 			err_codes.append(err)
+
+	if len(err_codes) == 0 and categorized[0][0] == 'equal' and smiles1 != smiles2:
+		return ['order']
+
 	return err_codes
 
 
@@ -113,11 +118,14 @@ def single_smiles_diff(smiles1, smiles2):
 	mol1 = pybel.readstring("smi", smiles1)
 	mol2 = pybel.readstring("smi", smiles2)
 
-	def strip_h(formula):
-		# Strip hydrogens from molecular formula.
+	if re.sub('[+-]', '', smiles1) == re.sub('[+-]', '', smiles2):
+		return "charges"
+
+	def strip_extra(formula):
+		# Strip hydrogens and charges from molecular formula.
 		# We don't have to worry about greatest common factor, etc., since it's absolute atom counts.
-		return re.sub(r'H\d+', '', formula)
-	if strip_h(mol1.formula) != strip_h(mol2.formula):
+		return re.sub('[+-]', '', re.sub(r'H\d+', '', formula))
+	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
 		return "formula"
 
 	def is_organic(mol):

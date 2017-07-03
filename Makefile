@@ -1,4 +1,4 @@
-.PHONY: all backup test diff ob_changes.patch
+.PHONY: all backup test diff download ob_changes.patch
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -26,6 +26,13 @@ ob_changes.patch:
 
 test: bin/sbu
 	python Python/check_mof_linkers.py
+
+# Download external programs, if not locally installed
+download: Resources/External/Systre-1.2.0-beta2.jar
+
+Resources/External/Systre-1.2.0-beta2.jar:
+	cd Resources/External; \
+	wget https://github.com/odf/gavrog/releases/download/v0.6.0-beta2/Systre-1.2.0-beta2.jar
 
 setup:
 	cd openbabel; \

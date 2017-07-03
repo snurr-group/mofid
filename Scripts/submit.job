@@ -1,0 +1,13 @@
+#!/bin/bash
+#PBS -N test-names
+#PBS -o pbs.out
+#PBS -e pbs.err
+#PBS -r n
+#PBS -V
+#PBS -mba
+
+cd $PBS_O_WORKDIR
+echo $PBS_JOBID > jobid
+
+bash Scripts/extract_folder.sh Data/RingCIFs/
+

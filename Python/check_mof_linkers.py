@@ -21,7 +21,8 @@ import warnings
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
 
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, compare_moffles, extract_linkers
+from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
+from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
 HMOF_DB = "../Resources/hmof_linker_info.json"
@@ -125,6 +126,47 @@ def extend_molecule(base, extension, connection_start=20, pseudo_atom='[Lr]'):
 
 	return extended
 
+def compare_moffles(moffles1, moffles2, names=None):
+	# Compares MOFFLES strings to identify sources of difference, if any
+	if names is None:
+		names = ['mof1', 'mof2']
+	if moffles1 is None or moffles2 is None:
+		mof_name = 'Undefined'
+		for x in [moffles1, moffles2]:
+			if x is not None:
+				mof_name = parse_moffles(x)['name']
+		return {'match': 'NA',
+		        'errors': ['Undefined composition'],
+		        'topology': None,
+		        'smiles': None,
+		        'cat': None,
+		        names[0]: moffles1,
+		        names[1]: moffles2,
+		        'name': mof_name
+		        }
+	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	comparison = dict()
+	comparison['match'] = True
+	comparison['errors'] = []
+	comparison[names[0]] = moffles1
+	comparison[names[1]] = moffles2
+	for key in parsed[0]:
+		expected = parsed[0][key]
+		if parsed[1][key] == expected:
+			comparison[key] = expected
+		else:
+			comparison[key] = False
+			comparison['match'] = False
+			comparison['errors'].append("err_" + key)
+
+	# Deeper investigation of SMILES-type errors
+	if "err_smiles" in comparison['errors']:
+		comparison['errors'].remove("err_smiles")
+		for err in diff(parsed[0]['smiles'], parsed[1]['smiles']):
+			comparison['errors'].append("err_" + err)
+
+	return comparison
+
 def summarize(results):
 	# Summarize the error classes for MOFFLES results
 	summarized = {'mofs': results, 'errors': dict()}
@@ -180,10 +222,32 @@ class MOFCompare:
 		for id in linkers:
 			print(linkers[id] + " " + id)
 
+	def test_auto(self, spec):
+		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
+		if 'f1' in spec and 'F1' in spec:
+			return self.test_moffles(spec)
+		elif os.path.exists(spec):
+			return self.test_cif(spec)
+		else:
+			raise ValueError("Unknown specification for testing: " + spec)
+
+	def test_moffles(self, moffles):
+		# Test a generated MOFFLES string against the expectation based on the CIF filename
+		start = time.time()
+		cif_path = parse_moffles(moffles)['name']
+		return self._test_generated(cif_path, moffles, start, "from_moffles")
+
 	def test_cif(self, cif_path):
 		# Compares an arbitrary CIF file against its expected specification
-		# Returns a formatted JSON string with the results
+		# Returns a formatted JSON string with the result
 		start = time.time()
+		moffles_auto = cif2moffles(cif_path)
+		return self._test_generated(cif_path, moffles_auto, start, "from_cif")
+
+	def _test_generated(self, cif_path, generated_moffles, start_time = None, generation_type = "from_generated"):
+		# Compares an arbitrary MOFFLES string against the value generated,
+		# either locally in the script (cif2moffles) or from an external .smi file.
+		# Also tests for common classes of error
 		moffles_from_name = self.expected_moffles(cif_path)
 
 		if moffles_from_name is None:  # missing SBU info in the DB file
@@ -201,9 +265,11 @@ class MOFCompare:
 		moffles_from_name['err_cpp_error'] = assemble_moffles(['ERROR'], 'NA', None, mof_name=default['name'])
 
 		# Calculate the MOFFLES derived from the CIF structure itself
-		moffles_auto = cif2moffles(cif_path)
-		comparison = self.compare_multi_moffles(moffles_from_name, moffles_auto, ['from_name', 'from_cif'])
-		comparison['time'] = time.time() - start
+		comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
+		if start_time is None:
+			comparison['time'] = 0
+		else:
+			comparison['time'] = time.time() - start_time
 		comparison['name_parser'] = self.__class__.__name__
 		return comparison
 
@@ -266,7 +332,7 @@ class HypoMOFs(MOFCompare):
 
 	def parse_filename(self, hmof_path):
 		# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
-		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": 0}
+		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": '0'}
 		mof_name = basename(hmof_path)  # Get the basename without file extension
 		parts = mof_name.split("_")
 		flag = None
@@ -392,7 +458,7 @@ class GAMOFs(MOFCompare):
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
-				v_sbus.append('[O]C(=O)c1ccccc1')
+				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
 				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
 
@@ -575,19 +641,44 @@ class AutoCompare:
 	def test_cif(self, cif_path):
 		# Dispatch to the class corresponding to the source of the input CIF
 		mof_info = basename(cif_path)
-		if (not self.recalculate) and (mof_info in self.precalculated):
+		parser = self._choose_parser(mof_info)
+		if parser is None:
+			return None
+		return parser.test_cif(cif_path)
+
+	def test_moffles(self, moffles):
+		assert 'f1' in moffles and 'F1' in moffles
+		parser = self._choose_parser(parse_moffles(moffles)['name'])
+		if parser is None:
+			return None
+		return parser.test_moffles(moffles)
+
+	def test_auto(self, spec):
+		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
+		# See also the implementation in MOFCompare
+		if 'f1' in spec and 'F1' in spec:
+			return self.test_moffles(spec)
+		elif os.path.exists(spec):
+			return self.test_cif(spec)
+		else:
+			raise ValueError("Unknown specification for testing: " + spec)
+
+	def _choose_parser(self, cif_name):
+		# Determine the appropriate MOFCompare class based on a MOF's name
+		if (not self.recalculate) and (cif_name in self.precalculated):
 			mof_log("...using precompiled table of known MOFs\n")
-			return self.known.test_cif(cif_path)
-		elif "hypotheticalmof" in mof_info.lower() or "hmof" in mof_info.lower():
-			if "_i_" in mof_info.lower():
+			return self.known
+		elif "hypotheticalmof_" in cif_name.lower() or "hmof_" in cif_name.lower():
+			# Underscore suffix prevents false positives in structures named optimized_hmof1.cif, etc.
+			if "_i_" in cif_name.lower():
 				mof_log("...parsing file with rules for Wilmer hypothetical MOFs\n")
-				return self.hmof.test_cif(cif_path)
+				return self.hmof
 			else:
 				mof_log("...parsing file with rules for GA hypothetical MOFs\n")
-				return self.ga.test_cif(cif_path)
-		elif "_sym_" in mof_info:
+				return self.ga
+		elif "_sym_" in cif_name:
 			mof_log("...parsing file with rules for ToBACCo MOFs\n")
-			return self.tobacco.test_cif(cif_path)
+			return self.tobacco
 		else:
 			mof_log("...unable to find a suitable rule automatically\n")
 			return None
@@ -597,6 +688,7 @@ os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
 
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
+	input_type = "CIF"
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs
 		inputs = glob.glob(path_to_resource(NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
@@ -605,13 +697,27 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
+	elif len(args) == 1 and (args[0].endswith('.txt') or args[0].endswith('.smi')):
+		input_type = "MOFid line"
+		with open(args[0], "r") as f:
+			inputs = f.readlines()
+			inputs = [x.rstrip("\n") for x in inputs]
 	else:
+		input_type = "Auto"
 		inputs = args
 
 	moffles_results = []
-	for num_cif, cif_file in enumerate(inputs):
-		mof_log(" ".join(["Found CIF", str(num_cif+1), "of", str(len(inputs)), ":", cif_file]) + "\n")
-		result = comparer.test_cif(cif_file)
+	for num_cif, curr_input in enumerate(inputs):
+		display_input = curr_input
+		if input_type == "MOFid line":
+			display_input = curr_input.split(".F1.")[1]
+		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of", str(len(inputs)), ":", display_input]) + "\n")
+		if input_type == "CIF":
+			result = comparer.test_cif(curr_input)
+		elif input_type == "MOFid line":
+			result = comparer.test_moffles(curr_input)
+		else:
+			result = comparer.test_auto(curr_input)
 		if result is not None:
 			moffles_results.append(result)
 

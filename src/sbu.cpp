@@ -19,6 +19,7 @@
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
+#include <openbabel/phmodel.h>
 #include "config_sbu.h"
 
 
@@ -69,10 +70,13 @@ int sepPeriodicChains(OBMol *nodes);
 std::vector<int> makeVector(int a, int b, int c);
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
+bool normalizeCharges(OBMol *mol);
+bool detectPaddlewheels(OBMol *mol);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
 const int X_CONN = 52;
+const double MAX_PADDLEWHEEL_DIST = 4.0;
 
 
 class ElementGen
@@ -137,6 +141,7 @@ class ElementGen
 struct MinimalAtom {
 	vector3 loc;
 	int element;
+	bool is_paddlewheel;
 };
 
 
@@ -517,7 +522,9 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
 	}
 	// Can disable bond detection as a diagnostic:
 	// obconversion.AddOption("s", OBConversion::INOPTIONS);
-	return obconversion.ReadFile(molp, filepath);
+	bool success = obconversion.ReadFile(molp, filepath);
+	detectPaddlewheels(molp);
+	return success;
 }
 
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
@@ -788,6 +795,7 @@ void resetBonds(OBMol *mol) {
 		MinimalAtom sa;
 		sa.loc = a->GetVector();
 		sa.element = a->GetAtomicNum();
+		sa.is_paddlewheel = a->HasData("Paddlewheel");
 		orig_atoms.push(sa);
 	}
 
@@ -801,12 +809,33 @@ void resetBonds(OBMol *mol) {
 	while (!orig_atoms.empty()) {
 		MinimalAtom curr_atom = orig_atoms.front();
 		orig_atoms.pop();
-		formAtom(mol, curr_atom.loc, curr_atom.element);
+		OBAtom* copied_atom = formAtom(mol, curr_atom.loc, curr_atom.element);
+		if (curr_atom.is_paddlewheel) {
+			OBPairData *dp = new OBPairData;
+			dp->SetAttribute("Paddlewheel");
+			copied_atom->SetData(dp);
+		}
 		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
 	}
+
 	mol->ConnectTheDots();
+	// Bond metal atoms in paddlewheels together
+	FOR_ATOMS_OF_MOL(a1, *mol) {
+		if (a1->HasData("Paddlewheel")) {
+			FOR_ATOMS_OF_MOL(a2, *mol) {
+				if ( a2->HasData("Paddlewheel")
+					&& &*a1 != &*a2
+					&& a1->GetDistance(&*a2) < MAX_PADDLEWHEEL_DIST
+					&& !mol->GetBond(&*a1, &*a2) ) {
+					formBond(mol, &*a1, &*a2);
+				}
+			}
+		}
+	}
+
 	mol->PerceiveBondOrders();
 	mol->EndModify();
+	normalizeCharges(mol);
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
@@ -1545,4 +1574,95 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
 	atom->SetAtomicNum(element);
 	atom->SetType(etab.GetName(element));
 	return atom;
+}
+
+bool normalizeCharges(OBMol *mol) {
+	// Correct formal charges on carboxylic acids, imidazolate, etc.
+	// Returns if any changes were made to the molecule.
+
+	bool changed = false;
+	std::queue<std::pair<std::string, std::string> > reactions;
+	// Carboxylate: "OD1-0" means oxygen with one explicit connection, zero charge
+	reactions.push(std::make_pair("O=C[OD1-0:1]", "O=C[O-:1]"));
+	// FIXME: imidazolate is still broken due to presence of radicals.
+	// Newer upstream work on aromaticity/spin handling may be necessary
+	// reactions.push(std::make_pair("c1ncc[n:1]1", "c1ncc[n-:1]1"));  // Imidazolate, etc.
+	reactions.push(std::make_pair("[nD2:1]1nc[cD3]c1", "[n-:1]1nc[cD3]c1"));  // pyrazole, e.g. sym_3_mc_0
+
+	// TODO: While aromaticity bugs are being sorted out (esp. with nitrogens),
+	// we could also consider hard-coding the known nitrogen rings.
+	// https://en.wikipedia.org/wiki/Heterocyclic_compound is a good resource.
+
+	while (!reactions.empty()) {
+		std::string reactants = reactions.front().first;
+		std::string products = reactions.front().second;
+		reactions.pop();
+
+		OBChemTsfm tsfm;
+		if (!tsfm.Init(reactants, products)) {
+			obErrorLog.ThrowError(__FUNCTION__, "Internal error: could not parse reaction transform", obError);
+			return false;
+		}
+		if (tsfm.Apply(*mol)) {
+			changed = true;
+		}
+	}
+
+	return changed;
+}
+
+bool detectPaddlewheels(OBMol *mol) {
+	// Normalize all paddlewheel bonds to be a single bond between metals, regardless of exact distance.
+	// Also sets a "Paddlewheel" attribute on the relevant atoms for reperception of the relevant bond.
+	// See also earlier tests and example code from: http://openbabel.org/dev-api/classOpenBabel_1_1OBSmartsPattern.shtml
+	// Returns if any paddlewheels were detected in the structure
+
+	OBSmartsPattern paddlewheel;
+	// Paddlewheel metals might have a M-M bond, and possibly a coordinated solvent or pillar linker
+	paddlewheel.Init("[D4,D5,D6:1](OCO1)(OCO2)(OCO3)OCO[D4,D5,D6:2]123");
+	paddlewheel.Match(*mol);
+	std::vector<std::vector<int> > maplist = paddlewheel.GetUMapList();
+
+	std::vector<std::vector<int> >::iterator i;
+	std::vector<int>::iterator j;
+	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
+		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		candidate.BeginModify();
+		std::vector<OBAtom*> pw_metals;
+		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms
+			OBAtom* curr_atom = mol->GetAtom(*j);
+			if (isMetal(curr_atom)) {
+				pw_metals.push_back(curr_atom);
+			}
+			formAtom(&candidate, curr_atom->GetVector(), curr_atom->GetAtomicNum());
+		}
+		candidate.EndModify();
+		resetBonds(&candidate);
+
+		if (pw_metals.size() != 2) {
+			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
+		} else if (isPeriodicChain(&candidate)) {
+			obErrorLog.ThrowError(__FUNCTION__, "Skipping paddlewheel assignment: match is an infinite rod", obDebug);
+		} else {
+			OBBond* old_bond = mol->GetBond(pw_metals[0], pw_metals[1]);
+			if (old_bond) {
+				mol->DeleteBond(old_bond);
+			}
+			formBond(mol, pw_metals[0], pw_metals[1], 1);
+
+			OBPairData *dp = new OBPairData;
+			dp->SetAttribute("Paddlewheel");
+			//dp->SetValue("some value");
+			//dp->SetOrigin(external);
+			pw_metals[0]->SetData(dp);
+			dp = new OBPairData;
+			dp->SetAttribute("Paddlewheel");
+			pw_metals[1]->SetData(dp);
+		}
+	}
+	if (maplist.size() > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
