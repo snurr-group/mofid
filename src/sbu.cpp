@@ -1558,7 +1558,14 @@ bool normalizeCharges(OBMol *mol) {
 	std::queue<std::pair<std::string, std::string> > reactions;
 	// Carboxylate: "OD1-0" means oxygen with one explicit connection, zero charge
 	reactions.push(std::make_pair("O=C[OD1-0:1]", "O=C[O-:1]"));
-	// TODO: Imidazolate, center nitrogen rings, etc. can go here
+	// FIXME: imidazolate is still broken due to presence of radicals.
+	// Newer upstream work on aromaticity/spin handling may be necessary
+	// reactions.push(std::make_pair("c1ncc[n:1]1", "c1ncc[n-:1]1"));  // Imidazolate, etc.
+	reactions.push(std::make_pair("[nD2:1]1nc[cD3]c1", "[n-:1]1nc[cD3]c1"));  // pyrazole, e.g. sym_3_mc_0
+
+	// TODO: While aromaticity bugs are being sorted out (esp. with nitrogens),
+	// we could also consider hard-coding the known nitrogen rings.
+	// https://en.wikipedia.org/wiki/Heterocyclic_compound is a good resource.
 
 	while (!reactions.empty()) {
 		std::string reactants = reactions.front().first;
