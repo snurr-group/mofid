@@ -1,6 +1,7 @@
 {
 	"nodes" : {
 		"0" : "[Zn]O([Zn])([Zn])[Zn]",
+		"1" : "[Zn][Zn]",
 		"2" : "[Cu][Cu]",
 		"3" : "[O].[V]",
 		"4" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43"
@@ -44,7 +45,7 @@
 		"39" : "[O-]C(=O)c1cc(C(=O)[O-])c2c3c1cc1ccc4c5c1c3c1c(c2)ccc2c1c5c1c(c4)c(cc(c1c2)C(=O)[O-])C(=O)[O-]"
 	},
 	"functionalization" : {
-		"0" : "[O-]C(=O)C(=O)[O-] has problems with topology simplification, as expected"
+		"0" : "TODO"
 	},
 	"_known_issues" : {
 		"4" : "[O-]C(=O)c1cc2C3=C[CH]C=CC3OC(=O)c2cc1c1ccccc1 for many pcu MOFs",
