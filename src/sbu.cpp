@@ -205,6 +205,14 @@ int main(int argc, char* argv[])
 
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
 
+	std::ofstream file_info;
+	file_info.open("Test/mol_name.txt", std::ios::out | std::ios::trunc);
+	if (file_info.is_open()) {
+		file_info << filename << std::endl;
+		file_info.close();
+	}
+
+
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
 	deleteBonds(&mol, true);
