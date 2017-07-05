@@ -422,9 +422,8 @@ class GAMOFs(MOFCompare):
 			'functionalization': 'functionalization',
 		}
 
-		if codes['functionalization'] != "0" or codes["linker1"] != codes["linker2"]:
+		if codes['functionalization'] != "0":
 			return None  # For now, temporarily exclude functionalization (until we can figure out SMIRKS transforms)
-			# Also exclude multiple linkers, to narrow down the number of test structures, at least to begin
 
 		is_component_defined = []
 		for key in code_key:
@@ -437,17 +436,20 @@ class GAMOFs(MOFCompare):
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
 			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization
+			n_components = []  # Potentially inconsistent ordering of paddlewheel pillars
 			for part in sbu_codes:
 				full_smiles = self.mof_db[code_key[part]][codes[part]].split('.')
 				for smiles in full_smiles:
 					if smiles not in sbus:
 						sbus.append(smiles)
-				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
-				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
+				# Also generate the nitrogen-terminated versions for pillared paddlewheels
+				if part in ["linker1", "linker2"] and codes['nodes'] in ["1", "2"] and topology == "pcu":
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
-					if n_smi not in sbus:
-						sbus.append(n_smi)
+					if n_smi not in n_components:
+						n_components.append(n_smi)
+			if len(n_components) == 1:
+				sbus.append(n_components[0])
 			sbus.sort()
 
 			moffles_options = dict()
@@ -461,6 +463,12 @@ class GAMOFs(MOFCompare):
 				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
 				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
+			if len(n_components) == 2:
+				for i, smi in enumerate(n_components):
+					n_sbus = copy.deepcopy(sbus)
+					n_sbus.append(smi)
+					n_sbus.sort()
+					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
