@@ -76,6 +76,14 @@ def openbabel_replace(mol_smiles, query, replacement):
 	mol.OBMol.Kekulize()
 	return ob_normalize(mol.write("can"))
 
+def openbabel_contains(mol_smiles, query):
+	# Checks if a molecule (including multi-fragment contains a SMARTS match
+	matcher = pybel.ob.OBSmartsPattern()
+	success = matcher.Init(query)
+	assert success
+	mol = pybel.readstring("smi", mol_smiles)
+	return matcher.Match(mol.OBMol)
+
 def _get_first_atom(smiles):
 	# Extract the first atom from a SMILES string, coarsely
 	if smiles[0] == '[':
@@ -279,6 +287,7 @@ class MOFCompare:
 		if test_moffles is None and generated_moffles is not None:
 			comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
 			comparison['errors'] = ['err_missing_transform']
+			comparison['match'] = False
 		else:
 			# Calculate the MOFFLES derived from the CIF structure itself
 			comparison = self.compare_multi_moffles(moffles_from_name, test_moffles, ['from_name', generation_type])
@@ -443,11 +452,11 @@ class GAMOFs(MOFCompare):
 		if fg not in self.mof_db["functionalization"]:
 			return None  # Raises a transform error
 
-		# TODO: consider keeping track of the number of transforms?  (A num_matches function?)
-		# Maybe first do an OB search for the pattern to make sure it's somewhere in the MOFFLES, otherwise return None
-
-		pattern = self.mof_db["functionalization"][fg]
 		[sbus, fancy_name] = moffles.split()
+		pattern = self.mof_db["functionalization"][fg]
+		if not openbabel_contains(sbus, pattern):
+			return None  # will raise a transform error in the output
+
 		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in sbus.split('.')]
 		skeletons = list(set(skeletons))  # Only keep unique backbones if they have different functionalization patterns
 		skeletons.sort()
