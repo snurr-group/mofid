@@ -1625,6 +1625,7 @@ bool detectPaddlewheels(OBMol *mol) {
 	// See also earlier tests and example code from: http://openbabel.org/dev-api/classOpenBabel_1_1OBSmartsPattern.shtml
 	// Returns if any paddlewheels were detected in the structure
 
+	bool found_pw = false;
 	OBSmartsPattern paddlewheel;
 	// Paddlewheel metals might have a M-M bond, and possibly a coordinated solvent or pillar linker
 	paddlewheel.Init("[D4,D5,D6:1](OCO1)(OCO2)(OCO3)OCO[D4,D5,D6:2]123");
@@ -1634,24 +1635,37 @@ bool detectPaddlewheels(OBMol *mol) {
 	std::vector<std::vector<int> >::iterator i;
 	std::vector<int>::iterator j;
 	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
-		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
-		candidate.BeginModify();
 		std::vector<OBAtom*> pw_metals;
 		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms
 			OBAtom* curr_atom = mol->GetAtom(*j);
 			if (isMetal(curr_atom)) {
 				pw_metals.push_back(curr_atom);
 			}
-			formAtom(&candidate, curr_atom->GetVector(), curr_atom->GetAtomicNum());
+		}
+		if (pw_metals.size() != 2) {
+			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
+			return false;
+		}
+
+		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		candidate.BeginModify();
+		formAtom(&candidate, pw_metals[0]->GetVector(), pw_metals[0]->GetAtomicNum());
+		formAtom(&candidate, pw_metals[1]->GetVector(), pw_metals[1]->GetAtomicNum());
+		for (std::vector<OBAtom*>::iterator it=pw_metals.begin(); it!=pw_metals.end(); ++it) {
+			FOR_NBORS_OF_ATOM(n, *it) {
+				if (!atomInOtherMol(&*n, &candidate)) {
+					formAtom(&candidate, n->GetVector(), n->GetAtomicNum());
+				}
+			}
 		}
 		candidate.EndModify();
 		resetBonds(&candidate);
 
-		if (pw_metals.size() != 2) {
-			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
-		} else if (isPeriodicChain(&candidate)) {
+		if (candidate.Separate().size() == 1 && isPeriodicChain(&candidate)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Skipping paddlewheel assignment: match is an infinite rod", obDebug);
 		} else {
+			obErrorLog.ThrowError(__FUNCTION__, "Found a paddlewheel.  Assigining \"Paddlewheel\" attribute", obDebug);
+			found_pw = true;
 			OBBond* old_bond = mol->GetBond(pw_metals[0], pw_metals[1]);
 			if (old_bond) {
 				mol->DeleteBond(old_bond);
@@ -1668,9 +1682,5 @@ bool detectPaddlewheels(OBMol *mol) {
 			pw_metals[1]->SetData(dp);
 		}
 	}
-	if (maplist.size() > 0) {
-		return true;
-	} else {
-		return false;
-	}
+	return found_pw;
 }
