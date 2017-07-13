@@ -23,6 +23,7 @@ import pybel  # Read SMILES to calculate molecular formulas, etc.
 DIFF_LEVELS = dict({
 	'same' : 0,
 	'formula' : 50,
+	'fg_bond_location' : 8,
 	'linker_bond_orders' : 10,
 	'node_bond_orders' : 11,
 	'linker_single_bonds' : 20,
@@ -127,6 +128,13 @@ def single_smiles_diff(smiles1, smiles2):
 		return re.sub('[+-]', '', re.sub(r'H\d+', '', formula))
 	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
 		return "formula"
+
+	def move_hydrogen(formula):
+		# Transfer a proton from a carbonyl to a nearby aromatic carbon (and/or another linker)
+		# Shows up in certain linkers when functional groups are assigned to the wrong neighbor
+		return formula.replace('[OH]', 'O').replace('[c]', 'c')
+	if move_hydrogen(mol1.formula) != move_hydrogen(mol2.formula):
+		return "fg_bond_location"
 
 	def is_organic(mol):
 		return 'C' in mol.OBMol.GetSpacedFormula().split(' ')
