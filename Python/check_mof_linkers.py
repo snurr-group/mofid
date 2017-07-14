@@ -507,6 +507,10 @@ class GAMOFs(MOFCompare):
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
+			if codes['nodes'] == '4':  # Some Zr hMOFs have four linkers replaced by benzoic acid
+				moffles_options['Zr_mof_as_hex'] = assemble_moffles(sbus, 'hex', cat, mof_name=codes['name'])
+				if topology == 'pcu':
+					moffles_options['Zr_mof_pcu_as_fcu'] = assemble_moffles(sbus, 'fcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
 				v_sbus.append('[O-]C(=O)c1ccccc1')
