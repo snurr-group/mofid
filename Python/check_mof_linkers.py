@@ -18,6 +18,14 @@ import copy  # copy.deepcopy(x)
 import warnings
 # import re
 
+
+# TODO: Refactor the OpenBabel loading as another helper import
+def path_to_resource(resource):
+	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
+	python_path = os.path.dirname(__file__)
+	return os.path.join(python_path, resource)
+os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/installed/share/openbabel/2.3.90")  # directory with native EOL
+import pybel  # Read SMILES to calculate molecular formulas, etc.
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
 

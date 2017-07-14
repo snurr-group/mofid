@@ -16,13 +16,19 @@ def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
+os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/installed/share/openbabel/2.3.90")  # directory with native EOL
 import pybel  # Read SMILES to calculate molecular formulas, etc.
+
+def ob_normalize(smiles):
+	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
+	ob_mol = pybel.readstring("smi", smiles)
+	return ob_mol.write("can", opt={'i': True}).rstrip()
 
 
 DIFF_LEVELS = dict({
 	'same' : 0,
 	'formula' : 50,
+	'phenyl_radicals': 6,
 	'fg_bond_location' : 8,
 	'linker_bond_orders' : 10,
 	'node_bond_orders' : 11,
@@ -129,11 +135,14 @@ def single_smiles_diff(smiles1, smiles2):
 	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
 		return "formula"
 
-	def move_hydrogen(formula):
+	if ob_normalize(smiles1.replace('[c]', 'c')) == ob_normalize(smiles2.replace('[c]', 'c')):
+		return "phenyl_radicals"
+
+	def move_hydrogen(smiles):
 		# Transfer a proton from a carbonyl to a nearby aromatic carbon (and/or another linker)
 		# Shows up in certain linkers when functional groups are assigned to the wrong neighbor
-		return formula.replace('[OH]', 'O').replace('[c]', 'c')
-	if move_hydrogen(mol1.formula) != move_hydrogen(mol2.formula):
+		return ob_normalize(smiles.replace('[OH]', 'O').replace('[c]', 'c'))
+	if move_hydrogen(smiles1) == move_hydrogen(smiles2):
 		return "fg_bond_location"
 
 	def is_organic(mol):
