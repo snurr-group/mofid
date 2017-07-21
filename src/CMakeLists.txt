@@ -11,9 +11,14 @@ cmake_minimum_required(VERSION 2.6)
 # Name of your project
 project(sbu)
 # Create a list of source files (easier to maintain)
-set(sources sbu.cpp)
+# set(sources sbu.cpp)
 # Set the name for the executable
-set(executable_target sbu)
+# set(executable_target sbu)
+# Use a loop like openbabel/tools/CMakeLists.txt
+set(tools
+        sbu
+        sobgrep
+   )
 
 ################################################################################
 
@@ -44,9 +49,11 @@ include_directories(${OpenBabel2_INCLUDE_DIRS})
 # Set compiler flags similar to Open Babel's CMAKE_CXX_FLAGS_RELWITHDEBINFO
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
 
-# The executable
-add_executable(${executable_target} ${sources})
-# Link against imported openbabel target
-#target_link_libraries(${executable_target} openbabel ${LIBXML2_LIBRARIES})
-target_link_libraries(${executable_target} openbabel)
-# install(TARGETS ${executable_target} DESTINATION bin)
+foreach(tool ${tools})
+  # The executable
+  add_executable(${tool} ${tool}.cpp)
+  # Link against imported openbabel target
+  #target_link_libraries(${executable_target} openbabel ${LIBXML2_LIBRARIES})
+  target_link_libraries(${tool} openbabel)
+  # install(TARGETS ${executable_target} DESTINATION bin)
+endforeach(tool)
