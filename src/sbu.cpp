@@ -59,6 +59,7 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_ele
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
+std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
@@ -406,56 +407,25 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	bound_solvent.BeginModify();
+	mof_asr.BeginModify();
+	linkers.BeginModify();
 	int simplifications;
 	do {
 		simplifications = 0;
 		simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
 		simplifications += collapseXX(&simplified_net, X_CONN);
+
+		std::vector<OBMol> one_conn = removeOneConn(&simplified_net, pseudo_map, linker_conv.used_elements(), X_CONN);
+		for (std::vector<OBMol>::iterator it=one_conn.begin(); it!=one_conn.end(); ++it) {
+			bound_solvent += *it;
+			subtractMols(&linkers, &*it);
+		}
+		simplifications += one_conn.size();
+
 		// Do collapsing last, so we can still simplify "trivial loops" like M1-X-L-X-M1
 		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 	} while(simplifications);
-
-	// Remove ligands one-connected to a node.
-	// Currently classify these as bound solvents, but they could represent
-	// post-synthetic modification or organic parts of the node.
-	// TODO: check with experimentalists if MOF nodes are always metal oxides, which
-	// we are currently assuming.
-	bound_solvent.BeginModify();
-	mof_asr.BeginModify();
-	linkers.BeginModify();
-	pseudo_deletions.clear();  // Reset this reused variable
-	FOR_ATOMS_OF_MOL(a, simplified_net) {
-		if (a->GetValence() == 1) {
-			int point_type = a->GetAtomicNum();
-			if (inVector<int>(point_type, linker_conv.used_elements())) {  // Metal-containing linker
-				if (X_CONN) {  // Simplify by removing the connection point, simplifying the problem to the base case
-					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
-					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
-					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
-						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
-					}
-					formBond(&simplified_net, *(a_nbors.begin()), &*a);
-				}
-
-				// Delete the bound ligands
-				OBMol* fragment_mol = pseudo_map[&*a];
-				bound_solvent += *fragment_mol;
-				subtractMols(&linkers, fragment_mol);
-
-				// At the end, delete the one-connected "nodes"
-				pseudo_deletions.push_back(&*a);
-				pseudo_map.erase(&*a);
-
-			} else {
-				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
-			}
-		}
-	}
-	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
-		simplified_net.DeleteAtom(*it);
-	}
-	// Other bookkeeping on atom types is unnecessary, because we're not forming
-	// new connections between the bound solvents and the nodes.
 	subtractMols(&mof_asr, &bound_solvent);
 	bound_solvent.EndModify();
 	mof_asr.EndModify();
@@ -1242,6 +1212,50 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 	net->EndModify();
 
 	return to_delete.size();
+}
+
+std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector) {
+	// Remove ligands one-connected to a node.
+	// Currently classify these as bound solvents, but they could represent
+	// post-synthetic modification or organic parts of the node.
+	// Assumes that MOF nodes are always metal oxides.
+	// Inputs are the simplified net, a conversion from net pseudo atoms to molecules of real atoms,
+	// the elements allowed for removal, and the connector atom type.
+	// Returns the vector of OBMol's deleted from the simplified net, and cleans up pseudo_to_real map.
+
+	std::vector<OBMol> fragments_removed;
+	std::vector<OBAtom*> pseudo_deletions;
+	net->BeginModify();
+
+	FOR_ATOMS_OF_MOL(a, *net) {
+		if (a->GetValence() == 1) {
+			int point_type = a->GetAtomicNum();
+			if (inVector<int>(point_type, allowed_elements) || allowed_elements.size() == 0) {  // ignore check if not specified
+				if (X_CONN) { // Remove adjacent connection points, simplifying the problem to the base case
+					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
+					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
+					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
+						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
+					}
+					formBond(net, *(a_nbors.begin()), &*a);
+				}
+
+				// Save the bound ligand.  At the end, we'll delete the one-connected "nodes"
+				fragments_removed.push_back(*(pseudo_to_real[&*a]));
+				pseudo_deletions.push_back(&*a);
+				pseudo_to_real.erase(&*a);  // Map entry will be invalid after pseudo atom is deleted
+			} else {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
+			}
+		}
+	}
+
+	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
+		net->DeleteAtom(*it);
+	}
+	net->EndModify();
+
+	return fragments_removed;
 }
 
 int fourToTwoThree(OBMol *net, int X_CONN) {
