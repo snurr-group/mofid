@@ -284,7 +284,7 @@ class MOFCompare:
 		linkers = default['smiles'].split('.')
 		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
 		moffles_from_name['err_systre_error'] = assemble_moffles(linkers, 'ERROR', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_cpp_error'] = assemble_moffles(['ERROR'], 'NA', None, mof_name=default['name'])
+		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA', None, mof_name=default['name'])
 
 
 		# Run transformations on the generated MOFFLES from CIF or smi database, if applicable (e.g. GA hMOFs)

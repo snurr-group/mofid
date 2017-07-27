@@ -118,7 +118,7 @@ def single_smiles_diff(smiles1, smiles2):
 		raise ValueError("Only a single component is allowed")
 	if smiles1 == smiles2:
 		return "equal"
-	error_codes = ["ERROR", "NA", ""]
+	error_codes = ["ERROR", "NA", "", "*"]
 	if smiles1 in error_codes or smiles2 in error_codes:
 		return "ERROR"
 
