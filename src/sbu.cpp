@@ -1018,15 +1018,19 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) 
 		}
 	} else {
 		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
-			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
+			// Put the connection point 1/3 of the way between the centroid and the connection midpoint to the exterior
+			// (e.g. 1/3 of the way between a BDC centroid and the O-M bond in the -COO group).
 			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
-			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
+			// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
+			// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
+			// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
 			OBUnitCell* lattice = mol->GetPeriodicLattice();
 			OBAtom* external_atom = (*it)[0];
 			OBAtom* internal_atom = (*it)[1];
 
 			vector3 internal_atom_loc = lattice->UnwrapCartesianNear(internal_atom->GetVector(), centroid);
-			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
+			vector3 external_atom_loc = lattice->UnwrapCartesianNear(external_atom->GetVector(), internal_atom_loc);
+			vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + internal_atom_loc + external_atom_loc) / 6.0);
 
 			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
 			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
