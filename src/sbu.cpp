@@ -1050,28 +1050,33 @@ int collapseTwoConn(OBMol *net, int ignore_element) {
 	// Collapses two-connected nodes into edges to simplify the topology
 	// Returns the number of nodes deleted from the network
 
-	int simplifications = 0;
-
 	net->BeginModify();
 	std::vector<OBAtom*> to_delete;
 	FOR_ATOMS_OF_MOL(a, *net) {
 		if (a->GetValence() == 2 && a->GetAtomicNum() != ignore_element) {
-			std::vector<OBAtom*> nbors;
-			FOR_NBORS_OF_ATOM(n, *a) {
-				nbors.push_back(&*n);
-			}
-
-			formBond(net, nbors[0], nbors[1]);
 			to_delete.push_back(&*a);
-			++simplifications;
 		}
 	}
+
 	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
+		std::vector<OBAtom*> nbors;
+		FOR_NBORS_OF_ATOM(n, **it) {
+			nbors.push_back(&*n);
+		}
+
+		if (X_CONN) {  // Transform two-connected node/linker into a connection site
+			OBAtom* connector = formAtom(net, (*it)->GetVector(), X_CONN);
+			formBond(net, connector, nbors[0]);
+			formBond(net, connector, nbors[1]);
+		} else {  // Just collapse the node into an edge
+			formBond(net, nbors[0], nbors[1]);
+		}
+
 		net->DeleteAtom(*it);
 	}
 	net->EndModify();
 
-	return simplifications;
+	return to_delete.size();
 }
 
 int collapseXX(OBMol *net, int element_x) {
