@@ -48,6 +48,26 @@ get_before_space <- function(x) {
     unlist
 }
 
+tidy_errors <- function(x) {
+  # Converts a data frame with an untidy "errors" column to a tidy one with one line per err (or character(0))
+  new_df <- x[1,]
+  new_df$error <- "TEMP FOR INIT. REMOVED AT END"
+  for (rownum in 1:nrow(x)) {
+    row <- x[rownum,]
+    errors <- row$errors %>% unlist(use.names=FALSE)
+    if (length(errors) == 0) {
+      errors <- NA
+    }
+    for (err in errors) {
+      new_row <- row
+      new_row$error <- err
+      new_df <- bind_rows(new_df, new_row)
+    }
+  }
+  
+  new_df[-1,]  # delete the temporary row
+}
+
 
 # Examples:
 # filter(import_err_df("Notebooks/20170605-tobacco/very_first_big_tobacco.json"), inlist("err_smiles", errors)) %>% View
