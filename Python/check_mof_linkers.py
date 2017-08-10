@@ -494,6 +494,7 @@ class GAMOFs(MOFCompare):
 			sbus = []
 			sbu_codes = ['nodes', 'linker1', 'linker2']  # Functionalization handled in transform_moffles
 			n_components = []  # Potentially inconsistent ordering of paddlewheel pillars
+			n_orig = []  # Pillar molecule before transformation
 			for part in sbu_codes:
 				full_smiles = self.mof_db[code_key[part]][codes[part]].split('.')
 				for smiles in full_smiles:
@@ -505,6 +506,7 @@ class GAMOFs(MOFCompare):
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in n_components:
 						n_components.append(n_smi)
+						n_orig.append(full_smiles[0])
 			if len(n_components) == 1:
 				sbus.append(n_components[0])
 			sbus.sort()
@@ -530,6 +532,10 @@ class GAMOFs(MOFCompare):
 					n_sbus.append(smi)
 					n_sbus.sort()
 					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
+
+					n_sbus.remove(n_orig[i])
+					n_sbus.sort()
+					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -575,7 +581,7 @@ class GAMOFs(MOFCompare):
 	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
 		# Implement by deleting the carboxylate and transforming C->N
-		if linker_smiles == '[O-]C(=O)C(=O)[O-]':
+		if linker_smiles in ['[O-]C(=O)C(=O)[O-]', '[O-]C(=O)C#CC(=O)[O-]']:
 			return 'N#N'
 		nitrogen_linker = openbabel_replace(linker_smiles, '[#6:1][C:2](=[O:3])[O:4]', '[#7:1]')
 		# Open Babel has trouble round-tripping the aromatic nitrogen ring
