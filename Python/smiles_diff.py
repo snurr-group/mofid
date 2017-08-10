@@ -11,18 +11,7 @@ Report common classes of errors in the calculated MOFid.
 import sys, os
 import re
 
-# TODO: Refactor the OpenBabel loading as another helper import
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
-os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/installed/share/openbabel/2.3.90")  # directory with native EOL
-import pybel  # Read SMILES to calculate molecular formulas, etc.
-
-def ob_normalize(smiles):
-	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	ob_mol = pybel.readstring("smi", smiles)
-	return ob_mol.write("can", opt={'i': True}).rstrip()
+from cheminformatics import pybel, ob_normalize
 
 
 DIFF_LEVELS = dict({

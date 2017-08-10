@@ -18,17 +18,7 @@ import copy  # copy.deepcopy(x)
 import warnings
 # import re
 
-
-# TODO: Refactor the OpenBabel loading as another helper import
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
-os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/installed/share/openbabel/2.3.90")  # directory with native EOL
-import pybel  # Read SMILES to calculate molecular formulas, etc.
-import openbabel  # for visualization only, since my changes aren't backported to the python library
-import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
-
+from cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
 from smiles_diff import multi_smiles_diff as diff
 
@@ -50,12 +40,6 @@ def any(member, list):
 	# Is the member any part of the list?
 	return member in list
 
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	# However, some absolute paths are still present in extract_moffles.py since they're system-wide
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
-
 def basename(path):
 	# Get the basename for a given path, without the file extension
 	return os.path.splitext(os.path.basename(path))[0]
@@ -64,33 +48,6 @@ def mof_log(msg):
 	# Logging helper function, which writes to stderr to avoid polluting the json
 	if PRINT_CURRENT_MOF:
 		sys.stderr.write(msg)
-
-def ob_normalize(smiles):
-	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	ob_mol = pybel.readstring("smi", smiles)
-	return ob_mol.write("can", opt={'i': True}).rstrip()
-
-def openbabel_replace(mol_smiles, query, replacement):
-	# Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
-	# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
-	# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
-	# and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
-	transform = pybel.ob.OBChemTsfm()
-	success = transform.Init(query, replacement)
-	assert success
-	mol = pybel.readstring("smi", mol_smiles)
-	transform.Apply(mol.OBMol)
-	mol.OBMol.UnsetAromaticPerceived()
-	mol.OBMol.Kekulize()
-	return ob_normalize(mol.write("can"))
-
-def openbabel_contains(mol_smiles, query):
-	# Checks if a molecule (including multi-fragment contains a SMARTS match
-	matcher = pybel.ob.OBSmartsPattern()
-	success = matcher.Init(query)
-	assert success
-	mol = pybel.readstring("smi", mol_smiles)
-	return matcher.Match(mol.OBMol)
 
 def _get_first_atom(smiles):
 	# Extract the first atom from a SMILES string, coarsely
@@ -760,8 +717,6 @@ class AutoCompare:
 			mof_log("...unable to find a suitable rule automatically\n")
 			return None
 
-
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
 
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
