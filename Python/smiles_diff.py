@@ -11,18 +11,15 @@ Report common classes of errors in the calculated MOFid.
 import sys, os
 import re
 
-# TODO: Refactor the OpenBabel loading as another helper import
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
-import pybel  # Read SMILES to calculate molecular formulas, etc.
+from cheminformatics import pybel, ob_normalize, openbabel_replace
 
 
 DIFF_LEVELS = dict({
 	'same' : 0,
 	'formula' : 50,
+	'nonplanar_carboxylate': 5,
+	'phenyl_radicals': 6,
+	'fg_bond_location' : 8,
 	'linker_bond_orders' : 10,
 	'node_bond_orders' : 11,
 	'linker_single_bonds' : 20,
@@ -111,7 +108,7 @@ def single_smiles_diff(smiles1, smiles2):
 		raise ValueError("Only a single component is allowed")
 	if smiles1 == smiles2:
 		return "equal"
-	error_codes = ["ERROR", "NA", ""]
+	error_codes = ["ERROR", "NA", "", "*"]
 	if smiles1 in error_codes or smiles2 in error_codes:
 		return "ERROR"
 
@@ -127,6 +124,21 @@ def single_smiles_diff(smiles1, smiles2):
 		return re.sub('[+-]', '', re.sub(r'H\d+', '', formula))
 	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
 		return "formula"
+
+	def radical_to_carb(smiles):
+		return openbabel_replace(smiles, '[#6:1][#6D3:2](~[O-0:3])[O:4]', '[#6:1][#6:2](=[O:3])[O-:4]')
+	if radical_to_carb(smiles1) == radical_to_carb(smiles2):
+		return "nonplanar_carboxylate"
+
+	if ob_normalize(smiles1.replace('[c]', 'c')) == ob_normalize(smiles2.replace('[c]', 'c')):
+		return "phenyl_radicals"
+
+	def move_hydrogen(smiles):
+		# Transfer a proton from a carbonyl to a nearby aromatic carbon (and/or another linker)
+		# Shows up in certain linkers when functional groups are assigned to the wrong neighbor
+		return ob_normalize(smiles.replace('[OH]', 'O').replace('[c]', 'c'))
+	if move_hydrogen(smiles1) == move_hydrogen(smiles2):
+		return "fg_bond_location"
 
 	def is_organic(mol):
 		return 'C' in mol.OBMol.GetSpacedFormula().split(' ')

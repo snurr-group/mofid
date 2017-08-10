@@ -18,9 +18,7 @@ import copy  # copy.deepcopy(x)
 import warnings
 # import re
 
-import openbabel  # for visualization only, since my changes aren't backported to the python library
-import pybel  # Only used for SMARTS-based OBChemTsfm.  All of the CIF and other SMILES work is handled by sbu.cpp
-
+from cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
 from smiles_diff import multi_smiles_diff as diff
 
@@ -42,12 +40,6 @@ def any(member, list):
 	# Is the member any part of the list?
 	return member in list
 
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	# However, some absolute paths are still present in extract_moffles.py since they're system-wide
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
-
 def basename(path):
 	# Get the basename for a given path, without the file extension
 	return os.path.splitext(os.path.basename(path))[0]
@@ -56,25 +48,6 @@ def mof_log(msg):
 	# Logging helper function, which writes to stderr to avoid polluting the json
 	if PRINT_CURRENT_MOF:
 		sys.stderr.write(msg)
-
-def ob_normalize(smiles):
-	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	ob_mol = pybel.readstring("smi", smiles)
-	return ob_mol.write("can", opt={'i': True}).rstrip()
-
-def openbabel_replace(mol_smiles, query, replacement):
-	# Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
-	# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
-	# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
-	# and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
-	transform = pybel.ob.OBChemTsfm()
-	success = transform.Init(query, replacement)
-	assert success
-	mol = pybel.readstring("smi", mol_smiles)
-	transform.Apply(mol.OBMol)
-	mol.OBMol.UnsetAromaticPerceived()
-	mol.OBMol.Kekulize()
-	return ob_normalize(mol.write("can"))
 
 def _get_first_atom(smiles):
 	# Extract the first atom from a SMILES string, coarsely
@@ -222,6 +195,12 @@ class MOFCompare:
 		for id in linkers:
 			print(linkers[id] + " " + id)
 
+	def transform_moffles(self, moffles):
+		# Transforms the read MOFFLES read into a script.
+		# Override in subclasses, if applicable.
+		# Used by the GA hMOFs to get the skeleton of the functionalized MOFs, and only compare the unfunctionalized versions
+		return moffles
+
 	def test_auto(self, spec):
 		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
 		if 'f1' in spec and 'F1' in spec:
@@ -262,10 +241,22 @@ class MOFCompare:
 		linkers = default['smiles'].split('.')
 		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
 		moffles_from_name['err_systre_error'] = assemble_moffles(linkers, 'ERROR', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_cpp_error'] = assemble_moffles(['ERROR'], 'NA', None, mof_name=default['name'])
+		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA', None, mof_name=default['name'])
 
-		# Calculate the MOFFLES derived from the CIF structure itself
-		comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
+
+		# Run transformations on the generated MOFFLES from CIF or smi database, if applicable (e.g. GA hMOFs)
+		test_moffles = self.transform_moffles(generated_moffles)
+		if test_moffles != generated_moffles:
+			generation_type += "_transformed"
+
+		if test_moffles is None and generated_moffles is not None:
+			comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
+			comparison['errors'] = ['err_missing_transform']
+			comparison['match'] = False
+		else:
+			# Calculate the MOFFLES derived from the CIF structure itself
+			comparison = self.compare_multi_moffles(moffles_from_name, test_moffles, ['from_name', generation_type])
+
 		if start_time is None:
 			comparison['time'] = 0
 		else:
@@ -411,20 +402,45 @@ class GAMOFs(MOFCompare):
 
 		return codes
 
+	def transform_moffles(self, moffles):
+		# De-functionalize MOFids read from CIFs or a database.
+		# This will allow easy comparison between the linker skeletons found and expected.
+		if moffles is None:
+			return None
+
+		cif_path = parse_moffles(moffles)['name']
+		codes = self.parse_filename(cif_path)
+		fg = codes['functionalization']
+
+		if fg == "0":
+			return moffles
+		if fg not in self.mof_db["functionalization"]:
+			return None  # Raises a transform error
+
+		[sbus, fancy_name] = moffles.split()
+		pattern = self.mof_db["functionalization"][fg]
+		if not openbabel_contains(sbus, pattern):
+			return None  # will raise a transform error in the output
+
+		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in sbus.split('.')]
+		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart SBUs into multiple parts
+		skeletons = list(set(skeletons))  # Only keep unique backbones if they have different functionalization patterns
+		if '' in skeletons:  # null linker from defunctionalization on a lone functional group
+			skeletons.remove('')
+		skeletons.sort()
+
+		return ' '.join(['.'.join(skeletons), fancy_name])  # Reconstruct the defunctionalized MOFFLES
+
 	def expected_moffles(self, cif_path):
 		# What is the expected MOFFLES based on the information in a MOF's filename?
-		# TODO: add catentation
 		codes = self.parse_filename(cif_path)
 		code_key = {
 			'nodes': 'nodes',
 			'linker1': 'linkers',
 			'linker2': 'linkers',
 			'functionalization': 'functionalization',
+			# Catenation is handled below, with the topology statement
 		}
-
-		if codes['functionalization'] != "0" or codes["linker1"] != codes["linker2"]:
-			return None  # For now, temporarily exclude functionalization (until we can figure out SMIRKS transforms)
-			# Also exclude multiple linkers, to narrow down the number of test structures, at least to begin
 
 		is_component_defined = []
 		for key in code_key:
@@ -436,18 +452,23 @@ class GAMOFs(MOFCompare):
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
 			sbus = []
-			sbu_codes = ['nodes', 'linker1', 'linker2']  # TODO: implement functionalization
+			sbu_codes = ['nodes', 'linker1', 'linker2']  # Functionalization handled in transform_moffles
+			n_components = []  # Potentially inconsistent ordering of paddlewheel pillars
+			n_orig = []  # Pillar molecule before transformation
 			for part in sbu_codes:
 				full_smiles = self.mof_db[code_key[part]][codes[part]].split('.')
 				for smiles in full_smiles:
 					if smiles not in sbus:
 						sbus.append(smiles)
-				# Also generate the nitrogen-terminated versions of the "secondary linker" for pillared paddlewheels
-				if part == "linker2" and codes['nodes'] in ["1", "2"] and topology == "pcu":
+				# Also generate the nitrogen-terminated versions for pillared paddlewheels
+				if part in ["linker1", "linker2"] and codes['nodes'] in ["1", "2"] and topology == "pcu":
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
-					if n_smi not in sbus:
-						sbus.append(n_smi)
+					if n_smi not in n_components:
+						n_components.append(n_smi)
+						n_orig.append(full_smiles[0])
+			if len(n_components) == 1:
+				sbus.append(n_components[0])
 			sbus.sort()
 
 			moffles_options = dict()
@@ -456,11 +477,25 @@ class GAMOFs(MOFCompare):
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
+			if codes['nodes'] == '4':  # Some Zr hMOFs have four linkers replaced by benzoic acid
+				moffles_options['Zr_mof_as_hex'] = assemble_moffles(sbus, 'hex', cat, mof_name=codes['name'])
+				if topology == 'pcu':
+					moffles_options['Zr_mof_pcu_as_fcu'] = assemble_moffles(sbus, 'fcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
 				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
 				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
+			if len(n_components) == 2:
+				for i, smi in enumerate(n_components):
+					n_sbus = copy.deepcopy(sbus)
+					n_sbus.append(smi)
+					n_sbus.sort()
+					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
+
+					n_sbus.remove(n_orig[i])
+					n_sbus.sort()
+					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -506,6 +541,8 @@ class GAMOFs(MOFCompare):
 	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
 		# Implement by deleting the carboxylate and transforming C->N
+		if linker_smiles in ['[O-]C(=O)C(=O)[O-]', '[O-]C(=O)C#CC(=O)[O-]']:
+			return 'N#N'
 		nitrogen_linker = openbabel_replace(linker_smiles, '[#6:1][C:2](=[O:3])[O:4]', '[#7:1]')
 		# Open Babel has trouble round-tripping the aromatic nitrogen ring
 		# n1cc2ccc3c4c2c(c1)ccc4cnc3 or its rdkit equivalent c1cc2cncc3ccc4cncc1c4c23.
@@ -684,8 +721,6 @@ class AutoCompare:
 			return None
 
 
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")
-
 if __name__ == "__main__":
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
 	input_type = "CIF"
@@ -697,7 +732,7 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
-	elif len(args) == 1 and (args[0].endswith('.txt') or args[0].endswith('.smi')):
+	elif len(args) == 1 and (args[0].endswith('.txt') or args[0].endswith('.smi') or args[0].endswith('.out')):
 		input_type = "MOFid line"
 		with open(args[0], "r") as f:
 			inputs = f.readlines()

@@ -59,6 +59,7 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_ele
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
+std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = true);
@@ -204,6 +205,14 @@ int main(int argc, char* argv[])
 	OBMol bound_solvent = initMOF(&orig_mol);
 
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
+
+	std::ofstream file_info;
+	file_info.open("Test/mol_name.txt", std::ios::out | std::ios::trunc);
+	if (file_info.is_open()) {
+		file_info << filename << std::endl;
+		file_info.close();
+	}
+
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
@@ -398,56 +407,25 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	bound_solvent.BeginModify();
+	mof_asr.BeginModify();
+	linkers.BeginModify();
 	int simplifications;
 	do {
 		simplifications = 0;
 		simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
 		simplifications += collapseXX(&simplified_net, X_CONN);
+
+		std::vector<OBMol> one_conn = removeOneConn(&simplified_net, pseudo_map, linker_conv.used_elements(), X_CONN);
+		for (std::vector<OBMol>::iterator it=one_conn.begin(); it!=one_conn.end(); ++it) {
+			bound_solvent += *it;
+			subtractMols(&linkers, &*it);
+		}
+		simplifications += one_conn.size();
+
 		// Do collapsing last, so we can still simplify "trivial loops" like M1-X-L-X-M1
 		simplifications += collapseTwoConn(&simplified_net, X_CONN);
 	} while(simplifications);
-
-	// Remove ligands one-connected to a node.
-	// Currently classify these as bound solvents, but they could represent
-	// post-synthetic modification or organic parts of the node.
-	// TODO: check with experimentalists if MOF nodes are always metal oxides, which
-	// we are currently assuming.
-	bound_solvent.BeginModify();
-	mof_asr.BeginModify();
-	linkers.BeginModify();
-	pseudo_deletions.clear();  // Reset this reused variable
-	FOR_ATOMS_OF_MOL(a, simplified_net) {
-		if (a->GetValence() == 1) {
-			int point_type = a->GetAtomicNum();
-			if (inVector<int>(point_type, linker_conv.used_elements())) {  // Metal-containing linker
-				if (X_CONN) {  // Simplify by removing the connection point, simplifying the problem to the base case
-					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
-					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
-					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
-						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
-					}
-					formBond(&simplified_net, *(a_nbors.begin()), &*a);
-				}
-
-				// Delete the bound ligands
-				OBMol* fragment_mol = pseudo_map[&*a];
-				bound_solvent += *fragment_mol;
-				subtractMols(&linkers, fragment_mol);
-
-				// At the end, delete the one-connected "nodes"
-				pseudo_deletions.push_back(&*a);
-				pseudo_map.erase(&*a);
-
-			} else {
-				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
-			}
-		}
-	}
-	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
-		simplified_net.DeleteAtom(*it);
-	}
-	// Other bookkeeping on atom types is unnecessary, because we're not forming
-	// new connections between the bound solvents and the nodes.
 	subtractMols(&mof_asr, &bound_solvent);
 	bound_solvent.EndModify();
 	mof_asr.EndModify();
@@ -1040,15 +1018,19 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) 
 		}
 	} else {
 		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
-			// Put the connection point 1/3 of the way between the centroid and the connection point of the internal atom (e.g. COO).
+			// Put the connection point 1/3 of the way between the centroid and the connection midpoint to the exterior
+			// (e.g. 1/3 of the way between a BDC centroid and the O-M bond in the -COO group).
 			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
-			// Note: many top-down MOF generators instead place the connection point halfway on the node and linker bond.
+			// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
+			// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
+			// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
 			OBUnitCell* lattice = mol->GetPeriodicLattice();
 			OBAtom* external_atom = (*it)[0];
 			OBAtom* internal_atom = (*it)[1];
 
 			vector3 internal_atom_loc = lattice->UnwrapCartesianNear(internal_atom->GetVector(), centroid);
-			vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + internal_atom_loc) / 3.0);
+			vector3 external_atom_loc = lattice->UnwrapCartesianNear(external_atom->GetVector(), internal_atom_loc);
+			vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + internal_atom_loc + external_atom_loc) / 6.0);
 
 			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
 			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
@@ -1068,28 +1050,33 @@ int collapseTwoConn(OBMol *net, int ignore_element) {
 	// Collapses two-connected nodes into edges to simplify the topology
 	// Returns the number of nodes deleted from the network
 
-	int simplifications = 0;
-
 	net->BeginModify();
 	std::vector<OBAtom*> to_delete;
 	FOR_ATOMS_OF_MOL(a, *net) {
 		if (a->GetValence() == 2 && a->GetAtomicNum() != ignore_element) {
-			std::vector<OBAtom*> nbors;
-			FOR_NBORS_OF_ATOM(n, *a) {
-				nbors.push_back(&*n);
-			}
-
-			formBond(net, nbors[0], nbors[1]);
 			to_delete.push_back(&*a);
-			++simplifications;
 		}
 	}
+
 	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
+		std::vector<OBAtom*> nbors;
+		FOR_NBORS_OF_ATOM(n, **it) {
+			nbors.push_back(&*n);
+		}
+
+		if (X_CONN) {  // Transform two-connected node/linker into a connection site
+			OBAtom* connector = formAtom(net, (*it)->GetVector(), X_CONN);
+			formBond(net, connector, nbors[0]);
+			formBond(net, connector, nbors[1]);
+		} else {  // Just collapse the node into an edge
+			formBond(net, nbors[0], nbors[1]);
+		}
+
 		net->DeleteAtom(*it);
 	}
 	net->EndModify();
 
-	return simplifications;
+	return to_delete.size();
 }
 
 int collapseXX(OBMol *net, int element_x) {
@@ -1234,6 +1221,50 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 	net->EndModify();
 
 	return to_delete.size();
+}
+
+std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector) {
+	// Remove ligands one-connected to a node.
+	// Currently classify these as bound solvents, but they could represent
+	// post-synthetic modification or organic parts of the node.
+	// Assumes that MOF nodes are always metal oxides.
+	// Inputs are the simplified net, a conversion from net pseudo atoms to molecules of real atoms,
+	// the elements allowed for removal, and the connector atom type.
+	// Returns the vector of OBMol's deleted from the simplified net, and cleans up pseudo_to_real map.
+
+	std::vector<OBMol> fragments_removed;
+	std::vector<OBAtom*> pseudo_deletions;
+	net->BeginModify();
+
+	FOR_ATOMS_OF_MOL(a, *net) {
+		if (a->GetValence() == 1) {
+			int point_type = a->GetAtomicNum();
+			if (inVector<int>(point_type, allowed_elements) || allowed_elements.size() == 0) {  // ignore check if not specified
+				if (X_CONN) { // Remove adjacent connection points, simplifying the problem to the base case
+					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
+					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
+					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
+						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
+					}
+					formBond(net, *(a_nbors.begin()), &*a);
+				}
+
+				// Save the bound ligand.  At the end, we'll delete the one-connected "nodes"
+				fragments_removed.push_back(*(pseudo_to_real[&*a]));
+				pseudo_deletions.push_back(&*a);
+				pseudo_to_real.erase(&*a);  // Map entry will be invalid after pseudo atom is deleted
+			} else {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
+			}
+		}
+	}
+
+	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
+		net->DeleteAtom(*it);
+	}
+	net->EndModify();
+
+	return fragments_removed;
 }
 
 int fourToTwoThree(OBMol *net, int X_CONN) {
@@ -1617,6 +1648,7 @@ bool detectPaddlewheels(OBMol *mol) {
 	// See also earlier tests and example code from: http://openbabel.org/dev-api/classOpenBabel_1_1OBSmartsPattern.shtml
 	// Returns if any paddlewheels were detected in the structure
 
+	bool found_pw = false;
 	OBSmartsPattern paddlewheel;
 	// Paddlewheel metals might have a M-M bond, and possibly a coordinated solvent or pillar linker
 	paddlewheel.Init("[D4,D5,D6:1](OCO1)(OCO2)(OCO3)OCO[D4,D5,D6:2]123");
@@ -1626,24 +1658,37 @@ bool detectPaddlewheels(OBMol *mol) {
 	std::vector<std::vector<int> >::iterator i;
 	std::vector<int>::iterator j;
 	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
-		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
-		candidate.BeginModify();
 		std::vector<OBAtom*> pw_metals;
 		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms
 			OBAtom* curr_atom = mol->GetAtom(*j);
 			if (isMetal(curr_atom)) {
 				pw_metals.push_back(curr_atom);
 			}
-			formAtom(&candidate, curr_atom->GetVector(), curr_atom->GetAtomicNum());
+		}
+		if (pw_metals.size() != 2) {
+			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
+			return false;
+		}
+
+		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		candidate.BeginModify();
+		formAtom(&candidate, pw_metals[0]->GetVector(), pw_metals[0]->GetAtomicNum());
+		formAtom(&candidate, pw_metals[1]->GetVector(), pw_metals[1]->GetAtomicNum());
+		for (std::vector<OBAtom*>::iterator it=pw_metals.begin(); it!=pw_metals.end(); ++it) {
+			FOR_NBORS_OF_ATOM(n, *it) {
+				if (!atomInOtherMol(&*n, &candidate)) {
+					formAtom(&candidate, n->GetVector(), n->GetAtomicNum());
+				}
+			}
 		}
 		candidate.EndModify();
 		resetBonds(&candidate);
 
-		if (pw_metals.size() != 2) {
-			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
-		} else if (isPeriodicChain(&candidate)) {
+		if (candidate.Separate().size() == 1 && isPeriodicChain(&candidate)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Skipping paddlewheel assignment: match is an infinite rod", obDebug);
 		} else {
+			obErrorLog.ThrowError(__FUNCTION__, "Found a paddlewheel.  Assigining \"Paddlewheel\" attribute", obDebug);
+			found_pw = true;
 			OBBond* old_bond = mol->GetBond(pw_metals[0], pw_metals[1]);
 			if (old_bond) {
 				mol->DeleteBond(old_bond);
@@ -1660,9 +1705,5 @@ bool detectPaddlewheels(OBMol *mol) {
 			pw_metals[1]->SetData(dp);
 		}
 	}
-	if (maplist.size() > 0) {
-		return true;
-	} else {
-		return false;
-	}
+	return found_pw;
 }

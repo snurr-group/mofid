@@ -42,7 +42,7 @@ def extract_linkers(mof_path):
 	cpp_output = cpp_run.stdout
 	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
 	if cpp_run.return_code:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
-		fragments = ["ERROR"]
+		fragments = ["*"]  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
 	else:
 		fragments = cpp_output.strip().split("\n")
 		fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
@@ -108,6 +108,8 @@ def assemble_moffles(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	moffles = moffles + topology + "."
 	if cat is not None:
 		moffles = moffles + "cat" + cat + "."
+	if moffles.startswith(" "):  # Null linkers.  Make .smi compatible
+		moffles = "*" + moffles + "no_mof."
 	moffles = moffles + "F1" + "."
 	moffles = moffles + mof_name
 	return moffles

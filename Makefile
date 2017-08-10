@@ -8,7 +8,9 @@ backup:
 
 # Make this generic later on...
 bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
-	cd bin && make
+	cd bin && make sbu
+bin/sobgrep: src/sobgrep.cpp openbabel/build/lib/cifformat.so
+	cd bin && make sobgrep
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
