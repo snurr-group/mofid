@@ -11,12 +11,13 @@ Report common classes of errors in the calculated MOFid.
 import sys, os
 import re
 
-from cheminformatics import pybel, ob_normalize
+from cheminformatics import pybel, ob_normalize, openbabel_replace
 
 
 DIFF_LEVELS = dict({
 	'same' : 0,
 	'formula' : 50,
+	'nonplanar_carboxylate': 5,
 	'phenyl_radicals': 6,
 	'fg_bond_location' : 8,
 	'linker_bond_orders' : 10,
@@ -123,6 +124,11 @@ def single_smiles_diff(smiles1, smiles2):
 		return re.sub('[+-]', '', re.sub(r'H\d+', '', formula))
 	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
 		return "formula"
+
+	def radical_to_carb(smiles):
+		return openbabel_replace(smiles, '[#6:1][#6D3:2](~[O-0:3])[O:4]', '[#6:1][#6:2](=[O:3])[O-:4]')
+	if radical_to_carb(smiles1) == radical_to_carb(smiles2):
+		return "nonplanar_carboxylate"
 
 	if ob_normalize(smiles1.replace('[c]', 'c')) == ob_normalize(smiles2.replace('[c]', 'c')):
 		return "phenyl_radicals"
