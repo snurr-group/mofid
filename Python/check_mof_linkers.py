@@ -423,6 +423,7 @@ class GAMOFs(MOFCompare):
 			return None  # will raise a transform error in the output
 
 		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in sbus.split('.')]
+		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart SBUs into multiple parts
 		skeletons = list(set(skeletons))  # Only keep unique backbones if they have different functionalization patterns
 		skeletons.sort()
 
