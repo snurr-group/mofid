@@ -20,7 +20,6 @@ Ideas
 * Which design patterns would help organize my code?
 * See proposal, slides, and zhao_multivariable_2016 for complicated cases to diagnose my "naming" code.
 * See CHELPG decomposition work in SI of @mcdaniel_evaluation_2015
-* Consider adding bonding export to the CIF format.  Would need to consider unit cells, however...
 
 
 Notes
@@ -37,6 +36,27 @@ Listserv entries discussing periodic boundary conditions.
 * [Periodic boundaries and atom typing large systems (UFF)](https://www.mail-archive.com/openbabel-discuss@lists.sourceforge.net/msg02002.html)
 * [OpenBabel and Periodic Systems (multiple molecules per OBMol)](https://sourceforge.net/p/openbabel/mailman/message/7048390/)
 * [Crystallography help (fractional-cartesian conversion matrix)](https://sourceforge.net/p/openbabel/mailman/message/7049196/)
+
+
+Emscripten installation notes
+-----------------
+In Windows, download the [portable Emscripten SDK](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html#platform-notes-installation-instructions-portable-sdk) and install using Git Bash.  The general process is described on the website:
+
+```
+Follow instructions:
+# Fetch the latest registry of available tools.
+./emsdk update
+
+# Download and install the latest SDK tools.
+./emsdk install latest
+
+# Make the "latest" SDK "active"
+./emsdk activate latest
+```
+
+Setting the paths doesn't quite work due to mismatches between CMD and bash, but a new [importer script](Scripts/import_emscripten.sh) will automatically take care of those details in Git Bash, if sourced.  Sourcing is critical to ensure that the changes to environment variables propagate to the current shell instead of being confined to a subprocess.  Then, the Emscripten `make` processes are automated inside the `web` and `init-web` targets of the project Makefile.
+
+Additional emscripten links and diagnostics (like `emcc -v`) are sketched in the corresponding [notebook directory](Notebooks/20170810-emscripten/emscripten_installation.txt).
 
 
 Table of contents

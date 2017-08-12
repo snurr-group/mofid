@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch
+.PHONY: all backup test diff download ob_changes.patch init web init-web
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -36,7 +36,7 @@ Resources/External/Systre-1.2.0-beta2.jar:
 	cd Resources/External; \
 	wget https://github.com/odf/gavrog/releases/download/v0.6.0-beta2/Systre-1.2.0-beta2.jar
 
-setup:
+init:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
@@ -52,3 +52,32 @@ setup:
 	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
+
+
+# Emscripten web content below
+# In my current Windows setup, these must all be run within Git Bash
+# Not yet tested cross-platform in Linux
+init-web:
+	source Scripts/import_emscripten.sh; \
+	cd openbabel; \
+	mkdir embuild eminstall; \
+	cd embuild; \
+	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF; \
+	cd ../..; \
+	mkdir embin; \
+	cd embin; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/
+
+openbabel/embuild/obabel.js:
+	source Scripts/import_emscripten.sh; \
+	cd openbabel/embuild; \
+	emmake make; \
+	emmake make install
+
+web: embin/sbu.js
+
+embin/sbu.js: openbabel/embuild/obabel.js
+	source Scripts/import_emscripten.sh; \
+	cd embin; \
+	emmake make
+
