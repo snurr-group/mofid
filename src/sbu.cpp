@@ -15,6 +15,7 @@
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstring>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
@@ -36,6 +37,7 @@ typedef std::map<OBAtom*, std::vector<int> > UCMap;
 
 // Function prototypes
 std::string analyzeMOF(std::string filename);
+extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 OBMol initMOF(OBMol *orig_in_uc);
@@ -502,6 +504,20 @@ std::string analyzeMOF(std::string filename) {
 
 	return(analysis.str());
 }
+
+extern "C" {
+void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
+	// Wrap analyzeMOF with C compatibility for Emscripten usage
+	// Make the return value an input param, since c_str is (likely?) a pointer to
+	// an internal data structure in std::string, which will go out of scope.
+	// A good buflen for the output might be 2^16, or 65536
+	const char *TEMP_FILE = "from_emscripten.cif";
+	std::ofstream cifp(TEMP_FILE);
+	cifp << std::string(cifdata);
+
+	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
+}
+}  // extern "C"
 
 
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
