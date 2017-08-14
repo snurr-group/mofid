@@ -74,7 +74,8 @@ openbabel/embuild/obabel.js:
 	emmake make; \
 	emmake make install
 
-web: embin/sbu.js
+web: embin/sbu.js src/Web/sbu.html
+	cp src/Web/sbu.html embin/sbu.html
 
 embin/sbu.js: openbabel/embuild/obabel.js
 	source Scripts/import_emscripten.sh; \
