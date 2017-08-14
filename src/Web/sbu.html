@@ -102,7 +102,6 @@
     </style>
   </head>
   <body>
-    <a href="http://emscripten.org">
       <svg
    version="1.1"
    id="Layer_1"
@@ -1193,28 +1192,49 @@
    offset="0.6933" /><a:midPointStop
    style="stop-color:#000000;stop-opacity:0"
    offset="1" /></linearGradient></g></g></svg>
-    </a>
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
-<span id='controls'>
-  <span><input type="checkbox" id="resize">Resize canvas</span>
-  <span><input type="checkbox" id="pointerLock" checked>Lock/hide mouse pointer &nbsp;&nbsp;&nbsp;</span>
-  <span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, 
-                                                                            document.getElementById('resize').checked)">
-  </span>
-</span>
+      <script type="text/javascript">
+        var SmilesToSVG = function(smiles) {
+          C_SmilesToSVG = Module.cwrap(
+            'analyzeMOFc', 'null', ['string', 'number', 'number']
+          );
+          FS.mkdir('/Test');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
+          // At this point, the remaining errors are due to the DATADIR resources not being found
+          // Embedding wouldn't be too hard (or space consuming), and the biggest files aren't necessary yet
 
-    <div class="emscripten">
-      <progress value="0" max="100" id="progress" hidden=1></progress>
-    </div>
+          var buflen = 65536;
+          var ptr = Module._malloc(buflen);
+          var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
+          C_SmilesToSVG(smiles, ptr, buflen);
+          //var length = 
+          //if (length == -1) return "";
+          var ans = Module.Pointer_stringify(ptr);
+          Module._free(ptr);
+          return ans;
+        };
+        handleInput = function() {
+          var smiles = document.getElementById("smilesinput").value;
+          var createSVG = document.getElementById("svgdepict").checked==true;
+          var svg = SmilesToSVG(smiles, createSVG);
+          if (svg != "") {
+            if (!createSVG)
+              svg = "<pre>" + svg + "</pre>";
+            document.getElementById("svgimage").innerHTML = svg;
+            }
+        }
+        </script>
 
-    
-    <div class="emscripten_border">
-      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-    </div>
-    <textarea id="output" rows="8"></textarea>
+            <div class="emscripten">
+              <progress value="0" max="100" id="progress" hidden=1></progress>
+            </div>
+            Enter Smiles: <input type="text" name="smilesinput" id="smilesinput" oninput="handleInput()"></input>
+<input type="radio" name="depict" id="svgdepict" value="0" onclick="handleInput()">SVG</input>
+<input type="radio" name="depict" id="asciidepict" value="1" checked onclick="handleInput()">ASCII</input>
+<br/>
+            <span id="svgimage"></span>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
@@ -1250,14 +1270,12 @@
           }
         },
         canvas: (function() {
-          var canvas = document.getElementById('canvas');
 
           // As a default initial behavior, pop up an alert when webgl context is lost. To make your
           // application robust, you may want to override this behavior before shipping!
           // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
-          canvas.addEventListener("webglcontextlost", function(e) { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
 
-          return canvas;
+          return null;
         })(),
         setStatus: function(text) {
           if (!Module.setStatus.last) Module.setStatus.last = { time: Date.now(), text: '' };
