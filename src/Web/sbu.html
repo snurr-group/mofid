@@ -1219,23 +1219,30 @@
           return ans;
         };
         handleInput = function() {
-          var smiles = document.getElementById("smilesinput").value;
           var createSVG = document.getElementById("svgdepict").checked==true;
-          var svg = SmilesToSVG(smiles, createSVG);
-          if (svg != "") {
-            if (!createSVG)
-              svg = "<pre>" + svg + "</pre>";
-            document.getElementById("svgimage").innerHTML = svg;
+
+          var ciffile = document.getElementById("cifloader").files[0];
+          document.getElementById("svgimage").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
+          var cifreader = new FileReader();
+          cifreader.onload = function(event) {
+            var svg = SmilesToSVG(event.target.result);
+            if (svg != "") {
+              if (!createSVG)
+                svg = "<pre>" + svg + "</pre>";
+              document.getElementById("svgimage").innerHTML = svg;
             }
+          };
+          cifreader.readAsText(ciffile);
         }
         </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-            Enter Smiles: <input type="text" name="smilesinput" id="smilesinput"></input>
+            Enter CIF:
 <input type="radio" name="depict" id="svgdepict" value="0">SVG</input>
 <input type="radio" name="depict" id="asciidepict" value="1" checked>ASCII</input>
+<input type="file" id="cifloader"></input>
 <input type="submit" value="Submit" onclick="handleInput()"></input>
 <br/>
             <span id="svgimage"></span>
