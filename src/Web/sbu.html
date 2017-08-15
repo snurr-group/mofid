@@ -1201,7 +1201,10 @@
           C_SmilesToSVG = Module.cwrap(
             'analyzeMOFc', 'null', ['string', 'number', 'number']
           );
-          FS.mkdir('/Test');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
+
+          if(!FS.analyzePath('/Test').exists) {
+            FS.mkdir('/Test');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
+          }
           // At this point, the remaining errors are due to the DATADIR resources not being found
           // Embedding wouldn't be too hard (or space consuming), and the biggest files aren't necessary yet
 
@@ -1230,9 +1233,10 @@
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-            Enter Smiles: <input type="text" name="smilesinput" id="smilesinput" oninput="handleInput()"></input>
-<input type="radio" name="depict" id="svgdepict" value="0" onclick="handleInput()">SVG</input>
-<input type="radio" name="depict" id="asciidepict" value="1" checked onclick="handleInput()">ASCII</input>
+            Enter Smiles: <input type="text" name="smilesinput" id="smilesinput"></input>
+<input type="radio" name="depict" id="svgdepict" value="0">SVG</input>
+<input type="radio" name="depict" id="asciidepict" value="1" checked>ASCII</input>
+<input type="submit" value="Submit" onclick="handleInput()"></input>
 <br/>
             <span id="svgimage"></span>
 

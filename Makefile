@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch init web init-web
+.PHONY: all backup test diff download ob_changes.patch init web init-web html
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -74,8 +74,10 @@ openbabel/embuild/obabel.js:
 	emmake make; \
 	emmake make install
 
-web: embin/sbu.js src/Web/sbu.html
-	cp src/Web/sbu.html embin/sbu.html
+web: embin/sbu.js html
+
+html: src/Web/sbu.html
+	cp $< embin/
 
 embin/sbu.js: openbabel/embuild/obabel.js
 	source Scripts/import_emscripten.sh; \

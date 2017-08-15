@@ -512,8 +512,9 @@ void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
 	// an internal data structure in std::string, which will go out of scope.
 	// A good buflen for the output might be 2^16, or 65536
 	const char *TEMP_FILE = "from_emscripten.cif";
-	std::ofstream cifp(TEMP_FILE);
+	std::ofstream cifp(TEMP_FILE, std::ios::out | std::ios::trunc);
 	cifp << std::string(cifdata);
+	cifp.close();
 
 	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
 }
