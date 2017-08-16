@@ -66,7 +66,7 @@ init-web:
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js"
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"
 
 openbabel/embuild/obabel.js:
 	source Scripts/import_emscripten.sh; \
