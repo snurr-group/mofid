@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch init web init-web html
+.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -11,6 +11,8 @@ bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sbu
 bin/sobgrep: src/sobgrep.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sobgrep
+bin/searchdb: src/searchdb.cpp openbabel/build/lib/cifformat.so
+	cd bin && make searchdb
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
@@ -48,11 +50,13 @@ init:
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
 
+eclipse:
+	cd bin; \
+	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 
 # Emscripten web content below
 # In my current Windows setup, these must all be run within Git Bash
