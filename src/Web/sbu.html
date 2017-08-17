@@ -1197,8 +1197,8 @@
     <div class="emscripten" id="status">Downloading...</div>
 
       <script type="text/javascript">
-        var SmilesToSVG = function(smiles) {
-          C_SmilesToSVG = Module.cwrap(
+        var SmilesToSVG = function(cifdata) {
+          C_obcode = Module.cwrap(
             'analyzeMOFc', 'null', ['string', 'number', 'number']
           );
 
@@ -1209,25 +1209,22 @@
           var buflen = 65536;
           var ptr = Module._malloc(buflen);
           var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
-          C_SmilesToSVG(smiles, ptr, buflen);
-          //var length = 
-          //if (length == -1) return "";
+          C_obcode(cifdata, ptr, buflen);
           var ans = Module.Pointer_stringify(ptr);
           Module._free(ptr);
           return ans;
         };
         handleInput = function() {
-          var createSVG = document.getElementById("svgdepict").checked==true;
-
           var ciffile = document.getElementById("cifloader").files[0];
-          document.getElementById("svgimage").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
+          document.getElementById("obresults").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
           var cifreader = new FileReader();
           cifreader.onload = function(event) {
-            var svg = SmilesToSVG(event.target.result);
-            if (svg != "") {
-              if (!createSVG)
-                svg = "<pre>" + svg + "</pre>";
-              document.getElementById("svgimage").innerHTML = svg;
+            var mofid = SmilesToSVG(event.target.result);
+            if (mofid != "") {
+              mofid = "<pre>" + mofid + "</pre>";
+              document.getElementById("obresults").innerHTML = mofid;
+            } else {
+              document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
             }
           };
           cifreader.readAsText(ciffile);
@@ -1238,12 +1235,10 @@
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
             Enter CIF:
-<input type="radio" name="depict" id="svgdepict" value="0">SVG</input>
-<input type="radio" name="depict" id="asciidepict" value="1" checked>ASCII</input>
 <input type="file" id="cifloader"></input>
-<input type="submit" value="Submit" onclick="handleInput()"></input>
+<input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
-            <span id="svgimage"></span>
+            <span id="obresults"></span>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');

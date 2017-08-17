@@ -1197,32 +1197,26 @@
     <div class="emscripten" id="status">Downloading...</div>
 
       <script type="text/javascript">
-        var SmilesToSVG = function(smiles, invert_selection) {
-          C_SmilesToSVG = Module.cwrap(
+        var runSearch = function(query, invert_selection) {
+          C_obcode = Module.cwrap(
             'runSearchc', 'null', ['string', 'string', 'number', 'string']
           );
 
           var results_file = "search_results.smi";
-		  var buflen = 65536;
-          var ptr = Module._malloc(buflen);
-          var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
-          C_SmilesToSVG(smiles, "/ob_datadir/core.smi", invert_selection, results_file);
-          //var length = 
-          //if (length == -1) return "";
-          //var ans = Module.Pointer_stringify(ptr);
-          Module._free(ptr);
-          //return ans;
-		  return FS.readFile(results_file, {'encoding': 'utf8'});
+          C_obcode(query, "/ob_datadir/core.smi", invert_selection, results_file);
+
+          return FS.readFile(results_file, {'encoding': 'utf8'});
         };
         handleInput = function() {
-          var createSVG = document.getElementById("svgdepict").checked==true;
+          var invertSearch = document.getElementById("inverseclick").checked==true;
           var smartsQuery = document.getElementById("smartsinput").value;
-		  document.getElementById("svgimage").innerHTML = "<pre>Processing query " + smartsQuery + "</pre>";  // skipped since painting is likely async, so SmilesToSVG is blocking.
-          var svg = SmilesToSVG(smartsQuery, 0);
-          if (svg != "") {
-            if (!createSVG)
-              svg = "<pre>" + svg + "</pre>";
-            document.getElementById("svgimage").innerHTML = svg;
+          var matches = runSearch(smartsQuery, invertSearch);
+          var numlines = matches.split(/r\n|\r|\n/g).length;
+          if (matches != "") {
+            matches = "<p>Found " + numlines + " matches.</p>" + "<pre>" + matches + "</pre>";
+            document.getElementById("obresults").innerHTML = matches;
+          } else {
+            document.getElementById("obresults").innerHTML = "<p>No matches found.</p>";
           }
         };
         </script>
@@ -1231,11 +1225,10 @@
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
             Enter SMARTS query: <input type="text" name="smartsinput" id="smartsinput"></input>
-<input type="radio" name="depict" id="svgdepict" value="0">SVG</input>
-<input type="radio" name="depict" id="asciidepict" value="1" checked>ASCII</input>
-<input type="submit" value="Submit" onclick="handleInput()"></input>
+<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input>
+<input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
-            <span id="svgimage"></span>
+            <span id="obresults"></span>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
