@@ -1197,50 +1197,42 @@
     <div class="emscripten" id="status">Downloading...</div>
 
       <script type="text/javascript">
-        var SmilesToSVG = function(smiles) {
+        var SmilesToSVG = function(smiles, invert_selection) {
           C_SmilesToSVG = Module.cwrap(
-            'analyzeMOFc', 'null', ['string', 'number', 'number']
+            'runSearchc', 'null', ['string', 'string', 'number', 'string']
           );
 
-          if(!FS.analyzePath('/Test').exists) {
-            FS.mkdir('/Test');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
-          }
-
-          var buflen = 65536;
+          var results_file = "search_results.smi";
+		  var buflen = 65536;
           var ptr = Module._malloc(buflen);
           var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
-          C_SmilesToSVG(smiles, ptr, buflen);
+          C_SmilesToSVG(smiles, "/ob_datadir/core.smi", invert_selection, results_file);
           //var length = 
           //if (length == -1) return "";
-          var ans = Module.Pointer_stringify(ptr);
+          //var ans = Module.Pointer_stringify(ptr);
           Module._free(ptr);
-          return ans;
+          //return ans;
+		  return FS.readFile(results_file, {'encoding': 'utf8'});
         };
         handleInput = function() {
           var createSVG = document.getElementById("svgdepict").checked==true;
-
-          var ciffile = document.getElementById("cifloader").files[0];
-          document.getElementById("svgimage").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
-          var cifreader = new FileReader();
-          cifreader.onload = function(event) {
-            var svg = SmilesToSVG(event.target.result);
-            if (svg != "") {
-              if (!createSVG)
-                svg = "<pre>" + svg + "</pre>";
-              document.getElementById("svgimage").innerHTML = svg;
-            }
-          };
-          cifreader.readAsText(ciffile);
-        }
+          var smartsQuery = document.getElementById("smartsinput").value;
+		  document.getElementById("svgimage").innerHTML = "<pre>Processing query " + smartsQuery + "</pre>";  // skipped since painting is likely async, so SmilesToSVG is blocking.
+          var svg = SmilesToSVG(smartsQuery, 0);
+          if (svg != "") {
+            if (!createSVG)
+              svg = "<pre>" + svg + "</pre>";
+            document.getElementById("svgimage").innerHTML = svg;
+          }
+        };
         </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-            Enter CIF:
+            Enter SMARTS query: <input type="text" name="smartsinput" id="smartsinput"></input>
 <input type="radio" name="depict" id="svgdepict" value="0">SVG</input>
 <input type="radio" name="depict" id="asciidepict" value="1" checked>ASCII</input>
-<input type="file" id="cifloader"></input>
 <input type="submit" value="Submit" onclick="handleInput()"></input>
 <br/>
             <span id="svgimage"></span>
@@ -1322,6 +1314,6 @@
         };
       };
     </script>
-    <script async type="text/javascript" src="sbu.js"></script>
+    <script async type="text/javascript" src="searchdb.js"></script>
   </body>
 </html>

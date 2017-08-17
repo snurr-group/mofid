@@ -19,7 +19,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 // Function prototypes
 std::string runSearch(std::string pattern, std::string db_file, bool reverse_search);
-// TODO: Emscripten-compatible "C" function, plus embedding core.smi resource file
+extern "C" void runSearchc(const char *pattern, const char *db_file, bool reverse_search, char *out_file);
 
 
 int main(int argc, char* argv[])
@@ -66,3 +66,11 @@ std::string runSearch(std::string pattern, std::string db_file, bool reverse_sea
 	return out_smi.str();
 }
 
+extern "C"
+void runSearchc(const char *pattern, const char *db_file, bool reverse_search, char *out_file) {
+	// Wrap runSearch for Emscripten
+	// Runs a search for pattern on db_file, writing the results to out_file.
+	std::ofstream smip(out_file, std::ios::out | std::ios::trunc);
+	smip << runSearch(pattern, db_file, reverse_search);
+	smip.close();
+}  // extern "C"
