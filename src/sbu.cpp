@@ -846,6 +846,14 @@ void resetBonds(OBMol *mol) {
 	}
 
 	mol->PerceiveBondOrders();
+	FOR_BONDS_OF_MOL(b, *mol) {
+		if ( b->GetBeginAtom()->HasData("Paddlewheel")
+			&& b->GetEndAtom()->HasData("Paddlewheel")
+			&& b->GetBondOrder() == 3 ) {
+			b->SetBondOrder(1);  // Consider normalizing all M#M bonds similarly with isMetal condition
+		}
+	}
+
 	mol->EndModify();
 	normalizeCharges(mol);
 }
