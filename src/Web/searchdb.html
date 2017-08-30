@@ -1213,8 +1213,9 @@
           var matches = runSearch(smartsQuery, invertSearch);
           var numlines = matches.split(/r\n|\r|\n/g).length - 1;  // matches end in a newline
           if (matches != "") {
-            matches = "<p>Found " + numlines + " matches.</p>" + "<pre>" + matches + "</pre>";
-            document.getElementById("obresults").innerHTML = matches;
+            var download_matches = "data:text/plain;base64," + btoa(matches);
+            var html_matches = "<a href=\"" + download_matches + "\" download>Download results</a>" + "<p>Found " + numlines + " matches.</p>" + "<pre>" + matches + "</pre>";
+            document.getElementById("obresults").innerHTML = html_matches;
           } else {
             document.getElementById("obresults").innerHTML = "<p>No matches found.</p>";
           }

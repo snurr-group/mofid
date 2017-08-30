@@ -1197,6 +1197,12 @@
     <div class="emscripten" id="status">Downloading...</div>
 
       <script type="text/javascript">
+        var lsdir = function(path) {
+          return FS.readdir(path).filter(function(e) {
+            return !['..', '.'].includes(e);  // filter out current and parent dirs
+          })
+        };
+
         var SmilesToSVG = function(cifdata) {
           C_obcode = Module.cwrap(
             'analyzeMOFc', 'null', ['string', 'number', 'number']
@@ -1223,11 +1229,44 @@
             if (mofid != "") {
               mofid = "<pre>" + mofid + "</pre>";
               document.getElementById("obresults").innerHTML = mofid;
+
+              var fileoptions = document.getElementById("cifdownload");
+              while (fileoptions.firstChild) {  // clear out available options
+                fileoptions.removeChild(fileoptions.firstChild);
+              }
+              var filelist = lsdir("/Test");
+              filelist.forEach(function(file) {
+                var option = document.createElement("option");
+                option.text = file;
+                option.value = file;
+                fileoptions.appendChild(option);
+              });
+              document.getElementById("resultsdownload").style.display = "block";
+
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
+              document.getElementById("resultsdownload").style.display = "none";
             }
           };
           cifreader.readAsText(ciffile);
+        }
+
+        handleDownload = function() {
+          var download_input = document.getElementById("cifdownload");
+          var filename = download_input.options[download_input.selectedIndex].value;
+          var filepath = "Test/" + filename;
+
+          var contents = FS.readFile(filepath, {'encoding': 'utf8'});
+          var download_contents = "data:text/plain;base64," + btoa(contents);
+
+          // Open download dialog using a temporary hidden link
+          var fakelink = document.createElement("a");
+          fakelink.setAttribute("href", download_contents);
+          fakelink.setAttribute("download", filename);
+          fakelink.style.display = "none";
+          document.body.appendChild(fakelink);
+          fakelink.click();
+          document.body.removeChild(fakelink);
         }
         </script>
 
@@ -1239,6 +1278,11 @@
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
             <span id="obresults"></span>
+<div id="resultsdownload" style="display: none;">
+Download results:
+<select id="cifdownload"><option value="temp">hi</option></select>
+<input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
+</div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
