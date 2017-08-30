@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch
+.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -11,6 +11,8 @@ bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sbu
 bin/sobgrep: src/sobgrep.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sobgrep
+bin/searchdb: src/searchdb.cpp openbabel/build/lib/cifformat.so
+	cd bin && make searchdb
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
@@ -36,7 +38,7 @@ Resources/External/Systre-1.2.0-beta2.jar:
 	cd Resources/External; \
 	wget https://github.com/odf/gavrog/releases/download/v0.6.0-beta2/Systre-1.2.0-beta2.jar
 
-setup:
+init:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
@@ -48,7 +50,41 @@ setup:
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
+
+eclipse:
+	cd bin; \
+	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
+
+# Emscripten web content below
+# In my current Windows setup, these must all be run within Git Bash
+# Not yet tested cross-platform in Linux
+init-web:
+	source Scripts/import_emscripten.sh; \
+	cd openbabel; \
+	mkdir embuild eminstall; \
+	cd embuild; \
+	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF; \
+	cd ../..; \
+	mkdir embin; \
+	cd embin; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"
+
+openbabel/embuild/obabel.js:
+	source Scripts/import_emscripten.sh; \
+	cd openbabel/embuild; \
+	emmake make; \
+	emmake make install
+
+web: embin/sbu.js html
+
+html: src/Web/*.html
+	cp $^ embin/
+
+embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
+	source Scripts/import_emscripten.sh; \
+	cd embin; \
+	emmake make
+

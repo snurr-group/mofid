@@ -15,6 +15,7 @@
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstring>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
@@ -35,13 +36,15 @@ typedef std::map<OBAtom*, std::vector<int> > UCMap;
 
 
 // Function prototypes
+std::string analyzeMOF(std::string filename);
+extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 OBMol initMOF(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
 void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
-void printFragments(const std::vector<std::string> &unique_smiles);
+std::string writeFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
@@ -173,11 +176,25 @@ int main(int argc, char* argv[])
 	// Per my objective, this only sets the environment within the scope of the sbu.exe program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
+	std::string mof_results = analyzeMOF(filename);
+	if (mof_results == "") {  // No MOFs found
+		return(1);
+	} else {
+		std::cout << mof_results;
+		return(0);
+	}
+}
+
+std::string analyzeMOF(std::string filename) {
+	// Extract components of the MOFid
+	// Reports nodes/linkers, number of nets found, and writes CIFs to Test/ directory
+
+	std::stringstream analysis;
 	OBMol orig_mol;
 	// Massively improving performance by skipping kekulization of the full MOF
 	if (!readCIF(&orig_mol, filename, false)) {
-		printf("Error reading file: %s", filename);
-		exit(1);
+		std::cerr << "Error reading file: %s" << filename << std::endl;
+		return "";
 	}
 
 	// Strip all of the original CIF labels, so they don't interfere with the automatically generated labels in the output
@@ -439,9 +456,9 @@ int main(int argc, char* argv[])
 
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
-	printFragments(uniqueSMILES(nodes.Separate(), obconv));
-	printFragments(uniqueSMILES(linkers.Separate(), obconv));
-	std::cout << "Found " << net_components.size() << " simplified net(s)";
+	analysis << writeFragments(uniqueSMILES(nodes.Separate(), obconv));
+	analysis << writeFragments(uniqueSMILES(linkers.Separate(), obconv));
+	analysis << "Found " << net_components.size() << " simplified net(s)";
 
 	// Write out the decomposed and simplified MOF, including bond orders
 	resetBonds(&nodes);
@@ -485,8 +502,23 @@ int main(int argc, char* argv[])
 	}
 	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
 
-	return(0);
+	return(analysis.str());
 }
+
+extern "C" {
+void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
+	// Wrap analyzeMOF with C compatibility for Emscripten usage
+	// Make the return value an input param, since c_str is (likely?) a pointer to
+	// an internal data structure in std::string, which will go out of scope.
+	// A good buflen for the output might be 2^16, or 65536
+	const char *TEMP_FILE = "from_emscripten.cif";
+	std::ofstream cifp(TEMP_FILE, std::ios::out | std::ios::trunc);
+	cifp << std::string(cifdata);
+	cifp.close();
+
+	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
+}
+}  // extern "C"
 
 
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
@@ -720,13 +752,15 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 	out_file.close();
 }
 
-void printFragments(const std::vector<std::string> &unique_smiles) {
+std::string writeFragments(const std::vector<std::string> &unique_smiles) {
 	// Write a list of fragments
 	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
 	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
+	std::stringstream fragments;
 	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
-		printf("%s", i2->c_str());
+		fragments << *i2;
 	}
+	return fragments.str();
 }
 
 std::string getSMILES(OBMol fragment, OBConversion obconv) {
@@ -812,6 +846,14 @@ void resetBonds(OBMol *mol) {
 	}
 
 	mol->PerceiveBondOrders();
+	FOR_BONDS_OF_MOL(b, *mol) {
+		if ( b->GetBeginAtom()->HasData("Paddlewheel")
+			&& b->GetEndAtom()->HasData("Paddlewheel")
+			&& b->GetBondOrder() == 3 ) {
+			b->SetBondOrder(1);  // Consider normalizing all M#M bonds similarly with isMetal condition
+		}
+	}
+
 	mol->EndModify();
 	normalizeCharges(mol);
 }
