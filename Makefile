@@ -25,7 +25,7 @@ openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/
 diff: ob_changes.patch
 
 ob_changes.patch:
-	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' > $@
+	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' ':!openbabel/test/*' > $@
 	# Lists my changes to the main OpenBabel code
 
 test: bin/sbu
