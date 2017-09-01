@@ -480,7 +480,6 @@ public:
   OB_STATIC_PLUGIN(CANSMIFormat, theCANSMIFormat)
   OB_STATIC_PLUGIN(FIXFormat, theFIXFormat)
   OB_STATIC_PLUGIN(SVGFormat, theSVGFormat)
-  OB_STATIC_PLUGIN(SystreFormat, theSystreFormat)
   OB_STATIC_PLUGIN(TextFormat, theTextFormat)
   OB_STATIC_PLUGIN(ThermoFormat, theThermoFormat)
   OB_STATIC_PLUGIN(TinkerFormat, theTinkerFormat)
