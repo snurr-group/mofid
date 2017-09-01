@@ -511,7 +511,6 @@ namespace OpenBabel
     //! \param cart1 First vector of cartesian coordinates
     //! \param cart2 Second vector of cartesian coordinates to be subtracted
     //! \return Cartesian difference accounting for cell boundaries
-    //! \todo Consider adding a method to give the direction between unit cells
     vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2);
     vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2) const;
     //! Calculates the difference of two fractional coordinates accounting for periodic boundaries.

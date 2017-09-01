@@ -1690,7 +1690,7 @@ namespace OpenBabel
             case 3:
               bond_type = "T";
               break;
-            case 5:
+            case 5:  // FIXME: this will be different in upstream code
               bond_type = "A";  // aromatic, per OBBond::_order
               break;
             default:

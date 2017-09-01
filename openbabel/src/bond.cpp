@@ -63,7 +63,6 @@ namespace OpenBabel
     _end=NULL;
     _vdata.clear();
     _parent=(OBMol*)NULL;
-    //_direction=(vector3*)NULL;  //FIXME
   }
 
   OBBond::~OBBond()
