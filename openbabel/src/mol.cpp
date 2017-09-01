@@ -3776,7 +3776,7 @@ namespace OpenBabel
     // Pass 1: Assign estimated hybridization based on avg. angles
     for (atom = BeginAtom(i);atom;atom = NextAtom(i))
       {
-        angle = atom->AverageBondAngle();  // FIXME with correct lengths
+        angle = atom->AverageBondAngle();
 
         //        cout << atom->GetAtomicNum() << " " << angle << endl;
 
