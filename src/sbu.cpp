@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 	// Per my objective, this only sets the environment within the scope of the sbu.exe program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
-	std::string mof_results = analyzeMOF(filename);
+	std::string mof_results = analyzeMOF(std::string(filename));
 	if (mof_results == "") {  // No MOFs found
 		return(1);
 	} else {
