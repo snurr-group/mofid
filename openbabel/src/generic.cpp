@@ -414,21 +414,29 @@ namespace OpenBabel
     return ref_loc + bond_dir;
   }
 
-  vector3 OBUnitCell::PBCCartesianDifference(vector3 cart1, vector3 cart2) const
+  vector3 OBUnitCell::MinimumImageCartesian(vector3 cart) const
   {
-    vector3 frac1 = CartesianToFractional(cart1);
-    vector3 frac2 = CartesianToFractional(cart2);
-    vector3 frac_diff = PBCFractionalDifference(frac1, frac2);
-    return FractionalToCartesian(frac_diff);
+    vector3 frac = CartesianToFractional(cart);
+    frac = MinimumImageFractional(frac);
+    return FractionalToCartesian(frac);
   }
 
-  vector3 OBUnitCell::PBCFractionalDifference(vector3 frac1, vector3 frac2) const
+  vector3 OBUnitCell::MinimumImageFractional(vector3 frac) const
   {
-    vector3 frac = frac1 - frac2;
     double x = frac.x() - round(frac.x());
     double y = frac.y() - round(frac.y());
     double z = frac.z() - round(frac.z());
     return vector3(x, y, z);
+  }
+
+  vector3 OBUnitCell::PBCCartesianDifference(vector3 cart1, vector3 cart2) const
+  {
+    return MinimumImageCartesian(cart1 - cart2);
+  }
+
+  vector3 OBUnitCell::PBCFractionalDifference(vector3 frac1, vector3 frac2) const
+  {
+    return MinimumImageFractional(frac1 - frac2);
   }
 
   OBUnitCell::LatticeType OBUnitCell::GetLatticeType( int spacegroup ) const
