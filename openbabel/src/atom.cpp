@@ -1229,7 +1229,6 @@ namespace OpenBabel
 
   double OBAtom::GetDistance(OBAtom *b)
   {
-    // TODO: consider implementing PBC for other GetDistance, GetAngle overloads
     if (!IsPeriodic())
       {
         return(( this->GetVector() - b->GetVector() ).length());
@@ -1244,7 +1243,7 @@ namespace OpenBabel
   double OBAtom::GetDistance(int b)
   {
     OBMol *mol = (OBMol*)GetParent();
-    return(( this->GetVector() - mol->GetAtom(b)->GetVector() ).length());
+    return( this->GetDistance(mol->GetAtom(b)) );
   }
 
   double OBAtom::GetDistance(vector3 *v)
