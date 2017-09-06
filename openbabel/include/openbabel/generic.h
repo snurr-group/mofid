@@ -514,21 +514,9 @@ namespace OpenBabel
     vector3 MinimumImageCartesian(vector3 cart) const;
     //! Applies the minimum image convention to a fractional displacement vector
     //! \param cart Displacement vector between two atoms in fractional coordinates
-    //! \return Fractional difference, wrapped within half the unit cell
+    //! \return Fractional difference, wrapped within half the unit cell (-0.5 to 0.5)
     vector3 MinimumImageFractional(vector3 frac);
     vector3 MinimumImageFractional(vector3 frac) const;
-    //! Calculates the difference of two Cartesian coordinates accounting for periodic boundaries.
-    //! \param cart1 First vector of cartesian coordinates
-    //! \param cart2 Second vector of cartesian coordinates to be subtracted
-    //! \return Cartesian difference accounting for cell boundaries
-    vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2);
-    vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2) const;
-    //! Calculates the difference of two fractional coordinates accounting for periodic boundaries.
-    //! \param cart1 First vector of fractional coordinates
-    //! \param cart2 Second vector of fractional coordinates to be subtracted
-    //! \return Fractional difference within half the unit cell (-0.5 to 0.5)
-    vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2);
-    vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2) const;
 
     //! \return The numeric value of the given spacegroup
     int GetSpaceGroupNumber( std::string name = "" );

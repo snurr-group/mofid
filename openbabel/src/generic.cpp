@@ -404,13 +404,13 @@ namespace OpenBabel
 
   vector3 OBUnitCell::UnwrapCartesianNear(vector3 new_loc, vector3 ref_loc) const
   {
-    vector3 bond_dir = PBCCartesianDifference(new_loc, ref_loc);
+    vector3 bond_dir = MinimumImageCartesian(new_loc - ref_loc);
     return ref_loc + bond_dir;
   }
 
   vector3 OBUnitCell::UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc) const
   {
-    vector3 bond_dir = PBCFractionalDifference(new_loc, ref_loc);
+    vector3 bond_dir = MinimumImageFractional(new_loc - ref_loc);
     return ref_loc + bond_dir;
   }
 
@@ -427,16 +427,6 @@ namespace OpenBabel
     double y = frac.y() - round(frac.y());
     double z = frac.z() - round(frac.z());
     return vector3(x, y, z);
-  }
-
-  vector3 OBUnitCell::PBCCartesianDifference(vector3 cart1, vector3 cart2) const
-  {
-    return MinimumImageCartesian(cart1 - cart2);
-  }
-
-  vector3 OBUnitCell::PBCFractionalDifference(vector3 frac1, vector3 frac2) const
-  {
-    return MinimumImageFractional(frac1 - frac2);
   }
 
   OBUnitCell::LatticeType OBUnitCell::GetLatticeType( int spacegroup ) const
@@ -700,6 +690,8 @@ namespace OpenBabel
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, CartesianToFractional, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapCartesianCoordinate, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, WrapFractionalCoordinate, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, MinimumImageCartesian, vector3);
+  OBUNITCELL_CALL_CONST_OVERLOAD_ARG(vector3, MinimumImageFractional, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG(int, GetSpaceGroupNumber, std::string);
   OBUNITCELL_CALL_CONST_OVERLOAD(double, GetCellVolume);
   // Based on OBUNITCELL_CALL_CONST_OVERLOAD_ARG above
@@ -710,8 +702,6 @@ namespace OpenBabel
   }
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapCartesianNear, vector3, vector3);
   OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, UnwrapFractionalNear, vector3, vector3);
-  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, PBCFractionalDifference, vector3, vector3);
-  OBUNITCELL_CALL_CONST_OVERLOAD_ARG2(vector3, PBCCartesianDifference, vector3, vector3);
 
   double OBUnitCell::GetA() const
   {

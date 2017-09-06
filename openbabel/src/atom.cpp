@@ -1229,6 +1229,7 @@ namespace OpenBabel
 
   double OBAtom::GetDistance(OBAtom *b)
   {
+    // TODO: consider implementing PBC for other GetDistance, GetAngle overloads
     if (!IsPeriodic())
       {
         return(( this->GetVector() - b->GetVector() ).length());
@@ -1236,7 +1237,7 @@ namespace OpenBabel
     else
       {
         OBUnitCell *box = ((OBMol*)GetParent())->GetPeriodicLattice();
-        return (box->PBCCartesianDifference(this->GetVector(), b->GetVector())).length();
+        return (box->MinimumImageCartesian(this->GetVector() - b->GetVector())).length();
       }
   }
 
@@ -1255,17 +1256,14 @@ namespace OpenBabel
   {
     vector3 v1,v2;
 
-    if (!IsPeriodic())
-      {
-        v1 = this->GetVector() - b->GetVector();
-        v2 = c->GetVector() - b->GetVector();
-      }
-    else
+    v1 = this->GetVector() - b->GetVector();
+    v2 = c->GetVector() - b->GetVector();
+    if (IsPeriodic())
       {
         OBMol *mol = (OBMol*)GetParent();
         OBUnitCell *box = (OBUnitCell*)mol->GetPeriodicLattice();
-        v1 = box->PBCCartesianDifference(this->GetVector(), b->GetVector());
-        v2 = box->PBCCartesianDifference(c->GetVector(), b->GetVector());
+        v1 = box->MinimumImageCartesian(v1);
+        v2 = box->MinimumImageCartesian(v2);
       }
 
     if (IsNearZero(v1.length(), 1.0e-3)
