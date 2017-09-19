@@ -81,7 +81,6 @@ std::vector<int> GetPeriodicDirection(OBBond *bond);
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
 const int X_CONN = 52;
-const double MAX_PADDLEWHEEL_DIST = 4.0;
 
 
 class ElementGen
@@ -835,13 +834,23 @@ void resetBonds(OBMol *mol) {
 	// Bond metal atoms in paddlewheels together
 	FOR_ATOMS_OF_MOL(a1, *mol) {
 		if (a1->HasData("Paddlewheel")) {
+			OBAtom* closest_pw = NULL;
+			double closest_dist = 100.0;
 			FOR_ATOMS_OF_MOL(a2, *mol) {
-				if ( a2->HasData("Paddlewheel")
-					&& &*a1 != &*a2
-					&& a1->GetDistance(&*a2) < MAX_PADDLEWHEEL_DIST
-					&& !mol->GetBond(&*a1, &*a2) ) {
-					formBond(mol, &*a1, &*a2);
+				if ( a2->HasData("Paddlewheel") && &*a1 != &*a2) {
+					double a2_dist = a1->GetDistance(&*a2);
+					if (a2_dist < closest_dist) {
+						closest_dist = a2_dist;
+						closest_pw = &*a2;
+					}
 				}
+			}
+			if (!closest_pw) {
+				if (mol->NumAtoms() > 1) {  // Do not raise a warning when taking the SMILES of an isolated metal atom
+					obErrorLog.ThrowError(__FUNCTION__, "Unable to reconnect a paddlewheel metal to its partner", obWarning);
+				}
+			} else if (!mol->GetBond(&*a1, closest_pw)) {
+				formBond(mol, &*a1, closest_pw);
 			}
 		}
 	}
