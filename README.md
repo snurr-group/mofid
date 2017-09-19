@@ -40,13 +40,6 @@ Generated the eclipse code hinting by running `cmake -G "Eclipse CDT4 - Unix Mak
 
 The [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.  Also see the [installation instructions](https://openbabel.org/docs/dev/Installation/install.html#local-build).  With the new makefile configurations, run `make openbabel/fast` to make a quick local build, and the new sbu Makefile will automatically compile against the local directory.
 
-### OpenBabel listserv
-Listserv entries discussing periodic boundary conditions.
-
-* [Periodic boundaries and atom typing large systems (UFF)](https://www.mail-archive.com/openbabel-discuss@lists.sourceforge.net/msg02002.html)
-* [OpenBabel and Periodic Systems (multiple molecules per OBMol)](https://sourceforge.net/p/openbabel/mailman/message/7048390/)
-* [Crystallography help (fractional-cartesian conversion matrix)](https://sourceforge.net/p/openbabel/mailman/message/7049196/)
-
 ### Emscripten installation notes
 In Windows, download the [portable Emscripten SDK](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html#platform-notes-installation-instructions-portable-sdk) and install using Git Bash.  The general process is described on the website:
 

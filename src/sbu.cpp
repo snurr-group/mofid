@@ -76,6 +76,7 @@ OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 bool normalizeCharges(OBMol *mol);
 bool detectPaddlewheels(OBMol *mol);
+std::vector<int> GetPeriodicDirection(OBBond *bond);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
@@ -176,7 +177,7 @@ int main(int argc, char* argv[])
 	// Per my objective, this only sets the environment within the scope of the sbu.exe program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
 
-	std::string mof_results = analyzeMOF(filename);
+	std::string mof_results = analyzeMOF(std::string(filename));
 	if (mof_results == "") {  // No MOFs found
 		return(1);
 	} else {
@@ -693,7 +694,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 	} else {
 		std::stringstream edge_centers;
 		FOR_BONDS_OF_MOL(b, *pmol) {
-			std::vector<int> bond_dir = b->GetPeriodicDirection();
+			std::vector<int> bond_dir = GetPeriodicDirection(&*b);
 			vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
 			vector3 begin = uc->CartesianToFractional(b->GetBeginAtom()->GetVector());
 			// For the second atom, we need to copy it to the correct unit cell with f_add
@@ -1423,7 +1424,7 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 		to_visit.pop();
 		FOR_NBORS_OF_ATOM(nbr, current) {
 			OBBond* nbr_bond = fragment->GetBond(current, &*nbr);
-			std::vector<int> uc = nbr_bond->GetPeriodicDirection();  // TODO: Consider implementing GetPeriodicDirection in atom.cpp as well
+			std::vector<int> uc = GetPeriodicDirection(nbr_bond);  // TODO: Is there a good way to remove this function?  Otherwise, add it as a MOF helper method
 			if (nbr_bond->GetBeginAtom() == &*nbr) {  // opposite bond direction as expected
 				uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
 			}
@@ -1748,4 +1749,33 @@ bool detectPaddlewheels(OBMol *mol) {
 		}
 	}
 	return found_pw;
+}
+
+std::vector<int> GetPeriodicDirection(OBBond *bond) {
+	// What is the unit cell of the end atom wrt the first?
+	// Returns {0,0,0} if not periodic or if wrapping is not required.
+
+	std::vector<int> direction;
+	direction.push_back(0);
+	direction.push_back(0);
+	direction.push_back(0);
+
+	if (bond->IsPeriodic())  // Otherwise, return all zeros
+	{
+		OBUnitCell *box = bond->GetParent()->GetPeriodicLattice();
+		vector3 begin, end_orig, end_expected, uc_direction;
+		begin = box->CartesianToFractional(bond->GetBeginAtom()->GetVector());
+		end_orig = box->CartesianToFractional(bond->GetEndAtom()->GetVector());
+		end_expected = box->UnwrapFractionalNear(end_orig, begin);
+
+		// To get the signs right, consider the example {0, 0.7}.  We want -1 as the periodic direction.
+		// TODO: Think about edge cases, particularly atoms on the border of the unit cell.
+		uc_direction = end_expected - end_orig;
+
+		for (int i = 0; i < 3; ++i) {
+			double raw_cell = uc_direction[i];
+			direction[i] = static_cast<int>(lrint(raw_cell));
+		}
+	}
+	return direction;
 }

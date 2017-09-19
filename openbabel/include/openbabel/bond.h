@@ -60,9 +60,7 @@ namespace OpenBabel
 #define OB_KTRIPLE_BOND   (1<<9)
   //! A bond which "closes" a ring when walking the molecular graph
 #define OB_CLOSURE_BOND   (1<<10)
-  //! A bond that crosses periodic boundaries
-#define OB_PERIODIC_BOND  (1<<13)
-  // 14-16 currently unused
+  // 11-16 currently unused
 
 #define OB_WEDGE_OR_HASH_BOND     (1<<11)
 #define OB_CIS_OR_TRANS_BOND     (1<<12)
@@ -75,7 +73,6 @@ namespace OpenBabel
       OBMol                      *_parent;//!< The molecule which contains me (if any)
       OBAtom                     *_bgn;   //!< I connect one node
       OBAtom                     *_end;   //!< to another node
-      //vector3                     _direction; //!< Direction of unit cells from start to end atom for periodicity
       char                        _order; //!< Bond order (1, 2, 3, 5=aromatic)
       unsigned short int          _flags; //!< Any flags for this bond
       unsigned long                 _id;        //!< unique id
@@ -174,8 +171,6 @@ namespace OpenBabel
           automatically by lazy evaluation when requesting
           OBBond::IsClosure() **/
       void SetClosure()     { SetFlag(OB_CLOSURE_BOND);  }
-      //! Mark that this bond crosses periodic unit cell boundaries
-      void SetPeriodic()    { SetFlag(OB_PERIODIC_BOND);}
       //! Clear any indication of 2D "hash" notation from SetHash()
       void UnsetHash()      { UnsetFlag(OB_HASH_BOND);    }
       //! Clear any indication of 2D "wedge" notation from SetWedge()
@@ -191,8 +186,6 @@ namespace OpenBabel
         {
           _flags &= (~(OB_KSINGLE_BOND|OB_KDOUBLE_BOND|OB_KTRIPLE_BOND));
         }
-      //! Clear all periodicity information for the bond
-      void UnsetPeriodic()  { UnsetFlag(OB_PERIODIC_BOND);}
       //@}
 
       //! \name Bond data request methods
@@ -235,9 +228,8 @@ namespace OpenBabel
       double  GetEquibLength() const;
       //! \return The current length of this bond in Angstroms
       //! \todo What is the effect of removing the "const" declaration?
+      //! \todo It appears the problem is that GetLength is const, but OBAtom::GetDistance is not because GetVector is not.
       double  GetLength();
-      //! \return The unit cell of the second atom wrt the first.  {0,0,0} if not periodic or wrapping not required.
-      std::vector<int> GetPeriodicDirection();
       //! \return The index to the neighboring atom of @p ptr (i.e., the end if @p ptr is the start)
       /** \warning If @p ptr is not part of the bond, the beginning atom
           index will always be returned **/
@@ -267,10 +259,10 @@ namespace OpenBabel
            For more detailed rotor detection, check the OBRotorList and
            OBRotorRules classes **/
       bool IsRotor();
-      //! \return Is the bond within a periodic unit cell?
-      bool IsPeriodic();
       /** \return Is the bond an amide link (i.e., between a carbonyl C and a N)?
            No distinction is made between primary, secondary, and tertiary amides. **/
+      bool IsPeriodic();
+      //! \return Is the bond within a periodic unit cell?
       bool IsAmide();
       /** \return Is the bond a primary amide (i.e., between carbonyl C and a NH2)?
            In versions prior to 2.3, this function incorrectly identified secondary amides. **/

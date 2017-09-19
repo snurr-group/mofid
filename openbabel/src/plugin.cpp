@@ -329,7 +329,6 @@ std::vector<std::string> EnableStaticPlugins()
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theCANSMIFormat)->GetID());
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theFIXFormat)->GetID());
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theSVGFormat)->GetID());
-  plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theSystreFormat)->GetID());
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theTextFormat)->GetID());
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theThermoFormat)->GetID());
   plugin_ids.push_back(reinterpret_cast<OBPlugin*>(&theTinkerFormat)->GetID());

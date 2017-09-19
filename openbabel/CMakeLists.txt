@@ -491,8 +491,6 @@ if (APPLE OR NOT BUILD_SHARED)
 else ()
   option(BUILD_GUI "Build the GUI" ON)
 endif()
-# Ben: disable GUI building by default
-set(BUILD_GUI OFF)
 
 if(BUILD_GUI)
   message(STATUS "Attempting to build the GUI")
