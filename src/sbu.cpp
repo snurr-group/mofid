@@ -162,7 +162,7 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 
 int main(int argc, char* argv[])
 {
-	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
+	obErrorLog.SetOutputLevel(obWarning);  // See also http://openbabel.org/wiki/Errors
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -1165,7 +1165,7 @@ int collapseXX(OBMol *net, int element_x) {
 					if (x_nbors.size() != 2) {  // Each X should have one additional neighbor
 						std::stringstream nborMsg;
 						nborMsg << "y-X-X-y should be 4 atoms.  Found " << 2 + x_nbors.size() << std::endl;
-						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obInfo);
+						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obWarning);
 					}
 					if (x_nbors.size() == 2 && x_nbors[0] == x_nbors[1]) {
 						// x1 and x2 are bonded to the same psuedo-atom (M-x1-x2-M').
@@ -1560,7 +1560,7 @@ bool isPeriodicChain(OBMol *mol) {
 		return false;
 	}
 	if (mol->Separate().size() != 1) {
-		obErrorLog.ThrowError(__FUNCTION__, "Not processing multi-fragment OBMol", obInfo);
+		obErrorLog.ThrowError(__FUNCTION__, "Not processing multi-fragment OBMol", obWarning);
 		return false;
 	}
 	// Unwrapping the fragment will return an empty map if there's UC inconsistencies,
@@ -1742,7 +1742,7 @@ bool detectPaddlewheels(OBMol *mol) {
 
 			candidate.BeginModify();
 			for (std::vector<OBBond*>::iterator it=adj_delete.begin(); it!=adj_delete.end(); ++it) {
-				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates", obInfo);
+				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates", obDebug);
 				candidate.DeleteBond(*it);
 			}
 			candidate.EndModify();
