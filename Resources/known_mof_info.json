@@ -32,6 +32,8 @@
 	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O-]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O-] f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
 	"hypotheticalMOF_22242_0_0_1_0_9_0" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_22242_0_0_1_0_9_0",
 	
+	"ABAVIJ_clean" : "[Co].[O-]C(=O)c1ccncc1 f1.rtl.cat0.F1.ABAVIJ_clean",
+	
 	"NADZEZ-713513-P1" : "[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-].[Y] f1.NEW.cat0.F1.NADZEZ-713513-P1",
 	
 	"COD_2100028" : "* f1.NA.no_mof.F1.COD_2100028",
@@ -47,6 +49,7 @@
 		"ADARAA_clean" : "Porphyrinic MOF, which requires inclusion of Co ions into the linkers.  Otherwise the topology is not found.",
 		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "pcu topology after bound solvents are removed/simplified",
 		"hypotheticalMOF_22242_0_0_1_0_9_0" : "pcu topology after correctly detecting neighboring paddlewheels (not xah topology)",
+		"ABAVIJ_clean" : "Paddlewheel detection code should differentiate the direction of carboxylates, making this NOT a PW",
 		"MIL-47-P1-RASPA" : "Basic proof-of-concept for rod-like topologies (specifically **rna** for this MOF)",
 		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"
 	},

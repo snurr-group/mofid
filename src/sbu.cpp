@@ -1710,33 +1710,50 @@ bool detectPaddlewheels(OBMol *mol) {
 	std::vector<std::vector<int> >::iterator i;
 	std::vector<int>::iterator j;
 	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
+		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		candidate.BeginModify();
 		std::vector<OBAtom*> pw_metals;
 		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms
 			OBAtom* curr_atom = mol->GetAtom(*j);
 			if (isMetal(curr_atom)) {
 				pw_metals.push_back(curr_atom);
 			}
+			formAtom(&candidate, curr_atom->GetVector(), curr_atom->GetAtomicNum());
 		}
+		candidate.EndModify();
+		resetBonds(&candidate);
+
+		// Delete OOC-COO bonds, which would only be present for adjacent paddlewheels
+		OBSmartsPattern adjacent_pw;
+		adjacent_pw.Init("OC(=O)C(=O)O");
+		if (adjacent_pw.Match(candidate)) {
+			std::vector<std::vector<int> > adjacent_maplist = adjacent_pw.GetUMapList();
+			std::vector<OBBond*> adj_delete;
+			std::vector<std::vector<int> >::iterator match_adj;
+
+			for (match_adj=adjacent_maplist.begin(); match_adj!=adjacent_maplist.end(); ++match_adj) {
+				OBAtom* c1 = candidate.GetAtom((*match_adj)[1]);
+				OBAtom* c2 = candidate.GetAtom((*match_adj)[3]);
+				if (c1->GetAtomicNum() != 6 || c2->GetAtomicNum() != 6) {
+					obErrorLog.ThrowError(__FUNCTION__, "Internal error: unexpected atom type matched in SMARTS pattern", obError);
+				}
+				adj_delete.push_back(candidate.GetBond(c1, c2));
+			}
+
+			candidate.BeginModify();
+			for (std::vector<OBBond*>::iterator it=adj_delete.begin(); it!=adj_delete.end(); ++it) {
+				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates", obInfo);
+				candidate.DeleteBond(*it);
+			}
+			candidate.EndModify();
+		}
+
 		if (pw_metals.size() != 2) {
 			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
 			return false;
 		}
 
-		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
-		candidate.BeginModify();
-		formAtom(&candidate, pw_metals[0]->GetVector(), pw_metals[0]->GetAtomicNum());
-		formAtom(&candidate, pw_metals[1]->GetVector(), pw_metals[1]->GetAtomicNum());
-		for (std::vector<OBAtom*>::iterator it=pw_metals.begin(); it!=pw_metals.end(); ++it) {
-			FOR_NBORS_OF_ATOM(n, *it) {
-				if (!atomInOtherMol(&*n, &candidate)) {
-					formAtom(&candidate, n->GetVector(), n->GetAtomicNum());
-				}
-			}
-		}
-		candidate.EndModify();
-		resetBonds(&candidate);
-
-		if (candidate.Separate().size() == 1 && isPeriodicChain(&candidate)) {
+		if (isPeriodicChain(&candidate)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Skipping paddlewheel assignment: match is an infinite rod", obDebug);
 		} else {
 			obErrorLog.ThrowError(__FUNCTION__, "Found a paddlewheel.  Assigining \"Paddlewheel\" attribute", obDebug);
