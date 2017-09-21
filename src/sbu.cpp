@@ -38,6 +38,7 @@ typedef std::map<OBAtom*, std::vector<int> > UCMap;
 // Function prototypes
 std::string analyzeMOF(std::string filename);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
+extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
 bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 OBMol initMOF(OBMol *orig_in_uc);
@@ -517,6 +518,36 @@ void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
 	cifp.close();
 
 	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
+}
+
+int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen) {
+	// From Noel O'Boyle: https://baoilleach.blogspot.com/2015/02/cheminformaticsjs-open-babel.html
+	// See also http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
+	OpenBabel::OBMol mol;
+	OpenBabel::OBConversion conv;
+	conv.SetInFormat("smi");
+
+	bool ok = conv.ReadString(&mol, smiles);
+	if (!ok) return -1;
+
+	if (options==0) {
+		conv.SetOutFormat("ascii");
+		conv.AddOption("a", OpenBabel::OBConversion::OUTOPTIONS, "2.2");
+
+	} else {
+		conv.SetOutFormat("svg");
+		conv.AddOption("C", OpenBabel::OBConversion::OUTOPTIONS);
+		conv.AddOption("P", OpenBabel::OBConversion::OUTOPTIONS, "500");
+	}
+
+	std::string out = conv.WriteString(&mol);
+
+	if (out.size()+1 >= buflen)
+			return -1;
+
+	char* dst = (char*)mbuf;
+	strcpy(dst, out.c_str());
+	return out.size();
 }
 }  // extern "C"
 
