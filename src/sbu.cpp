@@ -1773,7 +1773,7 @@ bool detectPaddlewheels(OBMol *mol) {
 
 			candidate.BeginModify();
 			for (std::vector<OBBond*>::iterator it=adj_delete.begin(); it!=adj_delete.end(); ++it) {
-				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates", obDebug);
+				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates in candidate match", obDebug);
 				candidate.DeleteBond(*it);
 			}
 			candidate.EndModify();

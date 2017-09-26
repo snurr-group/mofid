@@ -1,5 +1,5 @@
 # MOFid
-Toward a universal MOF identifier
+A system for rapid identification and analysis of metal-organic frameworks
 
 ## Objective
 **Supplement** the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches.  Accomplish this goal by representing MOFs according to their nodes + linkers + topology
@@ -20,6 +20,8 @@ Toward a universal MOF identifier
 * Only P1 CIFs are recognized.  Symmetry operations are not applied
 * Structures are read as-is.  Hydrogens are not (yet) automatically added
 * The HTML (emscripten) interface is still a bare-bones proof-of-concept.  Visualization and potential integration with MOF Explorer is still necessary.
+* The topology of **rht** MOFs cannot be determined, even as **ntt**, because there are sets of paddlewheels containing the same neighbor list.  Systre complains about overlapping barycentric coordinates because these vertices in the simplified net appear redundant (even though we want there to be two separate PW).  See also the structure `rht_sym_3_on_0_sym_24_mc_13__.cif`.
+* Only cis/trans chirality is implemented for the linkers.  Tetrahedral (and octahedral) chirality is ignored due to sensitivity to the node geometry (and possibly a remaining bug in stereo for linkers).  This might be something the user can manually override when generating the MOFid, if enantiomerically pure components are used.
 
 ### Major bugs
 * Handling of formal charges, which is recommended for SMILES and even InChI.  Currently only carboxylates and certain nitrogen rings are handled by SMARTS pattern recognition.
