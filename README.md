@@ -9,6 +9,7 @@ A system for rapid identification and analysis of metal-organic frameworks
 * Give background on validating MOFid code against ToBaCCo and GA MOFs.
 * Include paper outline somewhere?
 * Clean up repo and comb through old known issues and potentially useful papers for additional validation.
+* Test more non-P1 CIFs to test symmetry operations
 
 ## Known issues (incomplete list)
 ### Technical questions
@@ -17,7 +18,6 @@ A system for rapid identification and analysis of metal-organic frameworks
 * Further consideration of how nodes are defined.  Metal oxides?  This question may change the assigned topology and simplification of some structures.
 
 ### Missing features
-* Only P1 CIFs are recognized.  Symmetry operations are not applied
 * Structures are read as-is.  Hydrogens are not (yet) automatically added
 * The HTML (emscripten) interface is still a bare-bones proof-of-concept.  Visualization and potential integration with MOF Explorer is still necessary.
 * The topology of **rht** MOFs cannot be determined, even as **ntt**, because there are sets of paddlewheels containing the same neighbor list.  Systre complains about overlapping barycentric coordinates because these vertices in the simplified net appear redundant (even though we want there to be two separate PW).  See also the structure `rht_sym_3_on_0_sym_24_mc_13__.cif`.

@@ -39,7 +39,7 @@ typedef std::map<OBAtom*, std::vector<int> > UCMap;
 std::string analyzeMOF(std::string filename);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true, bool makeP1 = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 OBMol initMOF(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
@@ -552,19 +552,37 @@ int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen
 }  // extern "C"
 
 
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 	// Read the first distinguished molecule from a CIF file
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
 	obconversion.AddOption("p", OBConversion::INOPTIONS);
-	if (!bond_orders) {
-		obconversion.AddOption("s", OBConversion::INOPTIONS);
-	}
-	// Can disable bond detection as a diagnostic:
-	// obconversion.AddOption("s", OBConversion::INOPTIONS);
+	// Defer bond detection until later, once symmetry options are applied
+	obconversion.AddOption("b", OBConversion::INOPTIONS);
 	bool success = obconversion.ReadFile(molp, filepath);
+
+	if (success && makeP1) {
+		// TODO: Consider adding a disorder removal step ("*" and "?" atom labels like CoRE MOF) before applying symmetry operations
+		// OBUnitCell* uc = molp->GetPeriodicLattice();  // Can't use GetPeriodicLattice because it's not the standard unit cell data
+		// This may get fixed if my PBC implementation is changed to use a single copy of UC data instead of copying it separately.
+		OBUnitCell* uc = (OBUnitCell*)molp->GetData(OBGenericDataType::UnitCell);
+		if (!uc) {
+			obErrorLog.ThrowError(__FUNCTION__, "Attempted to convert the CIF to P1 without a proper unit cell.", obError);
+			success = false;
+		} else {
+			obErrorLog.ThrowError(__FUNCTION__, "Applying symmetry operations to convert the MOF to P1 (or keep it as P1).", obDebug);
+			uc->FillUnitCell(molp);
+			molp->SetPeriodicLattice(uc);  // FIXME: temporary fix for lattice data, until it's decided in the upstream project
+		}
+	}
+
+	molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
 	detectPaddlewheels(molp);
+	if (bond_orders) {
+		molp->PerceiveBondOrders();
+	}
+
 	return success;
 }
 

@@ -24,6 +24,7 @@
 	"ic101935f_si_002_tobacco" : "[O-]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O-])Nc1ccc(cc1)C(=O)[O-].[Zn]O([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
 	
 	"MIL-47-P1-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-P1-RASPA",
+	"MIL-47-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-RASPA",
 	
 	"hypotheticalMOF_27262_1_0_2_9_9_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)C(=O)[O-].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_27262_1_0_2_9_9_0",
 	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[O-]C(=O)C=CC=CC(=O)[O-] f1.fcu.cat0.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
@@ -51,6 +52,7 @@
 		"hypotheticalMOF_22242_0_0_1_0_9_0" : "pcu topology after correctly detecting neighboring paddlewheels (not xah topology)",
 		"ABAVIJ_clean" : "Paddlewheel detection code should differentiate the direction of carboxylates, making this NOT a PW",
 		"MIL-47-P1-RASPA" : "Basic proof-of-concept for rod-like topologies (specifically **rna** for this MOF)",
+		"MIL-47-RASPA" : "Proof-of-concept for applying symmetry operations to non-P1 MOFs",
 		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"
 	},
 	
