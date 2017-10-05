@@ -1264,6 +1264,7 @@
           var invertSearch = document.getElementById("inverseclick").checked==true;
           var smartsQuery = document.getElementById("smartsinput").value;
           var rcsrQuery = document.getElementById("rcsrinput").value;
+          var catQuery = document.getElementById("catenation").value;
 
           var matches_raw = runSearch(smartsQuery, invertSearch);
           var matches = matches_raw.split(/r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
@@ -1271,6 +1272,15 @@
           if (rcsrQuery != "") {
             matches = matches.filter(function(mofid) {
               return filterTopology(mofid, rcsrQuery, false);
+            });
+          }
+
+          if (catQuery != "unused") {
+            if (catQuery == "null") {
+              catQuery = null;
+            }
+            matches = matches.filter(function(mofid) {
+              return parseMOFid(mofid).cat == catQuery;
             });
           }
 
@@ -1293,7 +1303,16 @@
 <p>Substructure query (SMILES or SMARTS): <input type="text" name="smartsinput" id="smartsinput"></input>
 <input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
 <p>RCSR topology: <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
-<p>Catenation (TBD):</p>
+<p>Catenation:
+<select id="catenation">
+  <option value="unused">(unused)</option>
+  <option value="0">Uncatenated</option>
+  <option value="1">2 nets total</option>
+  <option value="2">3 nets total</option>
+  <option value="3">4 nets total</option>
+  <option value="null">No MOFs identified</option>
+</select>
+</p>
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
             <span id="obresults"></span>
