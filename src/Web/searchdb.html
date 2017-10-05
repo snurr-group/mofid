@@ -1202,16 +1202,80 @@
             'runSearchc', 'null', ['string', 'string', 'number', 'string']
           );
 
+          var input_file = "/ob_datadir/core.smi";
           var results_file = "search_results.smi";
-          C_obcode(query, "/ob_datadir/core.smi", invert_selection, results_file);
+          if (query != "") {
+            C_obcode(query, input_file, invert_selection, results_file);
+          } else {
+            results_file = input_file;  // return everything
+          }
 
           return FS.readFile(results_file, {'encoding': 'utf8'});
         };
+
+        var parseMOFid = function(mofid) {
+          // Converted from extract_moffles.py:parse_moffles
+          var components = mofid.split(/\t| /);
+          if (components.length == 1) {
+            throw 'Attempted to parse invalid MOFid ' + mofid;
+          } else if (components.length > 2) {
+            throw 'FIXME: parseMOFid currently does not support spaces in common names.';
+          }
+          var smiles = components[0];
+          var metadata = components[1].split('.');
+
+          var mof_name = null;
+          var cat = null;
+          var topology = null;
+          for (var i=0; i<metadata.length; i++) {
+            var tag = metadata[i];
+            if (i == 0 && tag != 'f1') {
+              throw 'MOFid v1 must start with the tag "f1"';
+            }
+            if (tag == 'F1') {
+              mof_name = metadata.slice(i+1).join('.');
+              break;
+            }
+            if (tag.toLowerCase().startsWith('cat')) {
+              cat = tag.slice(3);  // end arg is optional.  Extracts through the end
+            } else {
+              topology = tag;
+            }
+          }
+
+          return {
+            smiles: smiles,
+            topology: topology,
+            cat: cat,
+            mof_name: mof_name
+          };
+        }
+
+        var filterTopology = function(mofid, topology, invert) {
+          var mof_topology = parseMOFid(mofid).topology;
+          if (invert) {
+            return (mof_topology != topology);
+          } else {
+            return (mof_topology == topology);
+          }
+        }
+
         handleInput = function() {
           var invertSearch = document.getElementById("inverseclick").checked==true;
           var smartsQuery = document.getElementById("smartsinput").value;
-          var matches = runSearch(smartsQuery, invertSearch);
-          var numlines = matches.split(/r\n|\r|\n/g).length - 1;  // matches end in a newline
+          var rcsrQuery = document.getElementById("rcsrinput").value;
+
+          var matches_raw = runSearch(smartsQuery, invertSearch);
+          var matches = matches_raw.split(/r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
+
+          if (rcsrQuery != "") {
+            matches = matches.filter(function(mofid) {
+              return filterTopology(mofid, rcsrQuery, false);
+            });
+          }
+
+          var numlines = matches.length;
+          matches = matches.join('\n');  // defaults to UNIX line endings, which is fine tbh
           if (matches != "") {
             var download_matches = "data:text/plain;base64," + btoa(matches);
             var html_matches = "<a href=\"" + download_matches + "\" download>Download results</a>" + "<p>Found " + numlines + " matches.</p>" + "<pre>" + matches + "</pre>";
@@ -1225,8 +1289,11 @@
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-            Enter substructure query (SMILES or SMARTS): <input type="text" name="smartsinput" id="smartsinput"></input>
-<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input>
+<p>CoRE MOF search (blank fields are ignored)</p>
+<p>Substructure query (SMILES or SMARTS): <input type="text" name="smartsinput" id="smartsinput"></input>
+<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
+<p>RCSR topology: <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
+<p>Catenation (TBD):</p>
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
             <span id="obresults"></span>
