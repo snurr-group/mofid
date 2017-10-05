@@ -38,7 +38,8 @@ typedef std::map<OBAtom*, std::vector<int> > UCMap;
 // Function prototypes
 std::string analyzeMOF(std::string filename);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true);
+extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true, bool makeP1 = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
 OBMol initMOF(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
@@ -81,7 +82,6 @@ std::vector<int> GetPeriodicDirection(OBBond *bond);
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
 const int X_CONN = 52;
-const double MAX_PADDLEWHEEL_DIST = 4.0;
 
 
 class ElementGen
@@ -163,7 +163,7 @@ bool inVector(const T &element, const std::vector<T> &vec) {
 
 int main(int argc, char* argv[])
 {
-	obErrorLog.SetOutputLevel(obInfo);  // See also http://openbabel.org/wiki/Errors
+	obErrorLog.SetOutputLevel(obWarning);  // See also http://openbabel.org/wiki/Errors
 	char* filename;
 	filename = argv[1];  // TODO: Check usage later
 
@@ -519,22 +519,70 @@ void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
 
 	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
 }
+
+int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen) {
+	// From Noel O'Boyle: https://baoilleach.blogspot.com/2015/02/cheminformaticsjs-open-babel.html
+	// See also http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
+	OpenBabel::OBMol mol;
+	OpenBabel::OBConversion conv;
+	conv.SetInFormat("smi");
+
+	bool ok = conv.ReadString(&mol, smiles);
+	if (!ok) return -1;
+
+	if (options==0) {
+		conv.SetOutFormat("ascii");
+		conv.AddOption("a", OpenBabel::OBConversion::OUTOPTIONS, "2.2");
+
+	} else {
+		conv.SetOutFormat("svg");
+		conv.AddOption("C", OpenBabel::OBConversion::OUTOPTIONS);
+		conv.AddOption("P", OpenBabel::OBConversion::OUTOPTIONS, "500");
+	}
+
+	std::string out = conv.WriteString(&mol);
+
+	if (out.size()+1 >= buflen)
+			return -1;
+
+	char* dst = (char*)mbuf;
+	strcpy(dst, out.c_str());
+	return out.size();
+}
 }  // extern "C"
 
 
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders) {
+bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 	// Read the first distinguished molecule from a CIF file
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
 	obconversion.SetInFormat("mmcif");
 	obconversion.AddOption("p", OBConversion::INOPTIONS);
-	if (!bond_orders) {
-		obconversion.AddOption("s", OBConversion::INOPTIONS);
-	}
-	// Can disable bond detection as a diagnostic:
-	// obconversion.AddOption("s", OBConversion::INOPTIONS);
+	// Defer bond detection until later, once symmetry options are applied
+	obconversion.AddOption("b", OBConversion::INOPTIONS);
 	bool success = obconversion.ReadFile(molp, filepath);
+
+	if (success && makeP1) {
+		// TODO: Consider adding a disorder removal step ("*" and "?" atom labels like CoRE MOF) before applying symmetry operations
+		// OBUnitCell* uc = molp->GetPeriodicLattice();  // Can't use GetPeriodicLattice because it's not the standard unit cell data
+		// This may get fixed if my PBC implementation is changed to use a single copy of UC data instead of copying it separately.
+		OBUnitCell* uc = (OBUnitCell*)molp->GetData(OBGenericDataType::UnitCell);
+		if (!uc) {
+			obErrorLog.ThrowError(__FUNCTION__, "Attempted to convert the CIF to P1 without a proper unit cell.", obError);
+			success = false;
+		} else {
+			obErrorLog.ThrowError(__FUNCTION__, "Applying symmetry operations to convert the MOF to P1 (or keep it as P1).", obDebug);
+			uc->FillUnitCell(molp);
+			molp->SetPeriodicLattice(uc);  // FIXME: temporary fix for lattice data, until it's decided in the upstream project
+		}
+	}
+
+	molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
 	detectPaddlewheels(molp);
+	if (bond_orders) {
+		molp->PerceiveBondOrders();
+	}
+
 	return success;
 }
 
@@ -835,13 +883,23 @@ void resetBonds(OBMol *mol) {
 	// Bond metal atoms in paddlewheels together
 	FOR_ATOMS_OF_MOL(a1, *mol) {
 		if (a1->HasData("Paddlewheel")) {
+			OBAtom* closest_pw = NULL;
+			double closest_dist = 100.0;
 			FOR_ATOMS_OF_MOL(a2, *mol) {
-				if ( a2->HasData("Paddlewheel")
-					&& &*a1 != &*a2
-					&& a1->GetDistance(&*a2) < MAX_PADDLEWHEEL_DIST
-					&& !mol->GetBond(&*a1, &*a2) ) {
-					formBond(mol, &*a1, &*a2);
+				if ( a2->HasData("Paddlewheel") && &*a1 != &*a2) {
+					double a2_dist = a1->GetDistance(&*a2);
+					if (a2_dist < closest_dist) {
+						closest_dist = a2_dist;
+						closest_pw = &*a2;
+					}
 				}
+			}
+			if (!closest_pw) {
+				if (mol->NumAtoms() > 1) {  // Do not raise a warning when taking the SMILES of an isolated metal atom
+					obErrorLog.ThrowError(__FUNCTION__, "Unable to reconnect a paddlewheel metal to its partner", obWarning);
+				}
+			} else if (!mol->GetBond(&*a1, closest_pw)) {
+				formBond(mol, &*a1, closest_pw);
 			}
 		}
 	}
@@ -1156,7 +1214,7 @@ int collapseXX(OBMol *net, int element_x) {
 					if (x_nbors.size() != 2) {  // Each X should have one additional neighbor
 						std::stringstream nborMsg;
 						nborMsg << "y-X-X-y should be 4 atoms.  Found " << 2 + x_nbors.size() << std::endl;
-						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obInfo);
+						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obWarning);
 					}
 					if (x_nbors.size() == 2 && x_nbors[0] == x_nbors[1]) {
 						// x1 and x2 are bonded to the same psuedo-atom (M-x1-x2-M').
@@ -1551,7 +1609,7 @@ bool isPeriodicChain(OBMol *mol) {
 		return false;
 	}
 	if (mol->Separate().size() != 1) {
-		obErrorLog.ThrowError(__FUNCTION__, "Not processing multi-fragment OBMol", obInfo);
+		obErrorLog.ThrowError(__FUNCTION__, "Not processing multi-fragment OBMol", obWarning);
 		return false;
 	}
 	// Unwrapping the fragment will return an empty map if there's UC inconsistencies,
@@ -1701,33 +1759,50 @@ bool detectPaddlewheels(OBMol *mol) {
 	std::vector<std::vector<int> >::iterator i;
 	std::vector<int>::iterator j;
 	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
+		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		candidate.BeginModify();
 		std::vector<OBAtom*> pw_metals;
 		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms
 			OBAtom* curr_atom = mol->GetAtom(*j);
 			if (isMetal(curr_atom)) {
 				pw_metals.push_back(curr_atom);
 			}
+			formAtom(&candidate, curr_atom->GetVector(), curr_atom->GetAtomicNum());
 		}
+		candidate.EndModify();
+		resetBonds(&candidate);
+
+		// Delete OOC-COO bonds, which would only be present for adjacent paddlewheels
+		OBSmartsPattern adjacent_pw;
+		adjacent_pw.Init("OC(=O)C(=O)O");
+		if (adjacent_pw.Match(candidate)) {
+			std::vector<std::vector<int> > adjacent_maplist = adjacent_pw.GetUMapList();
+			std::vector<OBBond*> adj_delete;
+			std::vector<std::vector<int> >::iterator match_adj;
+
+			for (match_adj=adjacent_maplist.begin(); match_adj!=adjacent_maplist.end(); ++match_adj) {
+				OBAtom* c1 = candidate.GetAtom((*match_adj)[1]);
+				OBAtom* c2 = candidate.GetAtom((*match_adj)[3]);
+				if (c1->GetAtomicNum() != 6 || c2->GetAtomicNum() != 6) {
+					obErrorLog.ThrowError(__FUNCTION__, "Internal error: unexpected atom type matched in SMARTS pattern", obError);
+				}
+				adj_delete.push_back(candidate.GetBond(c1, c2));
+			}
+
+			candidate.BeginModify();
+			for (std::vector<OBBond*>::iterator it=adj_delete.begin(); it!=adj_delete.end(); ++it) {
+				obErrorLog.ThrowError(__FUNCTION__, "Deleted bond between adjacent paddlewheel carboxylates in candidate match", obDebug);
+				candidate.DeleteBond(*it);
+			}
+			candidate.EndModify();
+		}
+
 		if (pw_metals.size() != 2) {
 			obErrorLog.ThrowError(__FUNCTION__, "Inconsistent paddlewheel match without two metal atoms", obError);
 			return false;
 		}
 
-		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
-		candidate.BeginModify();
-		formAtom(&candidate, pw_metals[0]->GetVector(), pw_metals[0]->GetAtomicNum());
-		formAtom(&candidate, pw_metals[1]->GetVector(), pw_metals[1]->GetAtomicNum());
-		for (std::vector<OBAtom*>::iterator it=pw_metals.begin(); it!=pw_metals.end(); ++it) {
-			FOR_NBORS_OF_ATOM(n, *it) {
-				if (!atomInOtherMol(&*n, &candidate)) {
-					formAtom(&candidate, n->GetVector(), n->GetAtomicNum());
-				}
-			}
-		}
-		candidate.EndModify();
-		resetBonds(&candidate);
-
-		if (candidate.Separate().size() == 1 && isPeriodicChain(&candidate)) {
+		if (isPeriodicChain(&candidate)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Skipping paddlewheel assignment: match is an infinite rod", obDebug);
 		} else {
 			obErrorLog.ThrowError(__FUNCTION__, "Found a paddlewheel.  Assigining \"Paddlewheel\" attribute", obDebug);

@@ -1203,7 +1203,24 @@
           })
         };
 
-        var SmilesToSVG = function(cifdata) {
+        var SmilesToSVG = function(smiles, createSVG) {
+          // From Noel O'Boyle: https://baoilleach.blogspot.com/2015/02/cheminformaticsjs-open-babel.html
+          // See also http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
+          C_SmilesToSVG = Module.cwrap(
+            'SmilesToSVG', 'number', ['string', 'number', 'number', 'number']
+          );
+
+          var buflen = 65536;
+          var ptr = Module._malloc(buflen);
+          var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
+          var length = C_SmilesToSVG(smiles, createSVG, ptr, buflen);
+          if (length == -1) return "";
+          var ans = Module.Pointer_stringify(ptr);
+          Module._free(ptr);
+          return ans;
+        };
+
+        var getMOFid = function(cifdata) {
           C_obcode = Module.cwrap(
             'analyzeMOFc', 'null', ['string', 'number', 'number']
           );
@@ -1220,15 +1237,22 @@
           Module._free(ptr);
           return ans;
         };
+
+        var rawToSmiles = function(raw_mofid) {
+          // Converts the raw output from the MOFid code to a parseable SMILES format
+          var lines = raw_mofid.replace(/\t/g, '').split(/r\n|\r|\n/g);  // remove trailing tabs before splitting
+          lines.pop();  // remove line about number of simplified nets
+          return lines.join('.');
+        }
+
         handleInput = function() {
           var ciffile = document.getElementById("cifloader").files[0];
           document.getElementById("obresults").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
           var cifreader = new FileReader();
           cifreader.onload = function(event) {
-            var mofid = SmilesToSVG(event.target.result);
+            var mofid = getMOFid(event.target.result);
             if (mofid != "") {
-              mofid = "<pre>" + mofid + "</pre>";
-              document.getElementById("obresults").innerHTML = mofid;
+              document.getElementById("obresults").innerHTML = "<pre>" + mofid + "</pre>";
 
               var fileoptions = document.getElementById("cifdownload");
               while (fileoptions.firstChild) {  // clear out available options
@@ -1243,9 +1267,13 @@
               });
               document.getElementById("resultsdownload").style.display = "block";
 
+              var svg = SmilesToSVG(rawToSmiles(mofid), true);
+              document.getElementById("svgimage").innerHTML = svg;
+
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
               document.getElementById("resultsdownload").style.display = "none";
+              document.getElementById("svgimage").innerHTML = "";
             }
           };
           cifreader.readAsText(ciffile);
@@ -1283,6 +1311,8 @@ Download results:
 <select id="cifdownload"><option value="temp">hi</option></select>
 <input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
 </div>
+
+<span id="svgimage"></span>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
