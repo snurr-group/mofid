@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Emscripten-Generated Code</title>
+    <!-- See installation instructions for kekule.js for ways to reduce file requirements: http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/installation.html -->
+    <script src="kekule/kekule.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="kekule/themes/default/kekule.css" />
     <style>
       body {
         font-family: arial;
@@ -1260,7 +1263,7 @@
           }
         }
 
-        handleInput = function() {
+        var handleInput = function() {
           var invertSearch = document.getElementById("inverseclick").checked==true;
           var smartsQuery = document.getElementById("smartsinput").value;
           var rcsrQuery = document.getElementById("rcsrinput").value;
@@ -1294,6 +1297,23 @@
             document.getElementById("obresults").innerHTML = "<p>No matches found.</p>";
           }
         };
+
+        var transferQuery = function() {
+          //var kekule_mols = getComposer().exportObjs(Kekule.Molecule);
+          // Thankfully, getComposer is defined in partridgejiang.github.io/Kekule.js/documents/tutorial/examples/composer.html
+          var getComposer = function() {
+            return Kekule.Widget.getWidgetById('composer');
+          }
+          var kekule_mols = getComposer().exportObjs(Kekule.Molecule);
+          var drawn_structure = '';
+          if (kekule_mols.length > 1) {
+            alert('Too many molecules drawn.');
+          } else if (kekule_mols.length == 1) {
+            drawn_structure = Kekule.IO.saveFormatData(kekule_mols[0], 'smi');
+          }  // else if zero, default of empty ''
+          document.getElementById("smartsinput").value = drawn_structure;
+          return true;
+        }
         </script>
 
             <div class="emscripten">
@@ -1313,6 +1333,11 @@
   <option value="null">No MOFs identified</option>
 </select>
 </p>
+
+<!-- See kekule.js documentation at http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/composer.html -->
+<div id="composer" style="width:600px;height:400px" data-widget="Kekule.Editor.Composer"></div>
+<input type="submit" value="Transfer substructure query to box" id="transfer" onclick="transferQuery()"></input>
+
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
             <span id="obresults"></span>
