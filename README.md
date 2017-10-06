@@ -10,6 +10,7 @@ A system for rapid identification and analysis of metal-organic frameworks
 * Include paper outline somewhere?
 * Clean up repo and comb through old known issues and potentially useful papers for additional validation.
 * Test more non-P1 CIFs to test symmetry operations
+* Add license info for MOFid, Open Babel, kekule.js, etc.
 
 ## Known issues (incomplete list)
 ### Technical questions

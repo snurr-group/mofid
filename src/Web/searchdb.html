@@ -4,6 +4,31 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Emscripten-Generated Code</title>
+    <!-- See installation instructions for kekule.js for ways to reduce file requirements: http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/installation.html -->
+    <script src="kekule/kekule.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="kekule/themes/default/kekule.css" />
+    <style>
+      /* See modal example and advice at https://css-tricks.com/considerations-styling-modal/ */
+      .modal {
+        display: block;
+        z-index: 100;
+        position: fixed;
+        /*left: 50%;*/
+        top: 50%;
+        /* transform: translate(-50%, -50%); */  /* Centers without knowing the width/height */
+        left: 5%;
+        transform: translate(0, -50%);
+
+        padding: 20px;
+        border: 3px solid #a7bb3c;
+        background: white;
+      }
+
+      .modal.closed {
+        display: none;
+      }
+    </style>
+    <!-- old boilerplate -->
     <style>
       body {
         font-family: arial;
@@ -1202,16 +1227,94 @@
             'runSearchc', 'null', ['string', 'string', 'number', 'string']
           );
 
+          var input_file = "/ob_datadir/core.smi";
           var results_file = "search_results.smi";
-          C_obcode(query, "/ob_datadir/core.smi", invert_selection, results_file);
+          if (query != "") {
+            C_obcode(query, input_file, invert_selection, results_file);
+          } else {
+            results_file = input_file;  // return everything
+          }
 
           return FS.readFile(results_file, {'encoding': 'utf8'});
         };
-        handleInput = function() {
+
+        var parseMOFid = function(mofid) {
+          // Converted from extract_moffles.py:parse_moffles
+          var components = mofid.split(/\t| /);
+          if (components.length == 1) {
+            throw 'Attempted to parse invalid MOFid ' + mofid;
+          } else if (components.length > 2) {
+            throw 'FIXME: parseMOFid currently does not support spaces in common names.';
+          }
+          var smiles = components[0];
+          var metadata = components[1].split('.');
+
+          var mof_name = null;
+          var cat = null;
+          var topology = null;
+          for (var i=0; i<metadata.length; i++) {
+            var tag = metadata[i];
+            if (i == 0 && tag != 'f1') {
+              throw 'MOFid v1 must start with the tag "f1"';
+            }
+            if (tag == 'F1') {
+              mof_name = metadata.slice(i+1).join('.');
+              break;
+            }
+            if (tag.toLowerCase().startsWith('cat')) {
+              cat = tag.slice(3);  // end arg is optional.  Extracts through the end
+            } else {
+              topology = tag;
+            }
+          }
+
+          return {
+            smiles: smiles,
+            topology: topology,
+            cat: cat,
+            mof_name: mof_name
+          };
+        }
+
+        var filterTopology = function(mofid, topology, invert) {
+          var mof_topology = parseMOFid(mofid).topology;
+          if (invert) {
+            return (mof_topology != topology);
+          } else {
+            return (mof_topology == topology);
+          }
+        }
+
+        var getInput = function(html_id) {
+          return document.getElementById(html_id).value.trim();  // strip whitespace at begin/end
+        }
+
+        var handleInput = function() {
           var invertSearch = document.getElementById("inverseclick").checked==true;
-          var smartsQuery = document.getElementById("smartsinput").value;
-          var matches = runSearch(smartsQuery, invertSearch);
-          var numlines = matches.split(/r\n|\r|\n/g).length - 1;  // matches end in a newline
+          var smartsQuery = getInput("smartsinput");
+          var rcsrQuery = getInput("rcsrinput");
+          var catQuery = getInput("catenation");
+
+          var matches_raw = runSearch(smartsQuery, invertSearch);
+          var matches = matches_raw.split(/r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
+
+          if (rcsrQuery != "") {
+            matches = matches.filter(function(mofid) {
+              return filterTopology(mofid, rcsrQuery, false);
+            });
+          }
+
+          if (catQuery != "unused") {
+            if (catQuery == "null") {
+              catQuery = null;
+            }
+            matches = matches.filter(function(mofid) {
+              return parseMOFid(mofid).cat == catQuery;
+            });
+          }
+
+          var numlines = matches.length;
+          matches = matches.join('\n');  // defaults to UNIX line endings, which is fine tbh
           if (matches != "") {
             var download_matches = "data:text/plain;base64," + btoa(matches);
             var html_matches = "<a href=\"" + download_matches + "\" download>Download results</a>" + "<p>Found " + numlines + " matches.</p>" + "<pre>" + matches + "</pre>";
@@ -1220,13 +1323,71 @@
             document.getElementById("obresults").innerHTML = "<p>No matches found.</p>";
           }
         };
+
+        var transferQuery = function() {
+          //var kekule_mols = getComposer().exportObjs(Kekule.Molecule);
+          // Thankfully, getComposer is defined in partridgejiang.github.io/Kekule.js/documents/tutorial/examples/composer.html
+          var getComposer = function() {
+            return Kekule.Widget.getWidgetById('composer');
+          }
+          var kekule_mols = getComposer().exportObjs(Kekule.Molecule);
+          var drawn_structure = '';
+          if (kekule_mols.length > 1) {
+            alert('Too many molecules drawn.');
+            return false;
+          } else if (kekule_mols.length == 1) {
+            drawn_structure = Kekule.IO.saveFormatData(kekule_mols[0], 'smi');
+          }  // else if zero, default of empty ''
+          document.getElementById("smartsinput").value = drawn_structure;
+          return true;
+        }
+
+        var openKekule = function() {
+          // show the modal box for kekule.js
+          var modal = document.getElementById('structure-modal');
+          modal.classList.toggle('closed');
+        }
+        var closeKekule = function() {
+          // close the modal box.  Turns out we can toggle, just like open.
+          openKekule();
+        }
+
+        var transferQueryAndClose = function() {
+          if (transferQuery()) {
+            closeKekule();
+          }
+        }
         </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-            Enter substructure query (SMILES or SMARTS): <input type="text" name="smartsinput" id="smartsinput"></input>
-<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input>
+<h3>CoRE MOF search (blank fields are ignored)</h3>
+<p><b>Substructure:</b> Enter SMILES/SMARTS or <input type="submit" value="draw query" onclick="openKekule()"></input>
+<input type="text" name="smartsinput" id="smartsinput"></input>
+<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
+<p><b>RCSR topology:</b> <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
+<p><b>Catenation:</b>
+<select id="catenation">
+  <option value="unused">(unused)</option>
+  <option value="0">Uncatenated</option>
+  <option value="1">2 nets total</option>
+  <option value="2">3 nets total</option>
+  <option value="3">4 nets total</option>
+  <option value="null">No MOFs identified</option>
+</select>
+</p>
+
+<div class="modal closed" id="structure-modal">
+<!-- See kekule.js documentation at http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/composer.html -->
+<h3>Substructure query</h3>
+<div class="query-buttons" style="clear:both;margin-bottom:1em;">
+<input type="submit" value="Accept query" id="transfer" onclick="transferQueryAndClose()"></input>
+<input type="submit" value="Cancel" id="cancel-query" onclick="closeKekule()"></input>
+</div>
+<div id="composer" style="width:600px;height:400px;" data-widget="Kekule.Editor.Composer"></div>
+</div>
+
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
             <span id="obresults"></span>
