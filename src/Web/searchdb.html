@@ -8,6 +8,28 @@
     <script src="kekule/kekule.min.js"></script>
     <link rel="stylesheet" type="text/css" href="kekule/themes/default/kekule.css" />
     <style>
+      /* See modal example and advice at https://css-tricks.com/considerations-styling-modal/ */
+      .modal {
+        display: block;
+        z-index: 100;
+        position: fixed;
+        /*left: 50%;*/
+        top: 50%;
+        /* transform: translate(-50%, -50%); */  /* Centers without knowing the width/height */
+        left: 5%;
+        transform: translate(0, -50%);
+
+        padding: 20px;
+        border: 3px solid #a7bb3c;
+        background: white;
+      }
+
+      .modal.closed {
+        display: none;
+      }
+    </style>
+    <!-- old boilerplate -->
+    <style>
       body {
         font-family: arial;
         margin: 0;
@@ -1308,22 +1330,40 @@
           var drawn_structure = '';
           if (kekule_mols.length > 1) {
             alert('Too many molecules drawn.');
+            return false;
           } else if (kekule_mols.length == 1) {
             drawn_structure = Kekule.IO.saveFormatData(kekule_mols[0], 'smi');
           }  // else if zero, default of empty ''
           document.getElementById("smartsinput").value = drawn_structure;
           return true;
         }
+
+        var openKekule = function() {
+          // show the modal box for kekule.js
+          var modal = document.getElementById('structure-modal');
+          modal.classList.toggle('closed');
+        }
+        var closeKekule = function() {
+          // close the modal box.  Turns out we can toggle, just like open.
+          openKekule();
+        }
+
+        var transferQueryAndClose = function() {
+          if (transferQuery()) {
+            closeKekule();
+          }
+        }
         </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
             </div>
-<p>CoRE MOF search (blank fields are ignored)</p>
-<p>Substructure query (SMILES or SMARTS): <input type="text" name="smartsinput" id="smartsinput"></input>
+<h3>CoRE MOF search (blank fields are ignored)</h3>
+<p><b>Substructure:</b> Enter SMILES/SMARTS or <input type="submit" value="draw query" onclick="openKekule()"></input>
+<input type="text" name="smartsinput" id="smartsinput"></input>
 <input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
-<p>RCSR topology: <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
-<p>Catenation:
+<p><b>RCSR topology:</b> <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
+<p><b>Catenation:</b>
 <select id="catenation">
   <option value="unused">(unused)</option>
   <option value="0">Uncatenated</option>
@@ -1334,9 +1374,15 @@
 </select>
 </p>
 
+<div class="modal closed" id="structure-modal">
 <!-- See kekule.js documentation at http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/composer.html -->
-<div id="composer" style="width:600px;height:400px" data-widget="Kekule.Editor.Composer"></div>
-<input type="submit" value="Transfer substructure query to box" id="transfer" onclick="transferQuery()"></input>
+<h3>Substructure query</h3>
+<div class="query-buttons" style="clear:both;margin-bottom:1em;">
+<input type="submit" value="Accept query" id="transfer" onclick="transferQueryAndClose()"></input>
+<input type="submit" value="Cancel" id="cancel-query" onclick="closeKekule()"></input>
+</div>
+<div id="composer" style="width:600px;height:400px;" data-widget="Kekule.Editor.Composer"></div>
+</div>
 
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
 <br/>
