@@ -69,7 +69,10 @@ init-web:
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"; \
+	mkdir kekule; \
+	cd kekule; \
+	unzip ../../Resources/kekule.release.0.7.5.170624.zip
 
 openbabel/embuild/obabel.js:
 	source Scripts/import_emscripten.sh; \
