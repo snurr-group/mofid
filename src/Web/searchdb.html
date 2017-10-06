@@ -1285,11 +1285,15 @@
           }
         }
 
+        var getInput = function(html_id) {
+          return document.getElementById(html_id).value.trim();  // strip whitespace at begin/end
+        }
+
         var handleInput = function() {
           var invertSearch = document.getElementById("inverseclick").checked==true;
-          var smartsQuery = document.getElementById("smartsinput").value;
-          var rcsrQuery = document.getElementById("rcsrinput").value;
-          var catQuery = document.getElementById("catenation").value;
+          var smartsQuery = getInput("smartsinput");
+          var rcsrQuery = getInput("rcsrinput");
+          var catQuery = getInput("catenation");
 
           var matches_raw = runSearch(smartsQuery, invertSearch);
           var matches = matches_raw.split(/r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
