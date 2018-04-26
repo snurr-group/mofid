@@ -28,6 +28,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 void copyAtom(OBAtom* src, OBMol* dest);
 OBMol initMOF(OBMol *orig_in_uc);
+OBUnitCell* getPeriodicLattice(OBMol *mol);
 
 
 int main(int argc, char* argv[])
@@ -115,8 +116,12 @@ void copyAtom(OBAtom* src, OBMol* dest) {
 OBMol initMOF(OBMol *orig_in_uc) {
 	// Initializes a MOF with the same lattice params as *orig_in_uc
 	OBMol dest;
-	dest.SetPeriodicLattice(orig_in_uc->GetPeriodicLattice());
-	dest.SetData(dest.GetPeriodicLattice()->Clone(NULL));
+	dest.SetData(getPeriodicLattice(orig_in_uc)->Clone(NULL));
+	dest.SetPeriodicMol();
 	return dest;
 }
 
+OBUnitCell* getPeriodicLattice(OBMol *mol) {
+	// (temporary) replacement for the old OBMol.GetPeriodicLattice helper function
+	return (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
+}

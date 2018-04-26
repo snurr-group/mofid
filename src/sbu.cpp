@@ -78,6 +78,7 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
 bool normalizeCharges(OBMol *mol);
 bool detectPaddlewheels(OBMol *mol);
 std::vector<int> GetPeriodicDirection(OBBond *bond);
+OBUnitCell* getPeriodicLattice(OBMol *mol);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
@@ -564,16 +565,13 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 
 	if (success && makeP1) {
 		// TODO: Consider adding a disorder removal step ("*" and "?" atom labels like CoRE MOF) before applying symmetry operations
-		// OBUnitCell* uc = molp->GetPeriodicLattice();  // Can't use GetPeriodicLattice because it's not the standard unit cell data
-		// This may get fixed if my PBC implementation is changed to use a single copy of UC data instead of copying it separately.
 		OBUnitCell* uc = (OBUnitCell*)molp->GetData(OBGenericDataType::UnitCell);
 		if (!uc) {
 			obErrorLog.ThrowError(__FUNCTION__, "Attempted to convert the CIF to P1 without a proper unit cell.", obError);
 			success = false;
 		} else {
 			obErrorLog.ThrowError(__FUNCTION__, "Applying symmetry operations to convert the MOF to P1 (or keep it as P1).", obDebug);
-			uc->FillUnitCell(molp);
-			molp->SetPeriodicLattice(uc);  // FIXME: temporary fix for lattice data, until it's decided in the upstream project
+			uc->FillUnitCell(molp);  // since we're operating on a pointer, internal changes to UC should happen automatically
 		}
 	}
 
@@ -599,8 +597,8 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 OBMol initMOF(OBMol *orig_in_uc) {
 	// Initializes a MOF with the same lattice params as *orig_in_uc
 	OBMol dest;
-	dest.SetPeriodicLattice(orig_in_uc->GetPeriodicLattice());
-	dest.SetData(dest.GetPeriodicLattice()->Clone(NULL));
+	dest.SetData(getPeriodicLattice(orig_in_uc)->Clone(NULL));
+	dest.SetPeriodicMol();
 	return dest;
 }
 
@@ -657,7 +655,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 	std::ofstream ofs;
 	ofs.open(filepath.c_str());
 
-	OBUnitCell* uc = pmol->GetPeriodicLattice();
+	OBUnitCell* uc = getPeriodicLattice(pmol);
 
 	// Write header for the molecule
 	std::string indent = "  ";
@@ -860,12 +858,14 @@ void resetBonds(OBMol *mol) {
 		orig_atoms.push(sa);
 	}
 
-	OBUnitCell uc_copy = *mol->GetPeriodicLattice();
+	OBUnitCell uc_copy = *getPeriodicLattice(mol);
 	mol->Clear();
-	mol->SetPeriodicLattice(&uc_copy);
+	// Need to allocate memory so it's a new copy that won't go out of scope
 	OBUnitCell* uc_data = new OBUnitCell;
 	*uc_data = uc_copy;
 	mol->SetData(uc_data);
+	mol->SetPeriodicMol();
+
 	mol->BeginModify();
 	while (!orig_atoms.empty()) {
 		MinimalAtom curr_atom = orig_atoms.front();
@@ -1125,7 +1125,7 @@ OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) 
 			// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
 			// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
 			// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
-			OBUnitCell* lattice = mol->GetPeriodicLattice();
+			OBUnitCell* lattice = getPeriodicLattice(mol);
 			OBAtom* external_atom = (*it)[0];
 			OBAtom* internal_atom = (*it)[1];
 
@@ -1184,7 +1184,7 @@ int collapseXX(OBMol *net, int element_x) {
 	// Simplify X-X bonds in the simplified net with their midpoint
 	// Returns the number of X-X bonds simplified
 	int simplifications = 0;
-	OBUnitCell* lattice = net->GetPeriodicLattice();
+	OBUnitCell* lattice = getPeriodicLattice(net);
 
 	net->BeginModify();
 	bool new_simplification = true;
@@ -1532,7 +1532,7 @@ bool unwrapFragmentMol(OBMol* fragment) {
 		std::vector<int> uc_shift = it->second;
 
 		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
-		vector3 coord_shift = fragment->GetPeriodicLattice()->FractionalToCartesian(uc_shift_frac);
+		vector3 coord_shift = getPeriodicLattice(fragment)->FractionalToCartesian(uc_shift_frac);
 		curr_atom->SetVector(curr_atom->GetVector() + coord_shift);
 	}
 	return true;
@@ -1561,7 +1561,7 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 
 	// The more complicated periodic case requires "unwrapping" the molecular fragment
 	UCMap unit_cells = unwrapFragmentUC(fragment, true, true);
-	OBUnitCell* lattice = fragment->GetPeriodicLattice();
+	OBUnitCell* lattice = getPeriodicLattice(fragment);
 	for (UCMap::iterator it=unit_cells.begin(); it!=unit_cells.end(); ++it) {
 		double weight = 1.0;
 		if (weighted) {
@@ -1590,7 +1590,7 @@ vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted) {
 		wt_2 = a2->GetAtomicMass();
 	}
 
-	OBUnitCell* lattice = a1->GetParent()->GetPeriodicLattice();
+	OBUnitCell* lattice = getPeriodicLattice(a1->GetParent());
 	if (lattice) {
 		vector3 a2_unwrap = lattice->UnwrapCartesianNear(a2_raw, a1_raw);
 		return lattice->WrapCartesianCoordinate((wt_1 * a1_raw + wt_2 * a2_unwrap) / (wt_1 + wt_2));
@@ -1837,7 +1837,7 @@ std::vector<int> GetPeriodicDirection(OBBond *bond) {
 
 	if (bond->IsPeriodic())  // Otherwise, return all zeros
 	{
-		OBUnitCell *box = bond->GetParent()->GetPeriodicLattice();
+		OBUnitCell *box = getPeriodicLattice(bond->GetParent());
 		vector3 begin, end_orig, end_expected, uc_direction;
 		begin = box->CartesianToFractional(bond->GetBeginAtom()->GetVector());
 		end_orig = box->CartesianToFractional(bond->GetEndAtom()->GetVector());
@@ -1853,4 +1853,9 @@ std::vector<int> GetPeriodicDirection(OBBond *bond) {
 		}
 	}
 	return direction;
+}
+
+OBUnitCell* getPeriodicLattice(OBMol *mol) {
+	// Replacement for the old OBMol.GetPeriodicLattice helper function
+	return (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
 }
