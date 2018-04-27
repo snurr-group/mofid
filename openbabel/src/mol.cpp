@@ -3583,7 +3583,6 @@ namespace OpenBabel
               {
                 atom1 = vector3(c[idx1*3], c[idx1*3+1], c[idx1*3+2]);
                 atom2 = vector3(c[idx2*3], c[idx2*3+1], c[idx2*3+2]);
-                //(OBUnitCell * ) GetData(OBGenericDataType::UnitCell);
                 OBUnitCell *unitCell = (OBUnitCell * ) GetData(OBGenericDataType::UnitCell);
                 wrapped_coords = unitCell->MinimumImageCartesian(atom1 - atom2);
                 d2 = wrapped_coords.length_2();
