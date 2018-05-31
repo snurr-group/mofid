@@ -6,8 +6,12 @@ Calculate possible MOFFLES for a database
 Use a list of CIF filenames to print the expected MOFFLES based on the
 "recipe," mostly for the hMOFs or GA currently.
 
-TODO: Consider extending this to other MOF databases, such as GA.
-Though figuring out what to do with functionalization might be tricky.
+Long-term, we could consider extending this to other MOF databases, such as
+the GA MOFs.  But there are multiple things that could prove difficult about
+the implementation: functionalization is inexact, the notation/positioning
+for nitrogen-terminated vs. carboxylate linkers is indeterminate, topologies
+aren't necessarily what you would expect, etc.  So let's focus on the ToBaCCo
+MOFs for generating linker SMILES, for now.
 
 @author: Ben Bucior
 """
