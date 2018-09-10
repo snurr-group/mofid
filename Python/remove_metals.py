@@ -12,27 +12,18 @@ including organic linkers (no metals).
 
 import os, sys
 
-import cheminformatics
+import extract_metals
 
 def usage():
 	print "Usage: python remove_metals.py smiles_part.tsv > smiles_nonmetals.tsv"
 	exit()
 
-# Establish a list of nonmetals based on sbu.cpp
-# For now, let's disallow metals within the organic linkers, for simplicity
-NONMETALS = [1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 32, 33, 34, 35, 36, 52, 53, 54, 85, 86]
-def isMetal(atom_obj):
-	# Operates like sbu.cpp:isMetal, but on a pybel atom instead of OBAtom*
-	# The atom is classified as a metal if it's not a "nonmetal"
-	return not(atom_obj.atomicnum in NONMETALS)
-
 def contains_metal(smiles):
 	# Does a SMILES entry contain a metal anywhere?
-	mol = cheminformatics.pybel.readstring("smi", smiles)
-	for atom in mol:
-		if isMetal(atom):
-			return True
-	return False  # default if no metals found
+	if len(extract_metals.get_metals(smiles)) > 0:
+		return True
+	else:
+		return False
 
 
 if __name__ == "__main__":
