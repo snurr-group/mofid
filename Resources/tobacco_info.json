@@ -79,11 +79,13 @@
 	"functionalization" : {},
 	"_known_issues" : {
 		"sym_3_on_1" : "Incorrect perception of central nitrogen-containing ring",
+		"sym_3_on_4" : "Not actually an aromatic ring (can only generate with a radical)",
 		"L_1"        : "Bent vs. straight linkers in nbob_sym_5_mc_2_sym_5_mc_2_L_1",
 		"L_2"        : "Similar inconsistency in double bond formation, but likely torsional?",
 		"L_4"        : "Many kekulization errors in Open Babel since the structure needs a net charge or another hydrogen",
 		"L_14 and L_15" : "Again we have conformers.  Currently they're listed without stereo in the database here",
 		"L_18"       : "Four inconsistent representations",
-		"L_22"       : "Many kekulization errors in this NU-1000 foundation"
+		"L_22"       : "Many kekulization errors in this NU-1000 foundation",
+		"citation"   : "Note that this set of ToBaCCo components comes from the 2016 paper (10.1039/C6EE02104B), not the 2017 algorithmic version"
 	}
 }
