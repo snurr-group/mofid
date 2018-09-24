@@ -1,0 +1,10 @@
+{
+    "files.exclude": {
+        "**/build": true,
+        "**/embin": true,
+        "**/embuild": true,
+        "**/eminstall": true,
+        "Data/": true,
+        "Notebooks": true
+    }
+}
