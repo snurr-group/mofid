@@ -924,7 +924,6 @@ void detectSingleBonds(OBMol *mol, double skin) {
 	// Replaces OBMol::ConnectTheDots with a function that does less processing
 	// By default, the skin (beyond sum of covalent radii) is set to 0.45 AA to match Open Babel.
 	// This version avoids difficulties from inconsistent valence cleanup, or maximum valence constraints.
-	// TODO: consider adding a bool cleanup_valence parameter to recreate Open Babel's heuristics
 
 	const bool USE_OB_SINGLE_DOTS = true;
 	if (USE_OB_SINGLE_DOTS) {
@@ -936,6 +935,7 @@ void detectSingleBonds(OBMol *mol, double skin) {
 	// Note that the change in the Zr node isn't surprising based on the depiction in Mercury.
 	// Also note that there is now a segfault in structures like Data/RingCIFs/MIL-47-P1-RASPA.cif
 	// TODO: the root cause appears to be H-H "bonding" between adjacent linkers.  WIP
+	// Note: the N^2 algorithm may be less efficient than Open Babel's version: https://www.slideshare.net/NextMoveSoftware/rdkit-gems
 
 	const double MIN_DISTANCE = 0.40;
 	obErrorLog.ThrowError(__FUNCTION__,
@@ -1733,7 +1733,11 @@ OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	// TODO: decide how to handle cases where the bond already exists.
 	// Overwrite existing bonds?  Make it, as long as it's a different periodic direction??
 	OBBond* pseudo_link = NULL;
-	if (!mol->GetBond(begin, end)) {
+	if (!begin || !end) {  // either atom is NULL
+		obErrorLog.ThrowError(__FUNCTION__, "begin or end OBAtom is undefined", obError);
+	} else if (mol->GetBond(begin, end)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
+	} else {
 		pseudo_link = mol->NewBond();
 		pseudo_link->SetBegin(begin);
 		pseudo_link->SetEnd(end);
@@ -1742,8 +1746,6 @@ OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 		// Otherwise, our OBAtomAtomIter will not operate properly (bonds will not propagate back to the atoms).
 		begin->AddBond(pseudo_link);
 		end->AddBond(pseudo_link);
-	} else {
-		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
 	}
 	return pseudo_link;
 }
