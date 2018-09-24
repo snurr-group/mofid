@@ -50,6 +50,7 @@ std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
+void detectSingleBonds(OBMol *mol, double skin = 0.45);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
@@ -577,7 +578,8 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 		}
 	}
 
-	molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
+	//molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
+	detectSingleBonds(molp);
 	detectPaddlewheels(molp);
 	if (bond_orders) {
 		molp->PerceiveBondOrders();
@@ -879,7 +881,8 @@ void resetBonds(OBMol *mol) {
 		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
 	}
 
-	mol->ConnectTheDots();
+	//mol->ConnectTheDots();
+	detectSingleBonds(mol);
 	// Bond metal atoms in paddlewheels together
 	FOR_ATOMS_OF_MOL(a1, *mol) {
 		if (a1->HasData("Paddlewheel")) {
@@ -915,6 +918,52 @@ void resetBonds(OBMol *mol) {
 
 	mol->EndModify();
 	normalizeCharges(mol);
+}
+
+void detectSingleBonds(OBMol *mol, double skin) {
+	// Replaces OBMol::ConnectTheDots with a function that does less processing
+	// By default, the skin (beyond sum of covalent radii) is set to 0.45 AA to match Open Babel.
+	// This version avoids difficulties from inconsistent valence cleanup, or maximum valence constraints.
+	// TODO: consider adding a bool cleanup_valence parameter to recreate Open Babel's heuristics
+
+	const bool USE_OB_SINGLE_DOTS = true;
+	if (USE_OB_SINGLE_DOTS) {
+		mol->ConnectTheDots();
+		return;
+	}
+	// Note: this code is currently broken.  I'm trying to diagnose why the simplification is adding two nets
+	// when running make bin/sbu && bin/sbu Data/RingCIFs/super_csq_sym_5_mc_2_sym_8_mc_9_L_12.cif
+	// Note that the change in the Zr node isn't surprising based on the depiction in Mercury.
+	// Also note that there is now a segfault in structures like Data/RingCIFs/MIL-47-P1-RASPA.cif
+	// TODO: the root cause appears to be H-H "bonding" between adjacent linkers.  WIP
+
+	const double MIN_DISTANCE = 0.40;
+	obErrorLog.ThrowError(__FUNCTION__,
+                          "Ran custom detectSingleBonds", obAuditMsg);
+	std::vector< std::pair<OBAtom*, vector3> > positions;
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		std::pair<OBAtom*, vector3> atom_pos(&*a, a->GetVector());
+		positions.push_back(atom_pos);
+		// TODO: probably need a couple vectors instead of atom IDs, indicies, and rad's
+	}
+	int num_atoms = positions.size();
+
+	for (int i = 0; i < num_atoms; ++i) {
+		OBAtom* a1 = positions[i].first;
+		double rad1 = etab.GetCovalentRad(a1->GetAtomicNum());
+		for (int j = i+1; j < num_atoms; ++j) {
+			OBAtom* a2 = positions[j].first;
+			double rad2 = etab.GetCovalentRad(a2->GetAtomicNum());
+			double cutoff = rad1 + rad2 + skin;
+			double r = a1->GetDistance(a2);
+			if (r < cutoff && r > MIN_DISTANCE) {
+				if (!(a1->IsConnected(a2))) {
+					mol->AddBond(a1->GetIdx(), a2->GetIdx(), 1);
+				}
+			}
+		}
+	}
+
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
