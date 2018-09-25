@@ -1835,9 +1835,9 @@ bool detectPaddlewheels(OBMol *mol) {
 		candidate.EndModify();
 		resetBonds(&candidate);
 
-		// Delete OOC-COO bonds, which would only be present for adjacent paddlewheels
+		// Delete OOC=COO bonds, which would only be present for adjacent paddlewheels
 		OBSmartsPattern adjacent_pw;
-		adjacent_pw.Init("OC(=O)C(=O)O");
+		adjacent_pw.Init("OC(O)=C(O)O");
 		if (adjacent_pw.Match(candidate)) {
 			std::vector<std::vector<int> > adjacent_maplist = adjacent_pw.GetUMapList();
 			std::vector<OBBond*> adj_delete;

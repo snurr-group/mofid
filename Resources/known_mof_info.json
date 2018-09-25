@@ -32,6 +32,7 @@
 	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O-]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_5026325_3_0_0_27_27_0",
 	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "[O-]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
 	"hypotheticalMOF_22242_0_0_1_0_9_0" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_22242_0_0_1_0_9_0",
+	"super_hMOF_22242" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.super_hMOF_22242",
 	
 	"ABAVIJ_clean" : "[Co].[O-]C(=O)c1ccncc1 f1.rtl.cat0.F1.ABAVIJ_clean",
 	
@@ -58,6 +59,7 @@
 	
 	"_info" : {
 		"NADZEZ-713513-P1" : "CoRE MOF 1.0 structure to test solvent removal.  Also tests the O=[Y] bond.",
-		"COD_2100028" : "non-MOF to test the check for catenation"
+		"COD_2100028" : "non-MOF to test the check for catenation",
+		"super_hMOF_22242" : "Differentiate between issues in general paddlewheel detection code and small unit cells (which also contain oxalic acid).  Both should give **pcu** if operating properly, **xah** otherwise."
 	}
 }
