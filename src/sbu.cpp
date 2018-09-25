@@ -50,7 +50,7 @@ std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
-void detectSingleBonds(OBMol *mol, double skin = 0.45);
+void detectSingleBonds(OBMol *mol, double skin = 0.45, bool only_override_oxygen = true);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
@@ -920,22 +920,14 @@ void resetBonds(OBMol *mol) {
 	normalizeCharges(mol);
 }
 
-void detectSingleBonds(OBMol *mol, double skin) {
-	// Replaces OBMol::ConnectTheDots with a function that does less processing
+void detectSingleBonds(OBMol *mol, double skin, bool only_override_oxygen) {
+	// Enhances OBMol::ConnectTheDots by also allowing certain cases to exceed maximum valence.
 	// By default, the skin (beyond sum of covalent radii) is set to 0.45 AA to match Open Babel.
-	// This version avoids difficulties from inconsistent valence cleanup, or maximum valence constraints.
+	// If only_override_oxygen, the only nodular oxygen species get extra valence.  Otherwise, everything.
+	// TODO: consider running M-M bonds as another special case besides oxygen.
+	// TODO: might also analyze nodes only using using single bonds to avoid related issues with bond order.
 
-	const bool USE_OB_SINGLE_DOTS = false;
-	if (USE_OB_SINGLE_DOTS) {
-		mol->ConnectTheDots();
-		return;
-	}
-	// Note: this code is currently broken.  I'm trying to diagnose why the simplification is adding two nets
-	// when running make bin/sbu && bin/sbu Data/RingCIFs/super_csq_sym_5_mc_2_sym_8_mc_9_L_12.cif
-	// Note that the change in the Zr node isn't surprising based on the depiction in Mercury.
-	// Also note that there is now a segfault in structures like Data/RingCIFs/MIL-47-P1-RASPA.cif
-	// TODO: the root cause appears to be H-H "bonding" between adjacent linkers.  WIP
-	// Note: the N^2 algorithm may be less efficient than Open Babel's version: https://www.slideshare.net/NextMoveSoftware/rdkit-gems
+	mol->ConnectTheDots();
 
 	const double MIN_DISTANCE = 0.40;
 	obErrorLog.ThrowError(__FUNCTION__,
@@ -948,20 +940,37 @@ void detectSingleBonds(OBMol *mol, double skin) {
 	}
 	int num_atoms = atoms.size();
 
+	// Note: the N^2 algorithm may be less efficient than Open Babel's version:
+	// https://www.slideshare.net/NextMoveSoftware/rdkit-gems
 	for (int i = 0; i < num_atoms; ++i) {
 		OBAtom* a1 = atoms[i];
+		if (only_override_oxygen && a1->GetAtomicNum() != 8) {
+			continue;
+		}
+		std::vector<OBAtom*> nbors_to_bond;
+		bool bonded_to_metal = false;
+
 		for (int j = i+1; j < num_atoms; ++j) {
 			OBAtom* a2 = atoms[j];
 			double r = a1->GetDistance(a2);
 			double cutoff = rads[i] + rads[j] + skin;
+
 			if (r < cutoff && r > MIN_DISTANCE) {
+				if (isMetal(a2)) {
+					bonded_to_metal = true;
+				}
 				if (!(a1->IsConnected(a2))) {
-					mol->AddBond(a1->GetIdx(), a2->GetIdx(), 1);
+					nbors_to_bond.push_back(a2);
 				}
 			}
 		}
-	}
 
+		if (!only_override_oxygen || bonded_to_metal) {
+			for (std::vector<OBAtom*>::iterator it = nbors_to_bond.begin(); it != nbors_to_bond.end(); ++it) {
+				mol->AddBond(a1->GetIdx(), (*it)->GetIdx(), 1);
+			}
+		}
+	}
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
