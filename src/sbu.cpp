@@ -925,7 +925,7 @@ void detectSingleBonds(OBMol *mol, double skin) {
 	// By default, the skin (beyond sum of covalent radii) is set to 0.45 AA to match Open Babel.
 	// This version avoids difficulties from inconsistent valence cleanup, or maximum valence constraints.
 
-	const bool USE_OB_SINGLE_DOTS = true;
+	const bool USE_OB_SINGLE_DOTS = false;
 	if (USE_OB_SINGLE_DOTS) {
 		mol->ConnectTheDots();
 		return;
@@ -940,22 +940,20 @@ void detectSingleBonds(OBMol *mol, double skin) {
 	const double MIN_DISTANCE = 0.40;
 	obErrorLog.ThrowError(__FUNCTION__,
                           "Ran custom detectSingleBonds", obAuditMsg);
-	std::vector< std::pair<OBAtom*, vector3> > positions;
+	std::vector<OBAtom*> atoms;
+	std::vector<double> rads;
 	FOR_ATOMS_OF_MOL(a, *mol) {
-		std::pair<OBAtom*, vector3> atom_pos(&*a, a->GetVector());
-		positions.push_back(atom_pos);
-		// TODO: probably need a couple vectors instead of atom IDs, indicies, and rad's
+		atoms.push_back(&*a);
+		rads.push_back(etab.GetCovalentRad(a->GetAtomicNum()));
 	}
-	int num_atoms = positions.size();
+	int num_atoms = atoms.size();
 
 	for (int i = 0; i < num_atoms; ++i) {
-		OBAtom* a1 = positions[i].first;
-		double rad1 = etab.GetCovalentRad(a1->GetAtomicNum());
+		OBAtom* a1 = atoms[i];
 		for (int j = i+1; j < num_atoms; ++j) {
-			OBAtom* a2 = positions[j].first;
-			double rad2 = etab.GetCovalentRad(a2->GetAtomicNum());
-			double cutoff = rad1 + rad2 + skin;
+			OBAtom* a2 = atoms[j];
 			double r = a1->GetDistance(a2);
+			double cutoff = rads[i] + rads[j] + skin;
 			if (r < cutoff && r > MIN_DISTANCE) {
 				if (!(a1->IsConnected(a2))) {
 					mol->AddBond(a1->GetIdx(), a2->GetIdx(), 1);
