@@ -583,8 +583,7 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 		}
 	}
 
-	//molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
-	detectSingleBonds(molp);
+	detectSingleBonds(molp);  // Run single bond detection after filling in the unit cell to avoid running it twice
 	detectPaddlewheels(molp);
 	if (bond_orders) {
 		molp->PerceiveBondOrders();
@@ -886,7 +885,6 @@ void resetBonds(OBMol *mol) {
 		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
 	}
 
-	//mol->ConnectTheDots();
 	detectSingleBonds(mol);
 	// Bond metal atoms in paddlewheels together
 	FOR_ATOMS_OF_MOL(a1, *mol) {
@@ -955,7 +953,9 @@ void detectSingleBonds(OBMol *mol, double skin, bool only_override_oxygen) {
 		std::vector<OBAtom*> nbors_to_bond;
 		bool bonded_to_metal = false;
 
-		for (int j = i+1; j < num_atoms; ++j) {
+		// In a general neighbor detection algorithm, we would loop j from i+1 to num_atoms.
+		// But here, we need to find all neighbors for selected atoms, which is not two-way.
+		for (int j = 0; j < num_atoms; ++j) {
 			OBAtom* a2 = atoms[j];
 			double r = a1->GetDistance(a2);
 			double cutoff = rads[i] + rads[j] + skin;
