@@ -175,8 +175,13 @@ int main(int argc, char* argv[])
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
 	// Use setenv instead of putenv, per advice about string copies vs. pointers: http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv/5876818#5876818
 	// This is similar to the approach of cryos/avogadro:main.cpp:127
-	// Per my objective, this only sets the environment within the scope of the sbu.exe program
+	// Per my objective, this only sets the environment within the scope of the sbu.exe program.
+	// But Windows defines a separate _putenv, etc: https://stackoverflow.com/questions/17258029/c-setenv-undefined-identifier-in-visual-studio
+#ifdef _WIN32
+	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+#else
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+#endif
 
 	std::string mof_results = analyzeMOF(std::string(filename));
 	if (mof_results == "") {  // No MOFs found
