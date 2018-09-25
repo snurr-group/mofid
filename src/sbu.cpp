@@ -50,6 +50,7 @@ std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
+void detectSingleBonds(OBMol *mol, double skin = 0.45, bool only_override_oxygen = true);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
 int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
@@ -175,8 +176,13 @@ int main(int argc, char* argv[])
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
 	// Use setenv instead of putenv, per advice about string copies vs. pointers: http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv/5876818#5876818
 	// This is similar to the approach of cryos/avogadro:main.cpp:127
-	// Per my objective, this only sets the environment within the scope of the sbu.exe program
+	// Per my objective, this only sets the environment within the scope of the sbu.exe program.
+	// But Windows defines a separate _putenv, etc: https://stackoverflow.com/questions/17258029/c-setenv-undefined-identifier-in-visual-studio
+#ifdef _WIN32
+	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+#else
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+#endif
 
 	std::string mof_results = analyzeMOF(std::string(filename));
 	if (mof_results == "") {  // No MOFs found
@@ -575,7 +581,7 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 		}
 	}
 
-	molp->ConnectTheDots();  // Run single bond detection after filling in the unit cell to avoid running it twice
+	detectSingleBonds(molp);  // Run single bond detection after filling in the unit cell to avoid running it twice
 	detectPaddlewheels(molp);
 	if (bond_orders) {
 		molp->PerceiveBondOrders();
@@ -879,7 +885,7 @@ void resetBonds(OBMol *mol) {
 		// Consider saving and resetting formal charge as well, e.g. a->SetFormalCharge(0)
 	}
 
-	mol->ConnectTheDots();
+	detectSingleBonds(mol);
 	// Bond metal atoms in paddlewheels together
 	FOR_ATOMS_OF_MOL(a1, *mol) {
 		if (a1->HasData("Paddlewheel")) {
@@ -915,6 +921,61 @@ void resetBonds(OBMol *mol) {
 
 	mol->EndModify();
 	normalizeCharges(mol);
+}
+
+void detectSingleBonds(OBMol *mol, double skin, bool only_override_oxygen) {
+	// Enhances OBMol::ConnectTheDots by also allowing certain cases to exceed maximum valence.
+	// By default, the skin (beyond sum of covalent radii) is set to 0.45 AA to match Open Babel.
+	// If only_override_oxygen, the only nodular oxygen species get extra valence.  Otherwise, everything.
+	// TODO: consider running M-M bonds as another special case besides oxygen.
+	// TODO: might also analyze nodes only using using single bonds to avoid related issues with bond order.
+
+	mol->ConnectTheDots();
+
+	const double MIN_DISTANCE = 0.40;
+	obErrorLog.ThrowError(__FUNCTION__,
+                          "Ran custom detectSingleBonds", obAuditMsg);
+	std::vector<OBAtom*> atoms;
+	std::vector<double> rads;
+	FOR_ATOMS_OF_MOL(a, *mol) {
+		atoms.push_back(&*a);
+		rads.push_back(etab.GetCovalentRad(a->GetAtomicNum()));
+	}
+	int num_atoms = atoms.size();
+
+	// Note: the N^2 algorithm may be less efficient than Open Babel's version:
+	// https://www.slideshare.net/NextMoveSoftware/rdkit-gems
+	for (int i = 0; i < num_atoms; ++i) {
+		OBAtom* a1 = atoms[i];
+		if (only_override_oxygen && a1->GetAtomicNum() != 8) {
+			continue;
+		}
+		std::vector<OBAtom*> nbors_to_bond;
+		bool bonded_to_metal = false;
+
+		// In a general neighbor detection algorithm, we would loop j from i+1 to num_atoms.
+		// But here, we need to find all neighbors for selected atoms, which is not two-way.
+		for (int j = 0; j < num_atoms; ++j) {
+			OBAtom* a2 = atoms[j];
+			double r = a1->GetDistance(a2);
+			double cutoff = rads[i] + rads[j] + skin;
+
+			if (r < cutoff && r > MIN_DISTANCE) {
+				if (isMetal(a2)) {
+					bonded_to_metal = true;
+				}
+				if (!(a1->IsConnected(a2))) {
+					nbors_to_bond.push_back(a2);
+				}
+			}
+		}
+
+		if (!only_override_oxygen || bonded_to_metal) {
+			for (std::vector<OBAtom*>::iterator it = nbors_to_bond.begin(); it != nbors_to_bond.end(); ++it) {
+				mol->AddBond(a1->GetIdx(), (*it)->GetIdx(), 1);
+			}
+		}
+	}
 }
 
 bool subtractMols(OBMol *mol, OBMol *subtracted) {
@@ -1684,7 +1745,11 @@ OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 	// TODO: decide how to handle cases where the bond already exists.
 	// Overwrite existing bonds?  Make it, as long as it's a different periodic direction??
 	OBBond* pseudo_link = NULL;
-	if (!mol->GetBond(begin, end)) {
+	if (!begin || !end) {  // either atom is NULL
+		obErrorLog.ThrowError(__FUNCTION__, "begin or end OBAtom is undefined", obError);
+	} else if (mol->GetBond(begin, end)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
+	} else {
 		pseudo_link = mol->NewBond();
 		pseudo_link->SetBegin(begin);
 		pseudo_link->SetEnd(end);
@@ -1693,8 +1758,6 @@ OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order) {
 		// Otherwise, our OBAtomAtomIter will not operate properly (bonds will not propagate back to the atoms).
 		begin->AddBond(pseudo_link);
 		end->AddBond(pseudo_link);
-	} else {
-		obErrorLog.ThrowError(__FUNCTION__, "Did not generate multiply-defined bond between two atoms.", obWarning);
 	}
 	return pseudo_link;
 }
@@ -1772,9 +1835,9 @@ bool detectPaddlewheels(OBMol *mol) {
 		candidate.EndModify();
 		resetBonds(&candidate);
 
-		// Delete OOC-COO bonds, which would only be present for adjacent paddlewheels
+		// Delete OOC=COO bonds, which would only be present for adjacent paddlewheels
 		OBSmartsPattern adjacent_pw;
-		adjacent_pw.Init("OC(=O)C(=O)O");
+		adjacent_pw.Init("OC(O)=C(O)O");
 		if (adjacent_pw.Match(candidate)) {
 			std::vector<std::vector<int> > adjacent_maplist = adjacent_pw.GetUMapList();
 			std::vector<OBBond*> adj_delete;

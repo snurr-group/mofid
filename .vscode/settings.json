@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        "**/build": true,
+        "**/embin": true,
+        "**/embuild": true,
+        "**/eminstall": true,
+        "Data/": true,
+        "Notebooks": true,
+        "Test/": true
+    },
+    "editor.renderWhitespace": "boundary",
+    "files.trimTrailingWhitespace": true
+}

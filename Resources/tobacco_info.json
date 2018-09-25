@@ -1,16 +1,16 @@
 {
 	"nodes" : {
-		"skip_sym_3_mc_0"   : "[CuH].[Cu].n1[n]cc(c1)[Lr]",
+		"skip_sym_3_mc_0_without_oxygens"   : "[CuH].[Cu].n1[n]cc(c1)[Lr]",
 		"sym_4_mc_1"   : "[Zn].n1ccc(cc1)[Lr]",
 		"sym_5_mc_2"   : "[Cu][Cu].[Lr]C(=O)[O-]",
-		"sym_6_mc_3"   : "[Zn]O([Zn])([Zn])[Zn].[Lr]C(=O)[O-]",
-		"sym_7_mc_4"   : "[Cr]O([Cr])[Cr].[Lr]C(=O)[O-]",
-		"sym_8_mc_7"   : "[Co]O([Co])([Co])[Co].[Lr]C(=O)[O-]",
-		"sym_8_mc_9"   : "O[Zr]123(O)O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O.[Lr]C(=O)[O-]",
-		"sym_9_mc_5"   : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)O)(O)O)(O)O)(O)O.[Lr]C(=O)[O-]",
-		"sym_10_mc_10" : "O[Zr]123O4[Zr]56O3[Zr]37(O2[Zr]28O1[Zr]14(O6[Zr](O53)(O21)(O78)O)O)O.[Lr]C(=O)[O-]",
-		"sym_12_mc_11" : "O12[Zr]34O5[Zr]62O2[Zr]71O4[Zr]14O3[Zr]35O6[Zr]2(O71)O43.[Lr]C(=O)[O-]",
-		"sym_16_mc_14" : "O[Zr]123(O)O4[Zr]56(O3[Zr]37(O2[Zr]28(O1[Zr]14(O6[Zr](O53)(O21)(O78)(O)O)(O)(O)O)O)(O)(O)O)O.[Lr]C(=O)[O-]",
+		"sym_6_mc_3"   : "[Zn][O]([Zn])([Zn])[Zn].[Lr]C(=O)[O-]",
+		"sym_7_mc_4"   : "[Cr][O]([Cr])[Cr].[Lr]C(=O)[O-]",
+		"sym_8_mc_7"   : "[Co][O]([Co])([Co])[Co].[Lr]C(=O)[O-]",
+		"sym_8_mc_9"   : "O[Zr]123(O)[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)O)(O)O.[Lr]C(=O)[O-]",
+		"sym_9_mc_5"   : "O[Zr]123(O)[OH]4[Zr]56([O]3[Zr]37([OH]2[Zr]28([O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)O)(O)O)(O)O)(O)O.[Lr]C(=O)[O-]",
+		"sym_10_mc_10" : "O[Zr]123[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)O)O)O.[Lr]C(=O)[O-]",
+		"sym_12_mc_11" : "[O]12[Zr]34[OH]5[Zr]62[OH]2[Zr]71[OH]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[OH]43.[Lr]C(=O)[O-]",
+		"sym_16_mc_14" : "O[Zr]123(O)[OH]4[Zr]56([O]3[Zr]37([OH]2[Zr]28([O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)(O)O)O)(O)(O)O)O.[Lr]C(=O)[O-]",
 		"sym_3_on_0"   : "N([Lr])([Lr])([Lr])",
 		"sym_3_on_1"   : "[Lr]C1=NC(=[N]=C([N]1)[Lr])[Lr]",
 		"sym_3_on_2"   : "[Lr]c1cc([Lr])cc(c1)[Lr]",
@@ -71,7 +71,7 @@
 		"L_46" : "[Lr]c1ccc(cc1)C#CC#Cc1ccc(cc1)[Lr]",
 		"L_47" : "[Lr]C#Cc1ccc(cc1)c1ccc(cc1)C#C[Lr]"
 	},
-	"_solvated_nodes" : {
+	"_previously_solvated_nodes" : {
 		"sym_5_mc_2"   : "[O][Cu]#[Cu][O]",
 		"sym_7_mc_4"   : "[O][Cr]O([Cr][O])[Cr][O]",
 		"sym_8_mc_7"   : "[O][Co]O([O])([O])([Co][O])([Co][O])[Co][O]"
@@ -79,11 +79,13 @@
 	"functionalization" : {},
 	"_known_issues" : {
 		"sym_3_on_1" : "Incorrect perception of central nitrogen-containing ring",
+		"sym_3_on_4" : "Not actually an aromatic ring (can only generate with a radical)",
 		"L_1"        : "Bent vs. straight linkers in nbob_sym_5_mc_2_sym_5_mc_2_L_1",
 		"L_2"        : "Similar inconsistency in double bond formation, but likely torsional?",
 		"L_4"        : "Many kekulization errors in Open Babel since the structure needs a net charge or another hydrogen",
 		"L_14 and L_15" : "Again we have conformers.  Currently they're listed without stereo in the database here",
 		"L_18"       : "Four inconsistent representations",
-		"L_22"       : "Many kekulization errors in this NU-1000 foundation"
+		"L_22"       : "Many kekulization errors in this NU-1000 foundation",
+		"citation"   : "Note that this set of ToBaCCo components comes from the 2016 paper (10.1039/C6EE02104B), not the 2017 algorithmic version"
 	}
 }
