@@ -1299,13 +1299,13 @@ namespace OpenBabel
   // Returns: true if the atom is an oxygen and connected to two hydrogens and up to one other atom
   bool CIFisWaterOxygen(OBAtom *atom)
   {
-    if (!atom->IsOxygen())
+    if (atom->GetAtomicNum() != OBElements::Oxygen)
       return false;
 
     int nonHydrogenCount = 0;
     int hydrogenCount = 0;
     FOR_NBORS_OF_ATOM(neighbor, *atom) {
-      if (!neighbor->IsHydrogen())
+      if (neighbor->GetAtomicNum() != OBElements::Hydrogen)
         nonHydrogenCount++;
       else
         hydrogenCount++;
@@ -1471,7 +1471,7 @@ namespace OpenBabel
               if(nbc>0) tmpSymbol=tmpSymbol.substr(0,nbc);
               else tmpSymbol="C";//Something went wrong, no symbol ! Default to C ??
 
-              int atomicNum = etab.GetAtomicNum(tmpSymbol.c_str());
+              int atomicNum = OBElements::GetAtomicNum(tmpSymbol.c_str());
               // Test for some oxygens with subscripts
               if (atomicNum == 0 && tmpSymbol[0] == 'O') {
                 atomicNum = 8; // e.g. Ob, OH, etc.
@@ -1630,14 +1630,14 @@ namespace OpenBabel
            }
          else
            {
-             label_str = etab.GetSymbol(atom->GetAtomicNum()) + to_string(i);
+             label_str = OBElements::GetSymbol(atom->GetAtomicNum()) + to_string(i);
              i++;
            }
          // Save the existing or generated label for optional bonding
          label_table[&*atom] = label_str;
 
          snprintf(buffer, BUFF_SIZE, "    %-8s%-5s%.5f%10.5f%10.5f%8.3f\n",
-                  label_str.c_str(), etab.GetSymbol(atom->GetAtomicNum()),
+                  label_str.c_str(), OBElements::GetSymbol(atom->GetAtomicNum()),
                   X, Y, Z, occup);
 
          ofs << buffer;
@@ -1663,9 +1663,25 @@ namespace OpenBabel
           std::string label_2 = label_table[bond->GetEndAtom()];
 
           std::string sym_key;
-          std::vector<int> uc = bond->GetPeriodicDirection();
-          // uc will automatically be {0,0,0} for non-periodic systems
-          int symmetry_num = 555 + 100*uc[0] + 10*uc[1] + 1*uc[2];
+          int symmetry_num = 555;
+          if (bond->IsPeriodic()) {
+              OBUnitCell *box = (OBUnitCell*)pmol->GetData(OBGenericDataType::UnitCell);
+              vector3 begin, end_orig, end_expected, uc_direction;
+              begin = box->CartesianToFractional(bond->GetBeginAtom()->GetVector());
+              end_orig = box->CartesianToFractional(bond->GetEndAtom()->GetVector());
+              end_expected = box->UnwrapFractionalNear(end_orig, begin);
+
+              // To get the signs right, consider the example {0, 0.7}.  We want -1 as the periodic direction.
+              // TODO: Think about edge cases, particularly atoms on the border of the unit cell.
+              uc_direction = end_expected - end_orig;
+
+              std:vector<int> uc;
+              for (int i = 0; i < 3; ++i) {
+                  double raw_cell = uc_direction[i];
+                  uc.push_back(static_cast<int>(lrint(raw_cell)));
+              }
+              symmetry_num += 100*uc[0] + 10*uc[1] + 1*uc[2];  // Unit cell directionality vs. 555, per CIF spec
+          }
           if (symmetry_num == 555)
             {
               sym_key = ".";

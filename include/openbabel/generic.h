@@ -243,17 +243,17 @@ namespace OpenBabel
  class OBAPI OBVirtualBond : public OBGenericData
   {
   protected:
-    int _bgn;
-    int _end;
-    int _ord;
+    unsigned int _bgn;
+    unsigned int _end;
+    unsigned int _ord;
     int _stereo;
   public:
     OBVirtualBond();
     virtual OBGenericData* Clone(OBBase* /*parent*/) const{return new OBVirtualBond(*this);}
-    OBVirtualBond(int,int,int,int stereo=0);
-    int GetBgn()    {      return(_bgn);    }
-    int GetEnd()    {      return(_end);    }
-    int GetOrder()  {      return(_ord);    }
+    OBVirtualBond(unsigned int, unsigned int, unsigned int,int stereo=0);
+    unsigned int GetBgn()    {      return(_bgn);    }
+    unsigned int GetEnd()    {      return(_end);    }
+    unsigned int GetOrder()  {      return(_ord);    }
     int GetStereo() {      return(_stereo); }
   };
 
@@ -494,7 +494,7 @@ namespace OpenBabel
     //! \todo Make OBUnitCell::WrapFractionalCoordinate static in the next ABI break
     vector3 WrapFractionalCoordinate(vector3 frac);
     vector3 WrapFractionalCoordinate(vector3 frac) const;
-    //! Unwraps Cartesian coordinates near a reference location.
+    //! Unwraps Cartesian coordinates near a reference location
     //! \param new_loc Cartesian coordinates of target
     //! \param ref_loc Cartesian coordinates of the reference location
     //! \return Unwrapped coordinates of new_loc near ref_loc
@@ -507,18 +507,16 @@ namespace OpenBabel
     //! \todo Add a simple test case/example, like unwrapNear(<0.9, 0.2, 0.2>, <0.3, 0.9, 0.2>) -> <-0.1, 1.2, 0.2>
     vector3 UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc);
     vector3 UnwrapFractionalNear(vector3 new_loc, vector3 ref_loc) const;
-    //! Calculates the difference of two Cartesian coordinates accounting for periodic boundaries.
-    //! \param cart1 First vector of cartesian coordinates
-    //! \param cart2 Second vector of cartesian coordinates to be subtracted
-    //! \return Cartesian difference accounting for cell boundaries
-    vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2);
-    vector3 PBCCartesianDifference(vector3 cart1, vector3 cart2) const;
-    //! Calculates the difference of two fractional coordinates accounting for periodic boundaries.
-    //! \param cart1 First vector of fractional coordinates
-    //! \param cart2 Second vector of fractional coordinates to be subtracted
-    //! \return Fractional difference within half the unit cell (-0.5 to 0.5)
-    vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2);
-    vector3 PBCFractionalDifference(vector3 frac1, vector3 frac2) const;
+    //! Applies the minimum image convention to a Cartesian displacement vector
+    //! \param cart Displacement vector between two atoms in Cartesian coordinates
+    //! \return Cartesian difference, wrapped within half the unit cell
+    vector3 MinimumImageCartesian(vector3 cart);
+    vector3 MinimumImageCartesian(vector3 cart) const;
+    //! Applies the minimum image convention to a fractional displacement vector
+    //! \param cart Displacement vector between two atoms in fractional coordinates
+    //! \return Fractional difference, wrapped within half the unit cell (-0.5 to 0.5)
+    vector3 MinimumImageFractional(vector3 frac);
+    vector3 MinimumImageFractional(vector3 frac) const;
 
     //! \return The numeric value of the given spacegroup
     int GetSpaceGroupNumber( std::string name = "" );
@@ -998,11 +996,11 @@ namespace OpenBabel
 
     //! \brief Convenience function for common cases of closed-shell calculations -- pass the energies and symmetries
     //! This method will fill the OBOrbital objects for you
-    void LoadClosedShellOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int alphaHOMO);
+    void LoadClosedShellOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int alphaHOMO);
     //! \brief Convenience function to load alpha orbitals in an open-shell calculation
-    void LoadAlphaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int alphaHOMO);
+    void LoadAlphaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int alphaHOMO);
     //! \brief Convenience function to load beta orbitals in an open-shell calculation
-    void LoadBetaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, int betaHOMO);
+    void LoadBetaOrbitals(std::vector<double> energies, std::vector<std::string> symmetries, unsigned int betaHOMO);
 
   protected:
     std::vector<OBOrbital> _alphaOrbitals; //!< List of orbitals. In case of unrestricted calculations, this contains the alpha spin-orbitals
@@ -1173,7 +1171,7 @@ namespace OpenBabel
 
     int NumPoints() 
     { 
-      return _points.size(); 
+      return (int)_points.size();
     }
     
     void AddPoint(double x,double y,double z, double V) 
@@ -1202,7 +1200,33 @@ namespace OpenBabel
       ++i;
       return((i == _points.end()) ? (OBFreeGridPoint*)NULL : (OBFreeGridPoint*)*i);
     }
+    
+    void Clear();
 
+  };
+  
+  class OBAPI OBPcharge: public OBGenericData
+  {
+  protected:
+    std::vector<double> _PartialCharge;
+  public:
+    OBPcharge(){};
+    ~OBPcharge(){};
+
+    int NumPartialCharges() 
+    { 
+      return _PartialCharge.size(); 
+    }
+    
+    void AddPartialCharge(std::vector<double> q)
+    {
+      _PartialCharge = q;
+    }
+
+    std::vector<double> GetPartialCharge()
+    {
+        return _PartialCharge;
+    }
   };
 
  //! A standard iterator over vectors of OBGenericData (e.g., inherited from OBBase)

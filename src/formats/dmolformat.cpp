@@ -135,7 +135,7 @@ namespace OpenBabel
           break;
         atom = mol.NewAtom();
         //set atomic number
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
         x = atof((char*)vs[1].c_str()) * BOHR_TO_ANGSTROM;
         y = atof((char*)vs[2].c_str()) * BOHR_TO_ANGSTROM;
         z = atof((char*)vs[3].c_str()) * BOHR_TO_ANGSTROM;
@@ -148,9 +148,14 @@ namespace OpenBabel
       mol.PerceiveBondOrders();
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     mol.SetTitle(title);
@@ -200,7 +205,7 @@ namespace OpenBabel
       {
         atom = mol.GetAtom(i);
         snprintf(buffer, BUFF_SIZE, "%-3s% 27.14f% 20.14f% 20.14f",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->GetX() * ANGSTROM_TO_BOHR,
                  atom->GetY() * ANGSTROM_TO_BOHR,
                  atom->GetZ() * ANGSTROM_TO_BOHR);

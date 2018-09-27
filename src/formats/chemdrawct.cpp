@@ -81,7 +81,7 @@ namespace OpenBabel
         snprintf(buffer, BUFF_SIZE, " %9.4f %9.4f    0.0000 %-1s",
                  atom->x(),
                  atom->y(),
-                 etab.GetSymbol(atom->GetAtomicNum()));
+                 OBElements::GetSymbol(atom->GetAtomicNum()));
         ofs << buffer << endl;
       }
 
@@ -141,7 +141,7 @@ namespace OpenBabel
         z = atof((char*)vs[2].c_str());
 
         atom->SetVector(x,y,z); //set coordinates
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[3].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[3].c_str()));
       }
 
     if (nbonds != 0)
@@ -155,9 +155,14 @@ namespace OpenBabel
         }
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     return(true);

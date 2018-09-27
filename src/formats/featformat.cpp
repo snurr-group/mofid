@@ -100,13 +100,18 @@ namespace OpenBabel
         CleanAtomType(type);
         atom = mol.NewAtom();
         atom->SetVector(x,y,z);
-        atom->SetAtomicNum(etab.GetAtomicNum(type));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(type));
       }
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     if (!pConv->IsOption("b",OBConversion::INOPTIONS))
       mol.ConnectTheDots();
@@ -139,7 +144,7 @@ namespace OpenBabel
     for(atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
         snprintf(buffer, BUFF_SIZE, "%-3s %8.5f  %8.5f  %8.5f ",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->x(),
                  atom->y(),
                  atom->z());

@@ -100,16 +100,21 @@ namespace OpenBabel
         y = atof((char*)vs[2].c_str());
         z = atof((char*)vs[3].c_str());
         atom->SetVector(x,y,z); //set coordinates
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
 
         for (j = vs.begin()+4;j != vs.end();++j)
           mol.AddBond(atom->GetIdx(),atoi((char*)j->c_str()),1);
       }
 
     // clean out any remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     mol.SetTitle(title);
@@ -145,7 +150,7 @@ namespace OpenBabel
 
     for(atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
-        strncpy(tmptype,etab.GetSymbol(atom->GetAtomicNum()), sizeof(tmptype));
+        strncpy(tmptype,OBElements::GetSymbol(atom->GetAtomicNum()), sizeof(tmptype));
         tmptype[15] = '\0';
         if (strlen(tmptype) > 1)
           tmptype[1] = toupper(tmptype[1]);
