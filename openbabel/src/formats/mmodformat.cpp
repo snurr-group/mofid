@@ -184,9 +184,14 @@ namespace OpenBabel
       return(false);
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     return(true);
   }
@@ -217,13 +222,13 @@ namespace OpenBabel
     ttab.SetToType("MMD");
 
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i)) {
-        if (atom->IsHydrogen()) {
+        if (atom->GetAtomicNum() == OBElements::Hydrogen) {
           type = 41;
           if ((nbr = atom->BeginNbrAtom(j))) {
-            if (nbr->IsOxygen()) {
+            if (nbr->GetAtomicNum() == OBElements::Oxygen) {
               type = 42;
             }
-            else if (nbr->IsNitrogen()) {
+            else if (nbr->GetAtomicNum() == OBElements::Nitrogen) {
               type = 43;
             }
           }

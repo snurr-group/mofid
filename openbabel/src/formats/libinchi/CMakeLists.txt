@@ -5,8 +5,11 @@ set(INCHI_PATCH_VER 1)
 
 file(GLOB inchi_srcs "*.c")
 
+# inchi code has lots of warnings, so let's ignore them
+add_compile_options(-w)
+
 if(NOT WIN32)
-  set(libs ${libs} c)
+  set(libs ${libs} c m)
 endif(NOT WIN32)
 
 include_directories(${openbabel_SOURCE_DIR}/include/inchi)
