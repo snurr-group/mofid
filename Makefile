@@ -42,7 +42,7 @@ init:
 	mkdir build installed; \
 	cd build; \
 	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF ..; \
-	make -j2; \
+	make; \
 	make install; \
 	cd ../../; \
 	mkdir Test/; \
@@ -50,6 +50,8 @@ init:
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
 	make
+	# Note: used to use make -j2 for Open Babel, but it started failing for some reason.
+	#
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
 
