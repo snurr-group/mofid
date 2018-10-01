@@ -3,18 +3,21 @@
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
 
+backup:
+	rsync -av --exclude=".*" --exclude="openbabel/" --delete . ../../Box\ Sync/Projects/GitBackups/mofid
+
 # Make this generic later on...
-bin/sbu: src/sbu.cpp ob-build/lib/cifformat.so
+bin/sbu: src/sbu.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sbu
-bin/sobgrep: src/sobgrep.cpp ob-build/lib/cifformat.so
+bin/sobgrep: src/sobgrep.cpp openbabel/build/lib/cifformat.so
 	cd bin && make sobgrep
-bin/searchdb: src/searchdb.cpp ob-build/lib/cifformat.so
+bin/searchdb: src/searchdb.cpp openbabel/build/lib/cifformat.so
 	cd bin && make searchdb
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
-ob-build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/mol.cpp
-	cd ob-build; \
+openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/mol.cpp
+	cd openbabel/build; \
 	make cifformat; \
 	make install/fast
 
@@ -36,21 +39,21 @@ Resources/External/Systre-1.2.0-beta2.jar:
 
 init:
 	cd openbabel; \
-	mkdir ../ob-build ../ob-installed; \
-	cd ../ob-build; \
-	cmake -DCMAKE_INSTALL_PREFIX=../ob-installed -DBUILD_GUI=OFF ../openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF ..; \
 	make -j2 || exit 2; \
 	make install; \
-	cd ../; \
+	cd ../../; \
 	mkdir Test/; \
 	mkdir bin; \
 	cd bin; \
-	cmake -DOpenBabel2_DIR=../ob-build ../src/; \
-	make; \
-	cp ../ob-build/bin/*.dll .
+	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
+	make ;\
+	cp ../openbabel/build/bin/*.dll .
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
-	# The last stage hacks together a DLL dependency until I can figure out the cmake command
+	# FIXME: the last `cp` hacks together a DLL dependency until I can figure out the cmake command
 
 eclipse:
 	cd bin; \
