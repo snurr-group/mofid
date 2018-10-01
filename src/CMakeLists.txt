@@ -6,7 +6,7 @@
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)  # Hide Cygwin error
 
 # This line is required for cmake backwards compatibility.
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.10)
 
 # Name of your project
 project(sbu)
@@ -34,6 +34,7 @@ include_directories(${CMAKE_BINARY_DIR}/includes/)
 # Set the path containing OpenBabel2Config.cmake, needed for find_package below.
 find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
           ${OpenBabel2_DIR}
+          "../ob-build"
           "../openbabel/build"
           "/usr/lib/openbabel"
          "/usr/local/lib/openbabel")
