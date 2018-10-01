@@ -21,6 +21,7 @@
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
 #include <openbabel/phmodel.h>
+#include <openbabel/elements.h>
 #include "config_sbu.h"
 
 
@@ -377,7 +378,10 @@ std::string analyzeMOF(std::string filename) {
 			} else if (point_type == X_CONN) {
 				obErrorLog.ThrowError(__FUNCTION__, "Found singly-connected connection atom in the simplified net.", obError);
 			} else {
-				std::string err_msg ="Unexpected atom type " + etab.GetName(point_type) + "in the simplified net.";
+				std::string err_msg =
+					"Unexpected atom type " +
+					std::string(OBElements::GetName(point_type)) +
+					"in the simplified net.";
 				obErrorLog.ThrowError(__FUNCTION__, err_msg, obError);
 			}
 		}
@@ -778,26 +782,26 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 
 	out_file << "Nodes" << std::endl << equal_line << std::endl;
 	for (std::map<std::string,int>::iterator it=nodes.begin(); it!=nodes.end(); ++it) {
-		out_file << etab.GetSymbol(it->second) << ": " << it->first;
+		out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
 	}
 	out_file << std::endl << std::endl;
 
 	out_file << "Linkers" << std::endl << equal_line << std::endl;
 	for (std::map<std::string,int>::iterator it=linkers.begin(); it!=linkers.end(); ++it) {
-		out_file << etab.GetSymbol(it->second) << ": " << it->first;
+		out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
 	}
 	out_file << std::endl << std::endl;
 
 	if (X_CONN) {
 		out_file << "Connection atom (\"X\")" << std::endl << equal_line << std::endl;
-		out_file << etab.GetSymbol(X_CONN) << ": " << "<X connector>" << std::endl;
+		out_file << OBElements::GetSymbol(X_CONN) << ": " << "<X connector>" << std::endl;
 		out_file << std::endl << std::endl;
 	}
 
 	if (removed.size()) {
 		out_file << "Unused pseudo atom types (see test_partial.cif)" << std::endl << equal_line << std::endl;
 		for (std::map<std::string,int>::iterator it=removed.begin(); it!=removed.end(); ++it) {
-			out_file << etab.GetSymbol(it->second) << ": " << it->first;
+			out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
 		}
 		out_file << std::endl << std::endl;
 	}
@@ -939,7 +943,7 @@ void detectSingleBonds(OBMol *mol, double skin, bool only_override_oxygen) {
 	std::vector<double> rads;
 	FOR_ATOMS_OF_MOL(a, *mol) {
 		atoms.push_back(&*a);
-		rads.push_back(etab.GetCovalentRad(a->GetAtomicNum()));
+		rads.push_back(OBElements::GetCovalentRad(a->GetAtomicNum()));
 	}
 	int num_atoms = atoms.size();
 
@@ -1767,7 +1771,7 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
 	OBAtom* atom = mol->NewAtom();
 	atom->SetVector(loc);
 	atom->SetAtomicNum(element);
-	atom->SetType(etab.GetName(element));
+	atom->SetType(OBElements::GetName(element));
 	return atom;
 }
 

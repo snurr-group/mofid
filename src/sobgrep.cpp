@@ -19,6 +19,7 @@
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
+#include <openbabel/elements.h>
 #include "config_sbu.h"
 
 
@@ -42,7 +43,11 @@ int main(int argc, char* argv[])
 	std::stringstream dataMsg;
 	dataMsg << "Using local Open Babel data saved in " << LOCAL_OB_DATADIR << std::endl;
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
+#ifdef _WIN32
+	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+#else
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+#endif
 
 	// Read CIF as single bonds
 	OBMol orig_mol;
@@ -110,7 +115,7 @@ void copyAtom(OBAtom* src, OBMol* dest) {
 	OBAtom* copied = dest->NewAtom();
 	copied->SetVector(src->GetVector());
 	copied->SetAtomicNum(src->GetAtomicNum());
-	copied->SetType(etab.GetName(src->GetAtomicNum()));
+	copied->SetType(OBElements::GetName(src->GetAtomicNum()));
 }
 
 OBMol initMOF(OBMol *orig_in_uc) {
