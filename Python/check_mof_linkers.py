@@ -18,7 +18,7 @@ import copy  # copy.deepcopy(x)
 import warnings
 # import re
 
-from cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
+from cpp_cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
 from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
 from smiles_diff import multi_smiles_diff as diff
 

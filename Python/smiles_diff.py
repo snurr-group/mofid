@@ -11,7 +11,8 @@ Report common classes of errors in the calculated MOFid.
 import sys, os
 import re
 
-from cheminformatics import pybel, ob_normalize, openbabel_replace
+from old_cheminformatics import pybel
+from cpp_cheminformatics import ob_normalize, openbabel_replace
 
 
 DIFF_LEVELS = dict({

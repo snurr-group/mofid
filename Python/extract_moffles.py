@@ -10,7 +10,6 @@ together.
 @author: Ben Bucior
 """
 
-import subprocess  # No support for timeouts except in Python 3.x, so do not use this for Systre
 from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
 import glob
 import json
