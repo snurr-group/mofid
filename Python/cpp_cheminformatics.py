@@ -8,8 +8,12 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 @author: Ben Bucior
 """
 
+# Calling an external obabel binary is more expensive than using the built-in Python
+# libraries but ensures that all Open Babel calls are consistent.
+
 from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
 import sys, os
+import re
 
 def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
@@ -61,3 +65,20 @@ def openbabel_contains(mol_smiles, query):
 		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
 		return False
 
+def openbabel_formula(mol_smiles):
+	# Extracts a molecular formula without relying on the pybel module
+	# The .txt format prints the title: https://openbabel.org/docs/dev/FileFormats/Title_format.html
+	# Note: it looks like the various --append options are in descriptors/filters.cpp, etc.
+	cpp_run = EasyProcess([OBABEL_BIN, in_smiles(mol_smiles), "--append", "FORMULA", "-otxt"]).call()
+	cpp_output = cpp_run.stdout
+	if (cpp_run.stderr != "1 molecule converted"):
+		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
+	return cpp_output.rstrip()
+
+def openbabel_GetSpacedFormula(mol_smiles, delim=" "):
+	# Re-implements part of OpenBabel's GetSpacedFormula method
+	consolidated_formula = openbabel_formula(mol_smiles)
+	split_formula = re.findall(r"[A-Z][a-z]?|d*", consolidated_formula)
+	if split_formula[-1] == "":
+		split_formula.pop()
+	return delim.join(split_formula)
