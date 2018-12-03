@@ -23,7 +23,7 @@ def path_to_resource(resource):
 
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")  # directory with native EOL
+os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/data")  # directory with native EOL
 TSFM_BIN = path_to_resource("../bin/tsfm_smiles")
 OBABEL_BIN = path_to_resource("../openbabel/build/bin/obabel")
 

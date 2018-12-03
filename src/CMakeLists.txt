@@ -24,8 +24,8 @@ set(tools
 
 ################################################################################
 
-set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/ob_datadir"
-    CACHE PATH "Install dir for OB data customized for MOFs")
+set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/../openbabel/data"
+    CACHE PATH "Install dir for OB data, no customization needed for MOFs")
 # Set up include file for the data directory
 configure_file(${CMAKE_SOURCE_DIR}/config_sbu.h.cmake
   ${CMAKE_BINARY_DIR}/includes/config_sbu.h)

@@ -64,6 +64,7 @@ eclipse:
 # Emscripten web content below
 # In my current Windows setup, these must all be run within Git Bash
 # Not yet tested cross-platform in Linux
+# Warning: the path to web-data/core.smi has not yet been tested!
 init-web:
 	source Scripts/import_emscripten.sh; \
 	cd openbabel; \
@@ -73,7 +74,7 @@ init-web:
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../src/ob_datadir@/ob_datadir/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"; \
 	mkdir kekule; \
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip

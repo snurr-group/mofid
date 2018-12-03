@@ -18,7 +18,7 @@ def path_to_resource(resource):
 
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
-os.environ["BABEL_DATADIR"] = path_to_resource("../src/ob_datadir")  # directory with native EOL
+os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/data")  # directory with native EOL
 import pybel  # Read SMILES to calculate molecular formulas, run SMARTS-based OBChemTsfm, etc.
 import openbabel  # for visualization only, since my changes aren't backported to the python library
 
