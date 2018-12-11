@@ -59,11 +59,9 @@ init:
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	make ;\
-	cp ../openbabel/build/bin/*.dll .
+	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
-	# FIXME: the last `cp` hacks together a DLL dependency until I can figure out the cmake command
 
 eclipse:
 	cd bin; \
