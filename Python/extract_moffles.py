@@ -29,7 +29,7 @@ GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
 if sys.platform == "win32":
 	JAVA_LOC = "C:/Program Files/Java/jre1.8.0_102/bin/java"
-elif sys.platform.startswith("linux"):
+elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
 	JAVA_LOC = "java"
 else:
 	raise ValueError("Unknown platform.  Please specify file paths in Python/extract_moffles.py")
