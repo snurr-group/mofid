@@ -1,6 +1,8 @@
 # MOFid
 A system for rapid identification and analysis of metal-organic frameworks
 
+**WARNING: code is under active development and refactoring.  Details subject to change**
+
 ## Objective
 **Supplement** the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches.  Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
