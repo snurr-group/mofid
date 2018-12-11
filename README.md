@@ -4,44 +4,23 @@ A system for rapid identification and analysis of metal-organic frameworks
 ## Objective
 **Supplement** the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches.  Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
+## Installation notes/requirements
+* Needs a C++ compiler, make, cmake, and a Java Runtime Environment (for Systre)
+* sqlite3 is useful for analysis.
+* Testing code is based on Python 2.7.  Long-term it would be good to move everything to Python 3.x, but for now Open Babel is primarily a Python 2 library so everything else is currently kept that way.  Based on the features used by the code, the biggest compatibility change in the future will likely be `print` statements.
+* The Python test suite requires the `easyprocess` package to call executables like MOFid or Systre.  Depending on your environment, this can be installed using a command like `pip install --user easyprocess`
+* Systre is required for topology detection (check that the path is correct in Python/extract_moffles.py).  `jq` is a useful utility to parse json files but is not strictly necessary.  Both of these can be automatically set up using `make download`
+* The Python code directly calls a C++ executable in most cases instead of directly using the `openbabel` Python library.  If `openbabel` or `pybel` is needed but raise an error, you may need to modify the library path, e.g. `export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH`
+* To get started, run `make init` the first time to compile Open Babel and set up the cmake environment.  Modifications to `sbu.cpp` or other code can be quickly compiled using `make bin/sbu` and tested using `make test`.
+
 ## TODO
 * Add an intro to the project structure and tutorial on basic usage.
-* Give background on validating MOFid code against ToBaCCo and GA MOFs.
-* Include paper outline somewhere?
-* Clean up repo and comb through old known issues and potentially useful papers for additional validation.
-* Test more non-P1 CIFs to test symmetry operations
-* Add license info for MOFid, Open Babel, kekule.js, etc.
-
-## Known issues (incomplete list)
-### Technical questions
-* What should the final MOFid format look like?  SMILES has many advantages (interoperability, interpretability) but also downsides (search engine friendliness, not compact, sensitivity to aromaticity models).
-* How are counter anions handled?  How should they be classified in the ID?
-* Further consideration of how nodes are defined.  Metal oxides?  This question may change the assigned topology and simplification of some structures.
-
-### Missing features
-* Structures are read as-is.  Hydrogens are not (yet) automatically added
-* The HTML (emscripten) interface is still a bare-bones proof-of-concept.  Visualization and potential integration with MOF Explorer is still necessary.
-* The topology of **rht** MOFs cannot be determined, even as **ntt**, because there are sets of paddlewheels containing the same neighbor list.  Systre complains about overlapping barycentric coordinates because these vertices in the simplified net appear redundant (even though we want there to be two separate PW).  See also the structure `rht_sym_3_on_0_sym_24_mc_13__.cif`.
-* Only cis/trans chirality is implemented for the linkers.  Tetrahedral (and octahedral) chirality is ignored due to sensitivity to the node geometry (and possibly a remaining bug in stereo for linkers).  This might be something the user can manually override when generating the MOFid, if enantiomerically pure components are used.
-
-### Major bugs
-* Handling of formal charges, which is recommended for SMILES and even InChI.  Currently only carboxylates and certain nitrogen rings are handled by SMARTS pattern recognition.
-* Additional topological analysis is required.  Existing RCSR topologies are only obtained for ~2,000 of the CIFs from CoRE MOF 2.0, which is a similar fraction as an automated TOPOS analysis.
-* A few structures crash sbu.exe or the Python code.
-* Look for warnings in the CoRE MOF output.  These aren't inherently bad in a semi-messy data source, but they also flag potentially bad assumptions in the MOFid code.
-
-### Bugs with upstream Open Babel project
-* MOFid code uses the Open Babel project, as downloaded from Github on 6/23/16, commit 03fa0761dbd3b10a6d31036753faf8dddeda7ac5.  See also their [C++ tutorial](http://openbabel.org/wiki/Developer:Cpp_Tutorial)
-* Steps are in progress to merge changes, such as periodic boundary conditions, back into the upstream project.  Then, this dependency can be imported as a git submodule.  In the meantime, there are a few incompatibilities between MOFid and the upstream Open Babel project.
-* Open Babel's aromaticity model has problems with certain nitrogen-containing rings.  Certain heteroaromatic linkers from ToBaCCo are classified with incorrect bond orders.  Resolving this [issue](https://github.com/openbabel/openbabel/issues/1360) is in progress.
-* By default, Open Babel's bond assignment code (`OBMol::ConnectTheDots()`) deletes bonds in excess of a "maximum valence."  That means bonds can unexpectedly disappear from some CIFs.  Due to the way a few details are implemented, that means (1) assigning neighbors and topology for some metals is inconsistent, and (2) hydroxyls are not reported correctly due to some other workarounds in MOFid.
+* Include a link to the paper for additional documentation.
 
 
 ## Misc. notes
-### Eclipse
-Generated the eclipse code hinting by running `cmake -G "Eclipse CDT4 - Unix Makefiles" ../src` from within bin/ based on a [helpful post](http://stackoverflow.com/questions/11645575/importing-a-cmake-project-into-eclipse-cdt).  Another [website](http://www.badprog.com/c-eclipse-installation-of-c-c-development-tools-cdt-and-cygwin-for-windows) might be useful if I try to get the "Run" button working later.
-
-The [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.  Also see the [installation instructions](https://openbabel.org/docs/dev/Installation/install.html#local-build).  With the new makefile configurations, run `make openbabel/fast` to make a quick local build, and the new sbu Makefile will automatically compile against the local directory.
+### Open Babel API notes
+See the [C++ tutorial](http://openbabel.org/wiki/Developer:Cpp_Tutorial) for Open Babel.  Their [main API reference](http://openbabel.org/dev-api/namespaceOpenBabel.shtml) and [OBMol class reference](http://openbabel.org/dev-api/classOpenBabel_1_1OBMol.shtml) are also great resources.  Also see the [installation instructions](https://openbabel.org/docs/dev/Installation/install.html#local-build).  With the new makefile configurations, run `make openbabel/fast` to make a quick local build, and the new sbu Makefile will automatically compile against the local directory.
 
 ### Emscripten installation notes
 In Windows, download the [portable Emscripten SDK](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html#platform-notes-installation-instructions-portable-sdk) and install using Git Bash.  The general process is described on the website:
