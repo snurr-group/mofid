@@ -95,7 +95,7 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         atom->SetVector(x,y,z); //set coordinates
 
         //set atomic number
-        int atomicNum = etab.GetAtomicNum(vs[4].c_str());
+        int atomicNum = OBElements::GetAtomicNum(vs[4].c_str());
         atom->SetAtomicNum(atomicNum);
 
       } else if (strstr(buffer, "lattice_vector") != NULL) {
@@ -117,9 +117,14 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
       mol.PerceiveBondOrders();
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-	  (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     // Check if there are lattice vectors and add them
@@ -158,7 +163,7 @@ bool FHIaimsFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
                atom->GetX(),
                atom->GetY(),
                atom->GetZ(),
-               etab.GetSymbol(atom->GetAtomicNum()));
+               OBElements::GetSymbol(atom->GetAtomicNum()));
         ofs << buffer << '\n';
     }
 

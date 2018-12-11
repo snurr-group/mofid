@@ -11,7 +11,7 @@ Report common classes of errors in the calculated MOFid.
 import sys, os
 import re
 
-from cheminformatics import pybel, ob_normalize, openbabel_replace
+from cpp_cheminformatics import ob_normalize, openbabel_replace, openbabel_formula, openbabel_GetSpacedFormula
 
 
 DIFF_LEVELS = dict({
@@ -112,8 +112,8 @@ def single_smiles_diff(smiles1, smiles2):
 	if smiles1 in error_codes or smiles2 in error_codes:
 		return "ERROR"
 
-	mol1 = pybel.readstring("smi", smiles1)
-	mol2 = pybel.readstring("smi", smiles2)
+	mol1_formula = openbabel_formula(smiles1)
+	mol2_formula = openbabel_formula(smiles2)
 
 	if re.sub('[+-]', '', smiles1) == re.sub('[+-]', '', smiles2):
 		return "charges"
@@ -122,7 +122,7 @@ def single_smiles_diff(smiles1, smiles2):
 		# Strip hydrogens and charges from molecular formula.
 		# We don't have to worry about greatest common factor, etc., since it's absolute atom counts.
 		return re.sub('[+-]', '', re.sub(r'H\d+', '', formula))
-	if strip_extra(mol1.formula) != strip_extra(mol2.formula):
+	if strip_extra(mol1_formula) != strip_extra(mol2_formula):
 		return "formula"
 
 	def radical_to_carb(smiles):
@@ -140,9 +140,9 @@ def single_smiles_diff(smiles1, smiles2):
 	if move_hydrogen(smiles1) == move_hydrogen(smiles2):
 		return "fg_bond_location"
 
-	def is_organic(mol):
-		return 'C' in mol.OBMol.GetSpacedFormula().split(' ')
-	if is_organic(mol1) and is_organic(mol2):
+	def is_organic(smiles):
+		return 'C' in openbabel_GetSpacedFormula(smiles).split(' ')
+	if is_organic(smiles1) and is_organic(smiles2):
 		molec_type = "linker"
 	else:
 		molec_type = "node"

@@ -1,12 +1,10 @@
 # Open Babel data files
 
 set(to_install
-    aromatic.txt
     atomization-energies.txt
     atomtyp.txt
     babel_povray3.inc
     bondtyp.txt
-    element.txt
     eem.txt
     eem2015ba.txt
     eem2015bm.txt
@@ -16,11 +14,10 @@ set(to_install
     eem2015hn.txt
     eqeqIonizations.txt
     fragments.txt
+    fragment-index.txt
     gaff.dat
     gaff.prm
     ghemical.prm
-    isotope-small.txt
-    isotope.txt
     logp.txt
     MACCS.txt
     mmff94.ff
@@ -43,6 +40,7 @@ set(to_install
     mr.txt
     patterns.txt
     phmodel.txt
+    platinum-fragment.txt
     plugindefines.txt
     psa.txt
     qeq.txt
@@ -54,6 +52,7 @@ set(to_install
     svgformat.script
     templates.sdf
     torlib.txt
+    torsion.txt
     types.txt
     UFF.prm
 )

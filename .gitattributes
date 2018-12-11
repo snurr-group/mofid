@@ -1,7 +1,7 @@
 # With advice from [Github help](https://help.github.com/articles/dealing-with-line-endings/)
 
 # For now, keep things simple for cygwin compilation by enforcing unix line endings
-src/ob_datadir/* text eol=lf
-src/ob_datadir/*.png binary
+openbabel/data/* text eol=lf
+openbabel/data/*.png binary
 Makefile text eol=lf
 *.sh text eol=lf

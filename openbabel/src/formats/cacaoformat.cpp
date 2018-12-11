@@ -128,7 +128,7 @@ namespace OpenBabel
         v.Set(x,y,z);
         v = uc->FractionalToCartesian(v);
 
-        atom->SetAtomicNum(etab.GetAtomicNum(vs[0].c_str()));
+        atom->SetAtomicNum(OBElements::GetAtomicNum(vs[0].c_str()));
         atom->SetVector(v);
       }
 
@@ -138,9 +138,14 @@ namespace OpenBabel
       mol.PerceiveBondOrders();
 
     // clean out remaining blank lines
-    while(ifs.peek() != EOF && ifs.good() &&
-          (ifs.peek() == '\n' || ifs.peek() == '\r'))
+    std::streampos ipos;
+    do
+    {
+      ipos = ifs.tellg();
       ifs.getline(buffer,BUFF_SIZE);
+    }
+    while(strlen(buffer) == 0 && !ifs.eof() );
+    ifs.seekg(ipos);
 
     mol.EndModify();
     return(true);
@@ -181,7 +186,7 @@ namespace OpenBabel
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
       {
         snprintf(buffer,BUFF_SIZE,"%2s %7.4f, %7.4f, %7.4f\n",
-                 etab.GetSymbol(atom->GetAtomicNum()),
+                 OBElements::GetSymbol(atom->GetAtomicNum()),
                  atom->x(),
                  atom->y(),
                  atom->z());
@@ -329,7 +334,7 @@ namespace OpenBabel
 
     vector<OBInternalCoord*> vit;
     CacaoFormat::SetHilderbrandt(mol,vit);
-    strncpy(tmptype,etab.GetSymbol(mol.GetAtom(1)->GetAtomicNum()), sizeof(tmptype));
+    strncpy(tmptype,OBElements::GetSymbol(mol.GetAtom(1)->GetAtomicNum()), sizeof(tmptype));
     tmptype[sizeof(tmptype) - 1] = '\0';
 
     ofs << " # TITLE\n";
@@ -339,7 +344,7 @@ namespace OpenBabel
     ofs << buffer;
     for (i = 2; i <= mol.NumAtoms(); i++)
       {
-        strncpy(tmptype,etab.GetSymbol(mol.GetAtom(i)->GetAtomicNum()), sizeof(tmptype));
+        strncpy(tmptype,OBElements::GetSymbol(mol.GetAtom(i)->GetAtomicNum()), sizeof(tmptype));
         tmptype[sizeof(tmptype) - 1] = '\0';
 
         if (vit[i]->_tor < 0.0)

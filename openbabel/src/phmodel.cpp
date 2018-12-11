@@ -124,17 +124,18 @@ namespace OpenBabel
       return;
 
     vector<pair<OBSmartsPattern*,vector<double> > >::iterator i;
-    for (i = _vschrg.begin();i != _vschrg.end();++i)
-      if (i->first->Match(mol))
-        {
-          _mlist = i->first->GetUMapList();
-          unsigned int k;
-          vector<vector<int> >::iterator j;
+    for (i = _vschrg.begin(); i != _vschrg.end(); ++i) {
+      std::vector<std::vector<int> > mlist;
+      if (i->first->Match(mol, mlist, OBSmartsPattern::AllUnique))
+      {
+        unsigned int k;
+        vector<vector<int> >::iterator j;
 
-          for (j = _mlist.begin();j != _mlist.end();++j)
-            for (k = 0;k < j->size();++k)
-              mol.GetAtom((*j)[k])->SetPartialCharge(i->second[k]);
-        }
+        for (j = mlist.begin(); j != mlist.end(); ++j)
+          for (k = 0; k < j->size(); ++k)
+            mol.GetAtom((*j)[k])->SetPartialCharge(i->second[k]);
+      }
+    }
   }
 
   void OBPhModel::CorrectForPH(OBMol &mol, double pH)
@@ -189,7 +190,6 @@ namespace OpenBabel
       }
     }
 
-    atomtyper.CorrectAromaticNitrogens(mol);
   }
 
 
@@ -314,10 +314,15 @@ namespace OpenBabel
 
         for (i = mlist.begin();i != mlist.end();++i)
           for (j = _vchrg.begin();j != _vchrg.end();++j)
-            if (j->first < (signed)i->size()) //goof proofing
-              mol.GetAtom((*i)[j->first])->SetFormalCharge(j->second);
-
-        mol.UnsetImplicitValencePerceived();
+            if (j->first < (signed)i->size()) { //goof proofing
+              OBAtom *atom = mol.GetAtom((*i)[j->first]);
+              int old_charge = atom->GetFormalCharge();
+              atom->SetFormalCharge(j->second);
+              int new_hcount = atom->GetImplicitHCount() + (j->second - old_charge);
+              if (new_hcount < 0)
+                new_hcount = 0;
+              atom->SetImplicitHCount(new_hcount);
+            }
       }
 
     if (!_vbond.empty()) //modify bond orders
@@ -334,8 +339,15 @@ namespace OpenBabel
                   obErrorLog.ThrowError(__FUNCTION__, "unable to find bond", obDebug);
                   continue;
                 }
-
-              bond->SetBO(j->second);
+              unsigned int old_bond_order = bond->GetBondOrder();
+              bond->SetBondOrder(j->second);
+              for (int k = 0; k < 2; ++k) {
+                OBAtom* atom = k == 0 ? bond->GetBeginAtom() : bond->GetEndAtom();
+                int new_hcount = atom->GetImplicitHCount() - (j->second - old_bond_order);
+                if (new_hcount < 0)
+                  new_hcount = 0;
+                atom->SetImplicitHCount(new_hcount);
+              }
             }
       }
 

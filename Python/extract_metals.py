@@ -10,7 +10,7 @@ Based on remove_metals.py, but with the purpose of saving the metal compositions
 
 import os, sys
 
-import cheminformatics
+import old_cheminformatics
 
 def usage():
 	print "Usage: python extract_metals.py smiles.tsv > smiles_metals.tsv"
@@ -27,7 +27,7 @@ def isMetal(atom_obj):
 def get_metals(smiles):
 	# Get a list of metal names within a SMILES entry
 	metals = []
-	mol = cheminformatics.pybel.readstring("smi", smiles)
+	mol = old_cheminformatics.pybel.readstring("smi", smiles)
 	for atom in mol:
 		if isMetal(atom):
 			metal_num = atom.atomicnum

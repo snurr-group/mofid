@@ -6,7 +6,7 @@
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)  # Hide Cygwin error
 
 # This line is required for cmake backwards compatibility.
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.10)
 
 # Name of your project
 project(sbu)
@@ -19,12 +19,13 @@ set(tools
         sbu
         sobgrep
         searchdb
+        tsfm_smiles
    )
 
 ################################################################################
 
-set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/ob_datadir"
-    CACHE PATH "Install dir for OB data customized for MOFs")
+set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/../openbabel/data"
+    CACHE PATH "Install dir for OB data, no customization needed for MOFs")
 # Set up include file for the data directory
 configure_file(${CMAKE_SOURCE_DIR}/config_sbu.h.cmake
   ${CMAKE_BINARY_DIR}/includes/config_sbu.h)

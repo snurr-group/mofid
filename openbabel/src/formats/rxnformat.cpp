@@ -1,5 +1,6 @@
 /**********************************************************************
 Copyright (C) 2004 by Chris Morley
+Copyright (C) 2018 by Noel M. O'Boyle
 
 This file is part of the Open Babel project.
 For more information, see <http://openbabel.org/>
@@ -13,20 +14,20 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
-#include "openbabel/babelconfig.h"
+#include <openbabel/babelconfig.h>
 #include <string>
 #include <iomanip>
 #include <typeinfo>
-#include "openbabel/mol.h"
-#include "openbabel/obconversion.h"
-#include "openbabel/reaction.h"
+#include <openbabel/mol.h>
+#include <openbabel/obconversion.h>
+#include <openbabel/obmolecformat.h>
+#include <openbabel/reactionfacade.h>
 
 using namespace std;
-//using std::tr1::shared_ptr;
 
 namespace OpenBabel
 {
-class RXNFormat : public OBFormat
+class RXNFormat : public OBMoleculeFormat
 {
 public:
   //Register this format type ID
@@ -39,9 +40,17 @@ public:
   {
       return
         "MDL RXN format\n"
-        "The MDL reaction format is used to store information on chemical reactions.\n"
+        "The MDL reaction format is used to store information on chemical reactions.\n\n"
         "Output Options, e.g. -xA\n"
-        " A  output in Alias form, e.g. Ph, if present\n\n";
+        " A  output in Alias form, e.g. Ph, if present\n"
+        " G <option> how to handle any agents present\n\n"
+        "            One of the following options should be specifed:\n\n"
+        "            - agent - Treat as an agent (default). Note that some programs\n"
+        "                      may not read agents in RXN files.\n"
+        "            - reactant - Treat any agent as a reactant\n"
+        "            - product - Treat any agent as a product\n"
+        "            - ignore - Ignore any agent\n"
+        "            - both - Treat as both a reactant and a product\n\n";
   };
 
   virtual const char* GetMIMEType()
@@ -49,85 +58,45 @@ public:
 
   virtual const char* TargetClassDescription()
   {
-      return OBReaction::ClassDescription();
-  };
-
-  const type_info& GetType()
-  {
-    return typeid(OBReaction*);
-  };
+      return OBMol::ClassDescription();
+  }
 
 
   ////////////////////////////////////////////////////
   /// The "API" interface functions
-  virtual bool ReadMolecule(OBBase* pReact, OBConversion* pConv);
-  virtual bool WriteMolecule(OBBase* pReact, OBConversion* pConv);
+  virtual bool ReadMolecule(OBBase* pOb, OBConversion* pConv);
+  virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
 
-  ////////////////////////////////////////////////////
-  /// The "Convert" interface functions
-  virtual bool ReadChemObject(OBConversion* pConv)
-  {
-    //Makes a new OBReaction and new associated OBMols
-    OBReaction* pReact = new OBReaction;
-    bool ret=ReadMolecule(pReact,pConv); //call the "API" read function
-
-    std::string auditMsg = "OpenBabel::Read reaction ";
-    std::string description(Description());
-    auditMsg += description.substr(0,description.find('\n'));
-    obErrorLog.ThrowError(__FUNCTION__,
-              auditMsg,
-              obAuditMsg);
-
-    if(ret) //Do transformation and return molecule
-      return pConv->AddChemObject(pReact->DoTransformations(pConv->GetOptions(OBConversion::GENOPTIONS),pConv))!=0;
-    else
-    {
-      pConv->AddChemObject(NULL);
-      delete pReact;
-      pReact=NULL;
-      return false;
-    }
-};
-
-  virtual bool WriteChemObject(OBConversion* pConv)
-  {
-    //WriteChemObject() always deletes the object retrieved by GetChemObject
-    //For RXN NO LONGER deletes the associated molecules which are handled by a smart pointer
-    //Cast to the class type need, e.g. OBMol
-    OBBase* pOb=pConv->GetChemObject();
-    OBReaction* pReact = dynamic_cast<OBReaction*>(pOb);
-    if(pReact==NULL)
-        return false;
-
-    bool ret=false;
-    ret=WriteMolecule(pReact,pConv);
-
-    std::string auditMsg = "OpenBabel::Write reaction ";
-    std::string description(Description());
-          auditMsg += description.substr( 0, description.find('\n') );
-          obErrorLog.ThrowError(__FUNCTION__,
-                                auditMsg,
-                                obAuditMsg);
-    delete pOb;
-    return ret;
-  };
 };
 
 //Make an instance of the format class
 RXNFormat theRXNFormat;
 
+static bool ParseComponent(const char* t, unsigned int *ans)
+{
+  const char *p = t;
+  while (*p == ' ')
+    p++;
+  while (p - t < 3) {
+    if (*p < '0' || *p > '9')
+      return false;
+    *ans *= 10;
+    *ans += *p - '0';
+    p++;
+  }
+  return true;
+}
+
 /////////////////////////////////////////////////////////////////
 bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
-    //It's really a reaction, not a molecule.
-    //Doesn't make a new OBReactionObject, but does make mew reactant and product OBMols
-   OBReaction* pReact = pOb->CastAndClear<OBReaction>();
+    OBMol* pmol = pOb->CastAndClear<OBMol>();
+    if (pmol == NULL)
+      return false;
 
     OBFormat* pMolFormat = pConv->FindFormat("MOL");
-    if(pMolFormat==NULL || !pReact)
-        return false;
-
-    //	OBConversion MolConv(*pConv); //new copy to use to read associated MOL
+    if (pMolFormat==NULL)
+      return false;
 
     istream &ifs = *pConv->GetInStream();
     string ln;
@@ -143,20 +112,33 @@ bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         return false; //Has to start with $RXN
     }
     if (!getline(ifs,ln))
-      return(false); //reaction title
-    pReact->SetTitle(Trim(ln));
+      return false; //reaction title
+    pmol->SetTitle(Trim(ln));
 
     if (!getline(ifs,ln))
       return false; //creator
     if (!getline(ifs, ln))
-      return(false); //comment
-    pReact->SetComment(Trim(ln));
+      return false; //comment
+    // Originally the comment was added to the reaction via:
+    //     pmol->SetComment(Trim(ln));
 
-    int nReactants, nProducts, i;
-    ifs >> setw(3) >> nReactants >> setw(3) >> nProducts >> ws;
-    if(!ifs) return false;
+    if (!getline(ifs, ln))
+      return false; // num reactants, products, and optionally agents
 
-    if(nReactants + nProducts)
+    unsigned int nReactants = 0, nProducts = 0, nAgents = 0;
+    bool ok = ParseComponent(ln.c_str() + 0, &nReactants);
+    if (!ok)
+      return false;
+    ok = ParseComponent(ln.c_str() + 3, &nProducts);
+    if (!ok)
+      return false;
+    if (ln[6] != '\0') { // optional agents
+      ok = ParseComponent(ln.c_str() + 6, &nAgents);
+      if (!ok)
+        return false;
+    }
+
+    if(nReactants + nProducts + nAgents)
     {
       //Read the first $MOL. The others are read at the end of the previous MOL
       if(!getline(ifs, ln))
@@ -165,46 +147,136 @@ bool RXNFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         return false;
     }
 
-    OBMol* pmol;
+    OBReactionFacade rxnfacade(pmol);
 
-    for(i=0;i<nReactants;i++)
-    {
-      //Read a MOL file	using the same OBConversion object but with a different format
-      pmol=new OBMol;
-      if(!pMolFormat->ReadMolecule(pmol,pConv))
-        obErrorLog.ThrowError(__FUNCTION__, "Failed to read a reactant", obWarning);
-      else
+    // Note: If we supported it, we could read each of the rxn components directly
+    // into the returned OBMol instead of having to do a copy. Unfortunately,
+    // this isn't possible at the moment (MOL format will need some work first).
+    // Here is some example code to do it:
+    //
+    //unsigned int old_numatoms = 0;
+    //unsigned int compid = 1;
+    //for (int i = 0; i<nReactants; i++)
+    //{
+    //  //Read a MOL file	using the same OBConversion object but with a different format
+    //  if (!pMolFormat->ReadMolecule(pmol, pConv))
+    //    obErrorLog.ThrowError(__FUNCTION__, "Failed to read a reactant", obWarning);
+    //  unsigned int numatoms = pmol->NumAtoms();
+    //  for (unsigned int idx = old_numatoms + 1; idx <= numatoms; ++idx) {
+    //    OBAtom* atom = pmol->GetAtom(idx);
+    //    rxnfacade.SetRole(atom, REACTANT);
+    //    rxnfacade.SetComponentId(atom, compid);
+    //  }
+    //  old_numatoms = numatoms;
+    //  compid++;
+    //}
+
+    const char* type[3] = {"a reactant", "a product", "an agent"};
+    OBReactionRole role;
+    unsigned int num_components;
+    for(unsigned int N=0; N<3; N++) {
+      switch(N) {
+      case 0:
+        role = REACTANT;
+        num_components = nReactants;
+        break;
+      case 1:
+        role = PRODUCT;
+        num_components = nProducts;
+        break;
+      case 2:
+        role = AGENT;
+        num_components = nAgents;
+        break;
+      }
+      for (int i=0; i<num_components; i++)
       {
-        obsharedptr<OBMol> p(pmol);
-        pReact->AddReactant(p);
+        //Read a MOL file	using the same OBConversion object but with a different format
+        OBMol mol;
+        if (!pMolFormat->ReadMolecule(&mol, pConv)) {
+          std::string error = "Failed to read ";
+          error += type[N];
+          obErrorLog.ThrowError(__FUNCTION__, error, obWarning);
+          continue;
+        }
+        if (mol.NumAtoms() == 0) {
+          OBAtom* dummy = mol.NewAtom(); // Treat the empty OBMol as having a single dummy atom
+          OBPairData *pd = new OBPairData();
+          pd->SetAttribute("rxndummy");
+          pd->SetValue("");
+          pd->SetOrigin(fileformatInput);
+          dummy->SetData(pd);
+        }
+
+        rxnfacade.AddComponent(&mol, role);
       }
     }
 
-    for(i=0;i<nProducts;i++)
-    {
-      //Read a MOL file
-      pmol=new OBMol;
-      if(!pMolFormat->ReadMolecule(pmol,pConv))
-        obErrorLog.ThrowError(__FUNCTION__, "Failed to read a product", obWarning);
-      else
-      {
-        //        pReact->products.push_back(pmol);
-        obsharedptr<OBMol> p(pmol);
-        pReact->AddProduct(p);
-      }
-    }
+    pmol->SetIsReaction();
+    return true;
+}
 
-    return(true);
+enum HandleAgent {
+  AS_AGENT, IGNORE, AS_REACT, AS_PROD, BOTH_REACT_AND_PROD
+};
+
+static HandleAgent ReadAgentOption(const char* t)
+{
+  if (!t)
+    return AS_AGENT; // default
+  switch(t[0]) {
+  case 'a':
+    if (t[1]=='g' && t[2]=='e' && t[3]=='n' && t[4]=='t' && t[5]=='\0')
+      return AS_AGENT;
+    break;
+  case 'i':
+    if (t[1]=='g' && t[2]=='n' && t[3]=='o' && t[4]=='r' && t[5]=='e' && t[6]=='\0')
+      return IGNORE;
+    break;
+  case 'r':
+    if (t[1]=='e' && t[2]=='a' && t[3]=='c' && t[4]=='t' && t[5]=='a' && t[6]=='n' && t[7]=='t' && t[8]=='\0')
+      return AS_REACT;
+    break;
+  case 'p':
+    if (t[1]=='r' && t[2]=='o' && t[3]=='d' && t[4]=='u' && t[5]=='c' && t[6]=='t' && t[7]=='\0')
+      return AS_PROD;
+    break;
+  case 'b':
+    if (t[1]=='o' && t[2]=='t' && t[3]=='h' && t[4]=='\0')
+      return BOTH_REACT_AND_PROD;
+    break;
+  }
+  return AS_AGENT;
+}
+
+static void WriteMolFile(OBMol* pmol, OBConversion* pconv, OBFormat* pformat)
+{
+  ostream &ofs = *pconv->GetOutStream();
+  ofs << "$MOL" << '\n';
+  // Treat a dummy atom with "rxndummy" as the empty file
+  if (pmol->NumAtoms() == 1) {
+    OBAtom *atm = pmol->GetFirstAtom();
+    if (atm->GetAtomicNum() == 0 && atm->HasData("rxndummy"))
+      pmol->DeleteAtom(atm);
+  }
+  pformat->WriteMolecule(pmol, pconv);
+}
+
+static void WriteAgents(OBMol& mol, OBReactionFacade& rxnfacade, OBConversion* pconv, OBFormat* pformat)
+{
+  for(unsigned int i=0; i<rxnfacade.NumComponents(AGENT); i++) {
+    mol.Clear();
+    rxnfacade.GetComponent(&mol, AGENT, i);
+    WriteMolFile(&mol, pconv, pformat);
+  }
 }
 
 /////////////////////////////////////////////////////////////////
 bool RXNFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
-    //It's really a reaction, not a molecule.
-    //Cast output object to the class type need, i.e. OBReaction
-    OBReaction* pReact = dynamic_cast<OBReaction*>(pOb);
-    if(pReact==NULL)
-        return false;
+    OBMol* pmol = dynamic_cast<OBMol*>(pOb);
+    if (pmol == NULL || !pmol->IsReaction())
+      return false;
 
     pConv->AddOption("no$$$$",OBConversion::OUTOPTIONS);
 
@@ -215,30 +287,65 @@ bool RXNFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
         return false;
     }
 
+    OBReactionFacade rxnfacade(pmol);
+
+    HandleAgent handleagent = ReadAgentOption(pConv->IsOption("G"));
+    bool hasAgent = rxnfacade.NumComponents(AGENT) > 0;
+    bool agentInReactants, agentInProducts;
+    if (hasAgent && (handleagent==BOTH_REACT_AND_PROD || handleagent==AS_REACT))
+      agentInReactants = true;
+    else
+      agentInReactants = false;
+    if (hasAgent && (handleagent==BOTH_REACT_AND_PROD || handleagent==AS_PROD))
+      agentInProducts = true;
+    else
+      agentInProducts = false;
+
     ostream &ofs = *pConv->GetOutStream();
 
-    ofs << "$RXN" << endl;
-    ofs << pReact->GetTitle() << endl;
-    ofs << "      OpenBabel" << endl;
-    ofs << pReact->GetComment() <<endl;
+    ofs << "$RXN" << '\n';
+    ofs << pmol->GetTitle() << '\n';
+    ofs << "      OpenBabel" << '\n';
+    //ofs << pReact->GetComment() << '\n';
+    ofs << "\n";
 
-    ofs << setw(3) << pReact->NumReactants() << setw(3) << pReact->NumProducts() << endl;
+    ofs << setw(3);
+    if (agentInReactants)
+      ofs << rxnfacade.NumComponents(REACTANT) + rxnfacade.NumComponents(AGENT);
+    else
+      ofs << rxnfacade.NumComponents(REACTANT);
+    ofs << setw(3);
+    if (agentInProducts)
+      ofs << rxnfacade.NumComponents(PRODUCT) + rxnfacade.NumComponents(AGENT);
+    else
+      ofs << rxnfacade.NumComponents(PRODUCT);
+    if (hasAgent && handleagent==AS_AGENT)
+      ofs << setw(3) << rxnfacade.NumComponents(AGENT);
+    ofs << '\n';
 
-    unsigned i;
-    for(i=0;i<pReact->NumReactants();i++)
-    {
-      ofs << "$MOL" << endl;
-      //Write reactant in MOL format
-      pMolFormat->WriteMolecule(pReact->GetReactant(i).get(), pConv);
+    // Write reactants
+    OBMol mol;
+    for(unsigned int i=0; i<rxnfacade.NumComponents(REACTANT); i++) {
+      mol.Clear();
+      rxnfacade.GetComponent(&mol, REACTANT, i);
+      WriteMolFile(&mol, pConv, pMolFormat);
     }
+    if (agentInReactants)
+      WriteAgents(mol, rxnfacade, pConv, pMolFormat);
 
-    for(i=0;i<pReact->NumProducts();i++)
-    {
-      ofs << "$MOL" << endl;
-      //Write reactant in MOL format
-      pMolFormat->WriteMolecule(pReact->GetProduct(i).get(), pConv);
+    // Write products
+    for(unsigned int i=0; i<rxnfacade.NumComponents(PRODUCT); i++) {
+      mol.Clear();
+      rxnfacade.GetComponent(&mol, PRODUCT, i);
+      WriteMolFile(&mol, pConv, pMolFormat);
     }
+    if (agentInProducts)
+      WriteAgents(mol, rxnfacade, pConv, pMolFormat);
 
+    // Write agent out (if treating AS_AGENT)
+    if(hasAgent && handleagent==AS_AGENT)
+      WriteAgents(mol, rxnfacade, pConv, pMolFormat);
+    
     return true;
 }
 

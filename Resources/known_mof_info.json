@@ -12,15 +12,15 @@
 	"P1-Cu-BTC" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] f1.tbo.cat0.F1.P1-Cu-BTC",
 	"DOTSOV_clean" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] f1.tbo.cat0.F1.DOTSOV_clean",
 	
-	"ZIF-8-RASPA" : "Cc1ncc[n]1.[Zn] f1.sod.cat0.F1.ZIF-8-RASPA",
-	"ZIF-69-RASPA" : "Clc1ccc2c(c1)[n]cn2.Clc1ccc2c(c1)nc[n]2.O=N(=O)C1=N[CH]C=N1.O=N(=O)c1ncc[n]1.[Zn] f1.gme.cat0.F1.ZIF-69-RASPA",
+	"ZIF-8-RASPA" : "CC1=NC=C[N]1.[Zn] f1.sod.cat0.F1.ZIF-8-RASPA",
+	"ZIF-69-RASPA" : "Clc1ccc2c(c1)N=C[N]2.Clc1ccc2c(c1)[N]C=N2.O=N(=O)C1=NC=C[N]1.O=N(=O)C1=N[CH]C=N1.[Zn] f1.gme.cat0.F1.ZIF-69-RASPA",
 	
 	"NU-1000_S1" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.csq.cat0.F1.NU-1000_S1",
 	"super_nu1000" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.csq.cat0.F1.super_nu1000",
 	
 	"super_csq_sym_5_mc_2_sym_8_mc_9_L_12" : "O[Zr]123(O)[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)O)(O)O.[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Cu][Cu][O] f1.csq.cat0.F1.super_csq_sym_5_mc_2_sym_8_mc_9_L_12",
 	"ja_512311a_si_007_tobacco" : "[O-]C(=O)c1c(F)cc(cc1F)c1cc(cc(c1)c1cc(F)c(c(c1)F)C(=O)[O-])c1cc(F)c(c(c1)F)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.qom.cat0.F1.ja_512311a_si_007_tobacco",
-	"ADARAA_clean" : "[Co]O[Co].[O-]C(=O)c1cc(cc(c1)C1=c2ccc3n2[Co]24n5c1ccc5C(=c1n2c(cc1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O-])C(=O)[O-])c1c(Br)cccc1Br)C(=O)[O-] f1.nbo.cat0.F1.ADARAA_clean",
+	"ADARAA_clean" : "[Co]O[Co].[O-]C(=O)c1cc(cc(c1)C1=C2C=CC3=[N]2[Co]24n5c1ccc5C(=C1[N]2=C(C=C1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O-])C(=O)[O-])c1c(Br)cccc1Br)C(=O)[O-] f1.nbo.cat0.F1.ADARAA_clean",
 	"ic101935f_si_002_tobacco" : "[O-]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O-])Nc1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
 	
 	"MIL-47-P1-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-P1-RASPA",
@@ -30,7 +30,7 @@
 	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "[O-]C(=O)C=CC=CC(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.fcu.cat0.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
 	"hypotheticalMOF_2000756_0_0_2_32_32_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.tbo.cat0.F1.hypotheticalMOF_2000756_0_0_2_32_32_0",
 	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O-]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_5026325_3_0_0_27_27_0",
-	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "[O-]C(=O)c1ccc(cc1)n1c(=O)c2ccc3c4c2c(c1=O)ccc4c(=O)n(c3=O)c1ccc(cc1)C(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
+	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "[O-]C(=O)c1ccc(cc1)N1C(=O)c2ccc3c4c2c(C1=O)ccc4C(=O)N(C3=O)c1ccc(cc1)C(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
 	"hypotheticalMOF_22242_0_0_1_0_9_0" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_22242_0_0_1_0_9_0",
 	"super_hMOF_22242" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.super_hMOF_22242",
 	
@@ -43,13 +43,14 @@
 	
 	"_some_known_issues" : {
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
-		"ZIF-69-RASPA" : "Strange radicals in both linkers"
+		"ZIF-69-RASPA" : "Strange radicals in both linkers",
+		"ADARAA_clean" : "Linker is no longer aromatic with ~2018 Open Babel updates, probably due to the coordination environment with the metal"
 	},
 	
 	"_regression_tests" : {
 		"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "Multiple representations of the linker fixed by incorporating torsion code in OBBond::IsDoubleBondGeometry",
 		"ADARAA_clean" : "Porphyrinic MOF, which requires inclusion of Co ions into the linkers.  Otherwise the topology is not found.",
-		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "pcu topology after bound solvents are removed/simplified",
+		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "pcu topology after bound solvents are removed/simplified.  Also the linker should probably only be aromatic on two of its core rings.",
 		"hypotheticalMOF_22242_0_0_1_0_9_0" : "pcu topology after correctly detecting neighboring paddlewheels (not xah topology)",
 		"ABAVIJ_clean" : "Paddlewheel detection code should differentiate the direction of carboxylates, making this NOT a PW",
 		"MIL-47-P1-RASPA" : "Basic proof-of-concept for rod-like topologies (specifically **rna** for this MOF)",

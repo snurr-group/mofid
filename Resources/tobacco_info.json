@@ -36,7 +36,7 @@
 		"L_10" : "[Lr]c1ccc(c2c1CC2)[Lr]",
 		"L_11" : "[Lr]C12C=CC(C=C1)(C=C2)[Lr]",
 		"L_12" : "[Lr]c1ccc(cc1)[Lr]",
-		"L_13" : "[Lr]c1nnc(nn1)[Lr]",
+		"L_13" : "[Lr]C1=N[N]C(=N[N]1)[Lr]",
 		"L_14" : "[Lr]C=CC=C[Lr]",
 		"L_15" : "[Lr]C=CC=C[Lr]",
 		"L_16" : "[Lr]C#CC#C[Lr]",
@@ -64,7 +64,7 @@
 		"L_39" : "[Lr]c1ccc(cc1)C=Cc1ccc(cc1)[Lr]",
 		"L_40" : "[Lr]c1ccc(cc1)N=Nc1ccc(cc1)[Lr]",
 		"L_41" : "[Lr]c1ccc(cc1)C#Cc1ccc(cc1)[Lr]",
-		"L_42" : "[Lr]c1nnc(nn1)C#Cc1nnc(nn1)[Lr]",
+		"L_42" : "[Lr]C1=N[N]C(=N[N]1)C#Cc1nnc(nn1)[Lr]",
 		"L_43" : "[Lr]c1ccc(cc1)c1ccc(cc1)c1ccc(cc1)[Lr]",
 		"L_44" : "[Lr]c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)[Lr]",
 		"L_45" : "[Lr]c1nnc(nn1)c1nnc(nn1)c1nnc(nn1)[Lr]",
@@ -86,6 +86,8 @@
 		"L_14 and L_15" : "Again we have conformers.  Currently they're listed without stereo in the database here",
 		"L_18"       : "Four inconsistent representations",
 		"L_22"       : "Many kekulization errors in this NU-1000 foundation",
-		"citation"   : "Note that this set of ToBaCCo components comes from the 2016 paper (10.1039/C6EE02104B), not the 2017 algorithmic version"
+		"citation"   : "Note that this set of ToBaCCo components comes from the 2016 paper (10.1039/C6EE02104B), not the 2017 algorithmic version",
+		"L_13"       : "New kekulization regression after updating 2018 upstream Open Babel code",
+		"L_42"       : "New kekulization regression after updating 2018 upstream Open Babel code"
 	}
 }

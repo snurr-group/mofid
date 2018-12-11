@@ -19,6 +19,7 @@
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
+#include <openbabel/elements.h>
 #include "config_sbu.h"
 
 
@@ -28,6 +29,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // Function prototypes
 void copyAtom(OBAtom* src, OBMol* dest);
 OBMol initMOF(OBMol *orig_in_uc);
+OBUnitCell* getPeriodicLattice(OBMol *mol);
 
 
 int main(int argc, char* argv[])
@@ -41,7 +43,11 @@ int main(int argc, char* argv[])
 	std::stringstream dataMsg;
 	dataMsg << "Using local Open Babel data saved in " << LOCAL_OB_DATADIR << std::endl;
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
+#ifdef _WIN32
+	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+#else
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+#endif
 
 	// Read CIF as single bonds
 	OBMol orig_mol;
@@ -109,14 +115,18 @@ void copyAtom(OBAtom* src, OBMol* dest) {
 	OBAtom* copied = dest->NewAtom();
 	copied->SetVector(src->GetVector());
 	copied->SetAtomicNum(src->GetAtomicNum());
-	copied->SetType(etab.GetName(src->GetAtomicNum()));
+	copied->SetType(OBElements::GetName(src->GetAtomicNum()));
 }
 
 OBMol initMOF(OBMol *orig_in_uc) {
 	// Initializes a MOF with the same lattice params as *orig_in_uc
 	OBMol dest;
-	dest.SetPeriodicLattice(orig_in_uc->GetPeriodicLattice());
-	dest.SetData(dest.GetPeriodicLattice()->Clone(NULL));
+	dest.SetData(getPeriodicLattice(orig_in_uc)->Clone(NULL));
+	dest.SetPeriodicMol();
 	return dest;
 }
 
+OBUnitCell* getPeriodicLattice(OBMol *mol) {
+	// (temporary) replacement for the old OBMol.GetPeriodicLattice helper function
+	return (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
+}

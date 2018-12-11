@@ -37,13 +37,6 @@ namespace OpenBabel
 
     OBMol* pmol = new OBMol;
 
-    std::string auditMsg = "OpenBabel::Read molecule ";
-    std::string description(pFormat->Description());
-    auditMsg += description.substr(0,description.find('\n'));
-    obErrorLog.ThrowError(__FUNCTION__,
-                          auditMsg,
-                          obAuditMsg);
-
     if(pConv->IsOption("C",OBConversion::GENOPTIONS))
       return DeferMolOutput(pmol, pConv, pFormat);
 
@@ -106,8 +99,10 @@ namespace OpenBabel
 
     OBMol* ptmol = NULL;
     //Molecule is valid if it has some atoms
+    //or it represents a reaction
     //or the format allows zero-atom molecules and it has a title or properties
     if(ret && (pmol->NumAtoms() > 0 
+      || pmol->IsReaction()
       || (pFormat->Flags()&ZEROATOMSOK && (*pmol->GetTitle() || pmol->HasData(1)))))
     {
       ptmol = static_cast<OBMol*>(pmol->DoTransformations(pConv->GetOptions(OBConversion::GENOPTIONS),pConv));
@@ -169,13 +164,6 @@ namespace OpenBabel
           }
         ret=true;
 
-        std::string auditMsg = "OpenBabel::Write molecule ";
-        std::string description(pFormat->Description());
-        auditMsg += description.substr(0,description.find('\n'));
-        obErrorLog.ThrowError(__FUNCTION__,
-                              auditMsg,
-                              obAuditMsg);
-
         ret = DoOutputOptions(pOb, pConv);
 
         if(ret)
@@ -204,7 +192,7 @@ namespace OpenBabel
     if(pmol) {
       if(pConv->IsOption("writeconformers", OBConversion::GENOPTIONS)) {
         //The last conformer is written in the calling function
-        unsigned int c = 0;
+        int c = 0;
         for (; c < pmol->NumConformers()-1; ++c) {
           pmol->SetConformer(c);
           if(!pConv->GetOutFormat()->WriteMolecule(pmol, pConv))
@@ -404,11 +392,6 @@ namespace OpenBabel
         if(itr==lastitr)
           pConv->SetOneObjectOnly(); //to set IsLast
 
-        std::string auditMsg = "OpenBabel::Write molecule ";
-        std::string description((pConv->GetOutFormat())->Description());
-        auditMsg += description.substr(0,description.find('\n'));
-        obErrorLog.ThrowError(__FUNCTION__, auditMsg,  obAuditMsg);
-
         ret = pConv->GetOutFormat()->WriteMolecule(itr->second, pConv);
 
         delete itr->second; //always delete OBMol object
@@ -440,14 +423,13 @@ namespace OpenBabel
 
     //Collect the molecules first, just for convenience
     vector<obsharedptr<OBMol> > mols;
-    unsigned i;
-    for(i=0;i<pReact->NumReactants();i++)
+    for(int i=0;i<pReact->NumReactants();i++)
       mols.push_back(pReact->GetReactant(i));
-    for(i=0;i<pReact->NumProducts();i++)
+    for(int i=0;i<pReact->NumProducts();i++)
       mols.push_back(pReact->GetProduct(i));
+    for (int i = 0; i<pReact->NumAgents(); i++)
+      mols.push_back(pReact->GetAgent(i));
 
-    if(pReact->GetAgent())
-      mols.push_back(pReact->GetAgent());
     if(pReact->GetTransitionState())
       mols.push_back(pReact->GetTransitionState());
 
@@ -461,7 +443,7 @@ namespace OpenBabel
       mols.resize(1);
     }
     bool ok = true;
-    for(i=0;i<mols.size() && ok;++i)
+    for(unsigned int i=0;i<mols.size() && ok;++i)
     {
       if(mols[i])
       {
