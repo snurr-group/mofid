@@ -1,0 +1,24 @@
+language: cpp
+
+matrix:
+  include:
+    - compiler: gcc
+    - compiler: clang
+
+python:
+  - "2.7"
+
+before_install:
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt-get install -qq swig libeigen3-dev default-jre
+  - pip install --user easyprocess
+  - make download
+
+before_script:
+  - make init
+
+script:
+  - make bin/sbu
+  - make test

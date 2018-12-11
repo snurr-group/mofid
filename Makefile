@@ -40,21 +40,11 @@ Resources/External/Systre-1.2.0-beta2.jar:
 	wget https://github.com/odf/gavrog/releases/download/v0.6.0-beta2/Systre-1.2.0-beta2.jar
 
 
-# Download json parser
-# Currently no support for OSX within the Makefile, but it should be straightforward to add it:
-# See download page at https://stedolan.github.io/jq/download/
+# Download json parser from https://stedolan.github.io/jq/download/
+# Warning: OS X code here and elsewhere in the repo is untested.  YMMV
 Resources/External/jq:
-	JQ_BIN="UNKNOWN"; \
 	cd Resources/External; \
-	if [[ $$(uname -s) == *"NT"* ]]; then JQ_BIN="jq-win64.exe"; fi; \
-	if [[ $$(uname -s) == *"Linux"* ]]; then JQ_BIN="jq-linux64"; fi; \
-	wget "https://github.com/stedolan/jq/releases/download/jq-1.6/$$JQ_BIN"; \
-	wget "https://raw.githubusercontent.com/stedolan/jq/master/sig/v1.6/sha256sum.txt"; \
-	mv sha256sum.txt jq_sha256sum.txt; \
-	echo "Verifying checksum integrity of jq executable:"; \
-	grep $$JQ_BIN jq_sha256sum.txt | sha256sum --check || exit 55; \
-	cp $$JQ_BIN jq; \
-	chmod +x jq
+	bash ../../Scripts/make_download_jq.sh
 
 
 init:
@@ -69,11 +59,9 @@ init:
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	make ;\
-	cp ../openbabel/build/bin/*.dll .
+	make
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
-	# FIXME: the last `cp` hacks together a DLL dependency until I can figure out the cmake command
 
 eclipse:
 	cd bin; \

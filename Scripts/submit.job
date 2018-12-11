@@ -9,5 +9,5 @@
 cd $PBS_O_WORKDIR
 echo $PBS_JOBID > jobid
 
-bash Scripts/extract_folder.sh Data/RingCIFs/
+bash Scripts/extract_folder.sh Resources/TestCIFs/
 

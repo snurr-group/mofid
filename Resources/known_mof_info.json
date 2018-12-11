@@ -10,7 +10,6 @@
 	"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "[O-]C(=O)c1cc2ccc3c4c2c(c1)ccc4cc(c3)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_15286_i_0_j_17_k_17_m_0",
 	
 	"P1-Cu-BTC" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] f1.tbo.cat0.F1.P1-Cu-BTC",
-	"DOTSOV_clean" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] f1.tbo.cat0.F1.DOTSOV_clean",
 	
 	"ZIF-8-RASPA" : "CC1=NC=C[N]1.[Zn] f1.sod.cat0.F1.ZIF-8-RASPA",
 	"ZIF-69-RASPA" : "Clc1ccc2c(c1)N=C[N]2.Clc1ccc2c(c1)[N]C=N2.O=N(=O)C1=NC=C[N]1.O=N(=O)C1=N[CH]C=N1.[Zn] f1.gme.cat0.F1.ZIF-69-RASPA",
@@ -36,8 +35,6 @@
 	
 	"ABAVIJ_clean" : "[Co].[O-]C(=O)c1ccncc1 f1.rtl.cat0.F1.ABAVIJ_clean",
 	
-	"NADZEZ-713513-P1" : "O=[Y].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-].[Y] f1.NEW.cat0.F1.NADZEZ-713513-P1",
-	
 	"COD_2100028" : "* f1.NA.no_mof.F1.COD_2100028",
 	"intentionally_messed_up_hmof1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Zn][O]([Zn][O])([Zn])[Zn].[Zn][O]([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
 	
@@ -59,7 +56,6 @@
 	},
 	
 	"_info" : {
-		"NADZEZ-713513-P1" : "CoRE MOF 1.0 structure to test solvent removal.  Also tests the O=[Y] bond.",
 		"COD_2100028" : "non-MOF to test the check for catenation",
 		"super_hMOF_22242" : "Differentiate between issues in general paddlewheel detection code and small unit cells (which also contain oxalic acid).  Both should give **pcu** if operating properly, **xah** otherwise."
 	}

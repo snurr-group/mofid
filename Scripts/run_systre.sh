@@ -5,13 +5,13 @@
 DEFAULT_CGD_PATH="Test/topology.cgd"
 
 kernel=$(uname -s)
-if [[ $kernel == CYGWIN_NT* ]]
+if [[ $kernel == *NT* ]]
 then
 	SBU_BIN="C:/Users/Benjamin/Git/mofid/bin/sbu.exe"
 	# Settings for Systre
 	JAVA_LOC="C:/Program Files/Java/jre1.8.0_102/bin/java"
 	GAVROG_LOC="C:/Users/Benjamin/Software/Gavrog-0.6.0/Systre.jar"
-elif [[ $kernel == Linux* ]]
+elif [[ $kernel == *Linux* || $kernel == *linux* ]]
 then
 	SBU_BIN="/home/bbucior/Git/mofid/bin/sbu"
 	JAVA_LOC="java"
