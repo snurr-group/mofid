@@ -28,7 +28,7 @@ GA_DB = "../Resources/ga_hmof_info.json"
 TOBACCO_DB = "../Resources/tobacco_info.json"
 KNOWN_DB = "../Resources/known_mof_info.json"
 
-KNOWN_DEFAULT_CIFS = "../Data/RingCIFs"
+KNOWN_DEFAULT_CIFS = "../Resources/TestCIFs"
 TOBACCO_DEFAULT_CIFS = "../Data/tobacco_L_12/quick"
 HMOF_DEFAULT_CIFS = "../Data/hmofs_i_0_no_cat"
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main

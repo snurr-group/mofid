@@ -1,0 +1,113 @@
+#------------------------------------------------------------------------------
+#$Date: 2016-02-14 16:26:36 +0200 (Sun, 14 Feb 2016) $
+#$Revision: 176435 $
+#$URL: file:///home/coder/svn-repositories/cod/cif/2/10/00/2100028.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/. The original data for this entry
+# were provided by IUCr Journals, http://journals.iucr.org/.
+#
+# The file may be used within the scientific community so long as
+# proper attribution is given to the journal article from which the
+# data were obtained.
+#
+data_2100028
+loop_
+_publ_author_name
+'Richard E. Marsh'
+_publ_section_title
+;
+ Space group <i>P</i>1: an update
+;
+_journal_issue                   3
+_journal_name_full               'Acta Crystallographica Section B'
+_journal_page_first              359
+_journal_page_last               359
+_journal_paper_doi               10.1107/S0108768105009651
+_journal_volume                  61
+_journal_year                    2005
+_chemical_formula_moiety         'C12 H28 N2 O4, 2(C14 H7 O4), 2(H2 O)'
+_chemical_formula_sum            'C40 H46 N2 O14'
+_space_group_crystal_system      triclinic
+_symmetry_space_group_name_H-M   'P -1'
+_audit_creation_method           CRYM
+_cell_angle_alpha                100.40
+_cell_angle_beta                 91.38
+_cell_angle_gamma                98.01
+_cell_formula_units_Z            1
+_cell_length_a                   7.7050
+_cell_length_b                   10.8710
+_cell_length_c                   11.5400
+_cell_volume                     940.243
+_cod_data_source_file            bk0148.cif
+_cod_data_source_block           DAVLER
+_cod_depositor_comments
+;
+  Added moiety chemical formula and Z value from Marsh (2005) paper.
+  The summary chemical formula is calculated from moiety formula using
+  AdHocParser
+  (svn://www.crystallography.net/cod-tools/trunk/Formulae/AdHocParser.yp,
+  revision 1441.)
+
+  Andrius Merkys
+  2013-11-11
+;
+_cod_original_sg_symbol_H-M      P-1
+_cod_original_formula_sum        'not given'
+_cod_database_code               2100028
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_type_symbol
+O1 0.76470 0.29120 -0.52560 O
+O2 0.55955 -0.00785 -0.25430 O
+O3 0.53920 0.58215 -0.14840 O
+O4 0.70925 0.87510 -0.43225 O
+H1 0.66250 0.91350 -0.37250 H
+C1 0.63465 0.17275 -0.34360 C
+H2 0.66705 0.12240 -0.41130 H
+C2 0.57435 0.11660 -0.24835 C
+C3 0.53125 0.19610 -0.14755 C
+H3 0.49520 0.16140 -0.08260 H
+C4 0.54095 0.32405 -0.14165 C
+H4 0.50995 0.37430 -0.07355 H
+C5 0.59680 0.37985 -0.23700 C
+C6 0.59340 0.51475 -0.23300 C
+C7 0.65695 0.57020 -0.33635 C
+C8 0.65545 0.69805 -0.33430 C
+H5 0.61645 0.74780 -0.26865 H
+C9 0.71195 0.75245 -0.42975 C
+C10 0.77385 0.67750 -0.52505 C
+H6 0.81395 0.71330 -0.58855 H
+C11 0.77710 0.55115 -0.52760 C
+H7 0.82000 0.50265 -0.59245 H
+C12 0.71635 0.49455 -0.43370 C
+C13 0.71325 0.35785 -0.44005 C
+C14 0.64620 0.30235 -0.33755 C
+O9 -0.07640 0.25390 0.02420 O
+C29 0.07755 0.30570 -0.02480 C
+H15 0.18050 0.28660 0.01450 H
+H16 0.08435 0.39680 -0.01440 H
+C30 0.07050 0.24935 -0.15280 C
+H17 -0.03550 0.26460 -0.19140 H
+H18 0.17080 0.28710 -0.18995 H
+O10 0.07225 0.11750 -0.16300 O
+C31 0.09420 0.05315 -0.27890 C
+H19 0.20455 0.08725 -0.30760 H
+H20 -0.00035 0.06260 -0.33210 H
+C32 0.09265 -0.08365 -0.27225 C
+H21 -0.01990 -0.11715 -0.24605 H
+H22 0.10740 -0.13095 -0.35020 H
+N1 0.23480 -0.10030 -0.18975 N
+H23 0.22200 -0.05850 -0.10800 H
+H24 0.35350 -0.06650 -0.21300 H
+C33 0.25205 -0.23500 -0.18620 C
+H25 0.27280 -0.27750 -0.26490 H
+H26 0.35375 -0.23670 -0.13565 H
+C34 0.09450 -0.30695 -0.14240 C
+H27 -0.00970 -0.30240 -0.18930 H
+H28 0.10910 -0.39510 -0.14920 H
+O13 0.22315 0.02340 0.05555 O

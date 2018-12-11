@@ -33,7 +33,7 @@ def get_unique_smiles(filename):
 
 import os
 print os.getcwd()
-CIF_PATH = "../../Data/RingCIFs/"
+CIF_PATH = "../../Resources/TestCIFs/"
 print "HKUST-1", get_unique_smiles(os.path.join(CIF_PATH, "DOTSOV_clean.cif"))
 print "IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "P1-IRMOF-1.cif"))
 print "IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "VUSKEA_clean.cif"))
