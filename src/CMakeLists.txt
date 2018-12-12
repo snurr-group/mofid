@@ -21,6 +21,9 @@ set(tools
         searchdb
         tsfm_smiles
    )
+set(mofid_includes
+        obdetails.cpp
+)
 
 ################################################################################
 
@@ -53,7 +56,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
 
 foreach(tool ${tools})
   # The executable
-  add_executable(${tool} ${tool}.cpp)
+  add_executable(${tool} ${tool}.cpp ${mofid_includes})
   # Link against imported openbabel target
   #target_link_libraries(${executable_target} openbabel ${LIBXML2_LIBRARIES})
   target_link_libraries(${tool} openbabel)
