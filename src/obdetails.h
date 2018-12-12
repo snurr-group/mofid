@@ -16,8 +16,10 @@ class OBMol;
 class vector3;
 
 // Class OBMol
+bool isMetal(const OBAtom* atom);
 OBBond* formBond(OBMol *mol, OBAtom *begin, OBAtom *end, int order = 1);
 OBAtom* formAtom(OBMol *mol, vector3 loc, int element);
+int deleteBonds(OBMol *mol, bool only_metals = false);
 
 } // end namespace OpenBabel
 

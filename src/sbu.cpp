@@ -22,9 +22,10 @@
 #include <openbabel/babelconfig.h>
 #include <openbabel/phmodel.h>
 #include <openbabel/elements.h>
-#include "config_sbu.h"
-#include "obdetails.h"
 
+#include "config_sbu.h"
+#include "invector.h"
+#include "obdetails.h"
 
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
@@ -50,11 +51,9 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 std::string writeFragments(const std::vector<std::string> &unique_smiles);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
-bool isMetal(const OBAtom* atom);
 void resetBonds(OBMol *mol);
 void detectSingleBonds(OBMol *mol, double skin = 0.45, bool only_override_oxygen = true);
 bool subtractMols(OBMol *mol, OBMol *subtracted);
-int deleteBonds(OBMol *mol, bool only_metals = false);
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 bool isSubMol(OBMol *sub, OBMol *super);
@@ -150,17 +149,6 @@ struct MinimalAtom {
 	int element;
 	bool is_paddlewheel;
 };
-
-
-template<typename T>  // WARNING: look out for linker complications: https://isocpp.org/wiki/faq/templates#templates-defn-vs-decl
-bool inVector(const T &element, const std::vector<T> &vec) {
-	// Test if an element is a given member of a vector
-	if (std::find(vec.begin(), vec.end(), element) != vec.end()) {  // idiomatic C++
-		return true;
-	} else {
-		return false;
-	}
-}
 
 
 int main(int argc, char* argv[])
@@ -841,21 +829,6 @@ std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion
 	return unique_smiles;
 }
 
-bool isMetal(const OBAtom* atom) {
-	// Use the InChI definition of metals from https://jcheminf.springeropen.com/articles/10.1186/s13321-015-0068-4
-	// Nonmetals are H, He, B, C, N, O, F, Ne, Si, P, S, Cl, Ar, Ge, As, Se, Br, Kr, Te, I, Xe, At, Rn
-	const int NUM_NONMETALS = 23;
-	unsigned int nonmetals[NUM_NONMETALS] = {1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 32, 33, 34, 35, 36, 52, 53, 54, 85, 86};
-
-	unsigned int element = atom->GetAtomicNum();
-	for (int i=0; i<NUM_NONMETALS; ++i) {
-		if (nonmetals[i] == element) {
-			return false;  // Atom is a nonmetal
-		}
-	}
-	return true;  // Atom not classified as a nonmetal, so it's a metal
-}
-
 void resetBonds(OBMol *mol) {
 	// Resets bond orders and bond detection for molecular fragments
 	// Starting with a "clean" OBMol is the easiest way to handle this
@@ -1006,37 +979,6 @@ bool subtractMols(OBMol *mol, OBMol *subtracted) {
 	}
 	mol->EndModify();
 	return true;
-}
-
-int deleteBonds(OBMol *mol, bool only_metals) {
-	// Deletes bonds in a molecule, optionally only deleting bonds to metal atoms.
-	// Returns the number of bond deletions.
-	std::vector<OBMol> fragments;
-	obErrorLog.ThrowError(__FUNCTION__, "Bond deletion enabled", obDebug);
-	// Same spirit as OBMol::DeleteHydrogens()
-	std::vector<OBBond*> delbonds;
-	FOR_ATOMS_OF_MOL(a, *mol) {
-		if (isMetal(&*a) || !only_metals) {
-			FOR_BONDS_OF_ATOM(b, *a) {
-				if (!inVector(&*b, delbonds)) {
-					// avoid double deletion in the case of metal-metal bonds
-					delbonds.push_back(&*b);
-				}
-			}
-		}
-	}
-	mol->BeginModify();
-	std::stringstream deletionMsg;
-	for (std::vector<OBBond*>::iterator itb = delbonds.begin(); itb != delbonds.end(); ++itb) {
-		deletionMsg << "Deleting bond with atomic numbers ";
-		deletionMsg << (*itb)->GetBeginAtom()->GetAtomicNum() << " and ";
-		deletionMsg << (*itb)->GetEndAtom()->GetAtomicNum();
-		deletionMsg << " (OBBond * " << static_cast<void *>(&*itb) << ")\n";
-		mol->DeleteBond(*itb);  // We should also consider preserving the connection point instead of outright deleting the bond
-	}
-	obErrorLog.ThrowError(__FUNCTION__, deletionMsg.str(), obDebug);
-	mol->EndModify();
-	return delbonds.size();
 }
 
 bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2) {
