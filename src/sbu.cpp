@@ -181,7 +181,9 @@ int main(int argc, char* argv[])
 #ifdef _WIN32
 	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
 #else
+#ifndef __INTELLISENSE__ // Ignore setenv error in vscode:
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+#endif  // vscode error workaround
 #endif
 
 	std::string mof_results = analyzeMOF(std::string(filename));
