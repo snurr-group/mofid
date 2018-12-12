@@ -53,11 +53,6 @@ std::string getSMILES(OBMol fragment, OBConversion obconv);
 std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 void resetBonds(OBMol *mol);
 void detectSingleBonds(OBMol *mol, double skin = 0.45, bool only_override_oxygen = true);
-bool subtractMols(OBMol *mol, OBMol *subtracted);
-bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
-OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
-bool isSubMol(OBMol *sub, OBMol *super);
-std::map<int,int> getNumericFormula(OBMol *mol);
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
@@ -954,76 +949,6 @@ void detectSingleBonds(OBMol *mol, double skin, bool only_override_oxygen) {
 			}
 		}
 	}
-}
-
-bool subtractMols(OBMol *mol, OBMol *subtracted) {
-	// Subtracts all atoms from a second molecule present in the first
-	// Returns true if successful, false if failure (extra atoms, etc)
-	// Modifies *mol if true, reverts back to original *mol if false
-	// This code assumes that the molecule is well-defined (no multiply-defined atoms)
-
-	std::vector<OBAtom*> deleted;  // Consider implementing as a queue
-	FOR_ATOMS_OF_MOL(a2, *subtracted) {
-		OBAtom* match = atomInOtherMol(&*a2, mol);
-		if (!match) {  // *subtracted has an extra atom
-			obErrorLog.ThrowError(__FUNCTION__, "Attempted to subtract an atom not present in the original molecule", obWarning);
-			return false;  // *mol not modified
-		}
-		deleted.push_back(&*match);
-	}
-
-	// It's okay to delete the atoms, since they should hold different (cloned) pointers
-	mol->BeginModify();
-	for (std::vector<OBAtom*>::iterator it = deleted.begin(); it != deleted.end(); ++it) {
-		mol->DeleteAtom(*it);
-	}
-	mol->EndModify();
-	return true;
-}
-
-bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2) {
-	// Loosely based on the data copied during OBAtom::Duplicate
-	// Atoms are the same if these properties (excluding bond-related) are equivalent
-	return atom1.GetAtomicNum() == atom2.GetAtomicNum() &&
-			atom1.GetVector().IsApprox(atom2.GetVector(), 1.0e-6) &&
-			atom1.GetIsotope() == atom2.GetIsotope();
-}
-
-OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol) {
-	// Is an atom within a molecule?  (as defined by atomsEqual conditions)
-	// If so, return the pointer of the copycat.  Otherwise, return NULL
-	// This has the nice benefit that the usage is also compatible with bool
-	// ( if (atomInOtherMol(atomp, molp)) {}  will work, too.)
-	FOR_ATOMS_OF_MOL(a, *mol) {
-		if (atomsEqual(*a, *atom)) {
-			return &*a;
-		}
-	}
-	return NULL;
-}
-
-bool isSubMol(OBMol *sub, OBMol *super) {
-	// Are the atoms in *sub a subset of the atoms in *super?
-	FOR_ATOMS_OF_MOL(a, *sub) {
-		if (!atomInOtherMol(&*a, super)) {  // NULL if atom not found
-			return false;
-		}
-	}
-	return true;
-}
-
-std::map<int,int> getNumericFormula(OBMol *mol) {
-	// What is the molecular formula, based on atomic numbers?
-	// Returns <atomic number of an element, atom count in *mol>
-	std::map<int,int> formula;
-	FOR_ATOMS_OF_MOL(a, *mol) {
-		int element = a->GetAtomicNum();
-		if (formula.find(element) == formula.end()) {
-			formula[element] = 0;
-		}
-		formula[element] += 1;
-	}
-	return formula;
 }
 
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
