@@ -21,9 +21,9 @@ struct MinimalAtom {
 	bool is_paddlewheel;
 };
 
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders = true, bool makeP1 = true);
+bool importCIF(OBMol* molp, std::string filepath, bool bond_orders = true, bool makeP1 = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
-OBMol initMOF(OBMol *orig_in_uc);
+OBMol initMOFwithUC(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
 
 void resetBonds(OBMol *mol);

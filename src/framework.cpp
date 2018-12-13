@@ -19,7 +19,7 @@
 namespace OpenBabel
 {
 
-bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
+bool importCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 	// Read the first distinguished molecule from a CIF file
 	// (TODO: check behavior of mmcif...)
 	OBConversion obconversion;
@@ -47,6 +47,13 @@ bool readCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 		molp->PerceiveBondOrders();
 	}
 
+	// Strip all of the original CIF labels, so they don't interfere with the automatically generated labels in the output
+	FOR_ATOMS_OF_MOL(a, *molp) {
+		if (a->HasData("_atom_site_label")) {
+			a->DeleteData("_atom_site_label");
+		}
+	}
+
 	return success;
 }
 
@@ -60,7 +67,7 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 	conv.WriteFile(molp, filepath);
 }
 
-OBMol initMOF(OBMol *orig_in_uc) {
+OBMol initMOFwithUC(OBMol *orig_in_uc) {
 	// Initializes a MOF with the same lattice params as *orig_in_uc
 	OBMol dest;
 	dest.SetData(getPeriodicLattice(orig_in_uc)->Clone(NULL));
@@ -290,7 +297,7 @@ bool detectPaddlewheels(OBMol *mol) {
 	std::vector<std::vector<int> >::iterator i;
 	std::vector<int>::iterator j;
 	for (i=maplist.begin(); i!=maplist.end(); ++i) {  // loop over matches
-		OBMol candidate = initMOF(mol);  // Have to check the match for infinite rods
+		OBMol candidate = initMOFwithUC(mol);  // Have to check the match for infinite rods
 		candidate.BeginModify();
 		std::vector<OBAtom*> pw_metals;
 		for (j=i->begin(); j!=i->end(); ++j) {  // loop over paddlewheel atoms

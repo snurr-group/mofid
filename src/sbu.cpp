@@ -164,16 +164,9 @@ std::string analyzeMOF(std::string filename) {
 	std::stringstream analysis;
 	OBMol orig_mol;
 	// Massively improving performance by skipping kekulization of the full MOF
-	if (!readCIF(&orig_mol, filename, false)) {
+	if (!importCIF(&orig_mol, filename, false)) {
 		std::cerr << "Error reading file: %s" << filename << std::endl;
 		return "";
-	}
-
-	// Strip all of the original CIF labels, so they don't interfere with the automatically generated labels in the output
-	FOR_ATOMS_OF_MOL(a, orig_mol) {
-		if (a->HasData("_atom_site_label")) {
-			a->DeleteData("_atom_site_label");
-		}
 	}
 
 	/* Copy original definition to another variable for later use.
@@ -190,10 +183,10 @@ std::string analyzeMOF(std::string filename) {
 	copyMOF(&orig_mol, &simplified_net);
 	copyMOF(&orig_mol, &mof_fsr);
 	copyMOF(&orig_mol, &mof_asr);
-	OBMol free_solvent = initMOF(&orig_mol);
-	OBMol bound_solvent = initMOF(&orig_mol);
+	OBMol free_solvent = initMOFwithUC(&orig_mol);
+	OBMol bound_solvent = initMOFwithUC(&orig_mol);
 
-	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of readCIF)
+	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of importCIF)
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
 	std::ofstream file_info;
 	file_info.open("Test/mol_name.txt", std::ios::out | std::ios::trunc);
@@ -978,7 +971,7 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 						&& !inVector<OBAtom*>(*x2, to_delete)
 						&& metals[*x1] == metals[*x2] )
 					{
-						OBMol x_test = initMOF(net);
+						OBMol x_test = initMOFwithUC(net);
 						x_test.BeginModify();
 						std::vector<OBAtom*> test_atoms;  // Copy of M1-X1-L-X2-M2, where M2 might equal M1
 						test_atoms.push_back(formAtom(&x_test, metals[*x1]->GetVector(), metals[*x1]->GetAtomicNum()));
