@@ -34,8 +34,9 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 // is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
 typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
 
+class int3;  // temporarily forward declare this class so we can use it in UCMap and function prototypes
 typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
-typedef std::map<OBAtom*, std::vector<int> > UCMap;
+typedef std::map<OBAtom*, int3> UCMap;
 
 
 // Function prototypes
@@ -69,10 +70,9 @@ vector3 getCentroid(OBMol *fragment, bool weighted);
 vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
 bool isPeriodicChain(OBMol *mol);
 int sepPeriodicChains(OBMol *nodes);
-std::vector<int> makeVector(int a, int b, int c);
 bool normalizeCharges(OBMol *mol);
 bool detectPaddlewheels(OBMol *mol);
-std::vector<int> GetPeriodicDirection(OBBond *bond);
+int3 GetPeriodicDirection(OBBond *bond);
 OBUnitCell* getPeriodicLattice(OBMol *mol);
 
 /* Define global parameters for MOF decomposition */
@@ -143,6 +143,42 @@ struct MinimalAtom {
 	vector3 loc;
 	int element;
 	bool is_paddlewheel;
+};
+
+class int3 {
+public:
+	int x;
+	int y;
+	int z;
+
+	int3() {
+		x=0; y=0; z=0;
+	}
+	int3(int a, int b, int c) {
+		x=a; y=b; z=c;
+	}
+	// Get some of the operator functionality from vector3.cpp implementation
+	bool operator== ( const int3 &other ) const {
+		return ((x == other.x) && (y == other.y) && (z==other.z));
+	}
+	bool operator!= ( const int3 &other ) const {
+		return !(*this == other);
+	}
+	/* Implementation from Open Babel, which does not allow assignment operations */
+	/*
+	int operator[] ( unsigned int i ) const {
+		if (i == 0) { return x; }
+		if (i == 1) { return y; }
+		return z;  // otherwise
+	}
+	*/
+	// In order to get assignment equality, we need to return a reference
+	int& operator[] ( unsigned int i ) {
+		if (i == 0) { return x; }
+		if (i == 1) { return y; }
+		return z;  // otherwise
+	}
+	// operator assignment equal
 };
 
 
@@ -734,7 +770,7 @@ void writeSystre(OBMol* pmol, std::string filepath, int element_x, bool write_ce
 	} else {
 		std::stringstream edge_centers;
 		FOR_BONDS_OF_MOL(b, *pmol) {
-			std::vector<int> bond_dir = GetPeriodicDirection(&*b);
+			int3 bond_dir = GetPeriodicDirection(&*b);
 			vector3 f_add(bond_dir[0], bond_dir[1], bond_dir[2]);
 			vector3 begin = uc->CartesianToFractional(b->GetBeginAtom()->GetVector());
 			// For the second atom, we need to copy it to the correct unit cell with f_add
@@ -1403,25 +1439,25 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 	// By default, these are forbidden (since the ordering is undefined) and returns an empty map.
 
 	std::queue<OBAtom*> to_visit;
-	std::map<OBAtom*, std::vector<int> > unit_cells;
+	UCMap unit_cells;
 	// Start at whichever atom is (randomly?) saved first
 	// Note: atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
 	OBAtom* start_atom = fragment->GetAtom(1);
 	to_visit.push(start_atom);
-	unit_cells[start_atom] = makeVector(0, 0, 0);  // original unit cell
+	unit_cells[start_atom] = int3(0, 0, 0);  // original unit cell
 
 	while (!to_visit.empty()) {
 		OBAtom* current = to_visit.front();
 		to_visit.pop();
 		FOR_NBORS_OF_ATOM(nbr, current) {
 			OBBond* nbr_bond = fragment->GetBond(current, &*nbr);
-			std::vector<int> uc = GetPeriodicDirection(nbr_bond);  // TODO: Is there a good way to remove this function?  Otherwise, add it as a MOF helper method
+			int3 uc = GetPeriodicDirection(nbr_bond);  // TODO: Is there a good way to remove this function?  Otherwise, add it as a MOF helper method
 			if (nbr_bond->GetBeginAtom() == &*nbr) {  // opposite bond direction as expected
-				uc = makeVector(-1*uc[0], -1*uc[1], -1*uc[2]);
+				uc = int3(-1*uc.x, -1*uc.y, -1*uc.z);
 			}
 
-			std::vector<int> current_uc = unit_cells[current];
-			uc = makeVector(current_uc[0] + uc[0], current_uc[1] + uc[1], current_uc[2] + uc[2]);
+			int3 current_uc = unit_cells[current];
+			uc = int3(current_uc.x + uc.x, current_uc.y + uc.y, current_uc.z + uc.z);
 
 			if (unit_cells.find(&*nbr) == unit_cells.end()) {  // Unvisited atom
 				// Make sure to visit the neighbor (and its neighbors, etc.)
@@ -1462,7 +1498,7 @@ bool unwrapFragmentMol(OBMol* fragment) {
 
 	for (UCMap::iterator it=rel_uc.begin(); it!=rel_uc.end(); ++it) {
 		OBAtom* curr_atom = it->first;
-		std::vector<int> uc_shift = it->second;
+		int3 uc_shift = it->second;
 
 		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
 		vector3 coord_shift = getPeriodicLattice(fragment)->FractionalToCartesian(uc_shift_frac);
@@ -1500,7 +1536,7 @@ vector3 getCentroid(OBMol *fragment, bool weighted) {
 		if (weighted) {
 			weight = it->first->GetAtomicMass();
 		}
-		std::vector<int> uc_shift = it->second;  // <first: second> = <key: value> of a map/dict.
+		int3 uc_shift = it->second;  // <first: second> = <key: value> of a map/dict.
 		vector3 uc_shift_frac(uc_shift[0], uc_shift[1], uc_shift[2]);  // Convert ints to doubles
 		vector3 coord_shift = lattice->FractionalToCartesian(uc_shift_frac);
 		center += weight * (it->first->GetVector() + coord_shift);
@@ -1600,16 +1636,6 @@ int sepPeriodicChains(OBMol *nodes) {
 		}
 	}
 	return simplifications;
-}
-
-std::vector<int> makeVector(int a, int b, int c) {
-	// Shortcut for initializing a length-3 STL vector of ints.
-	// TODO: Consider making a new int3 class similar to vector3.
-	std::vector<int> v;
-	v.push_back(a);
-	v.push_back(b);
-	v.push_back(c);
-	return v;
 }
 
 bool normalizeCharges(OBMol *mol) {
@@ -1730,14 +1756,11 @@ bool detectPaddlewheels(OBMol *mol) {
 	return found_pw;
 }
 
-std::vector<int> GetPeriodicDirection(OBBond *bond) {
+int3 GetPeriodicDirection(OBBond *bond) {
 	// What is the unit cell of the end atom wrt the first?
 	// Returns {0,0,0} if not periodic or if wrapping is not required.
 
-	std::vector<int> direction;
-	direction.push_back(0);
-	direction.push_back(0);
-	direction.push_back(0);
+	int3 direction(0, 0, 0);
 
 	if (bond->IsPeriodic())  // Otherwise, return all zeros
 	{
