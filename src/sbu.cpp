@@ -42,11 +42,11 @@ typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
 std::string analyzeMOF(std::string filename);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
+
 void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool write_centers = true);
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
-std::string writeFragments(const std::vector<std::string> &unique_smiles);
+std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
-std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv);
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
@@ -425,8 +425,8 @@ std::string analyzeMOF(std::string filename) {
 
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
-	analysis << writeFragments(uniqueSMILES(nodes.Separate(), obconv));
-	analysis << writeFragments(uniqueSMILES(linkers.Separate(), obconv));
+	analysis << writeFragments(nodes.Separate(), obconv);
+	analysis << writeFragments(linkers.Separate(), obconv);
 	analysis << "Found " << net_components.size() << " simplified net(s)";
 
 	// Write out the decomposed and simplified MOF, including bond orders
@@ -672,15 +672,19 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 	out_file.close();
 }
 
-std::string writeFragments(const std::vector<std::string> &unique_smiles) {
-	// Write a list of fragments
-	// Use a const_iterator since we're not modifying the vector: http://stackoverflow.com/questions/4890497/how-do-i-iterate-over-a-constant-vector
+std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
+	// Write a list of unique SMILES for a set of fragments
 	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
-	std::stringstream fragments;
-	for (std::vector<std::string>::const_iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
-		fragments << *i2;
+	std::stringstream written;
+	std::set<std::string> unique_smiles;
+	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
+		unique_smiles.insert(getSMILES(*it, obconv));  // only adds unique values in a set
 	}
-	return fragments.str();
+	for (std::set<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
+		written << *i2;
+	}
+
+	return written.str();
 }
 
 std::string getSMILES(OBMol fragment, OBConversion obconv) {
@@ -689,18 +693,6 @@ std::string getSMILES(OBMol fragment, OBConversion obconv) {
 	resetBonds(&canon);
 	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
-}
-
-std::vector<std::string> uniqueSMILES(std::vector<OBMol> fragments, OBConversion obconv) {
-	// Extracts list of SMILES for unique fragments
-	std::vector<std::string> unique_smiles;
-	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		std::string mol_smiles = getSMILES(*it, obconv);
-		if (!inVector<std::string>(mol_smiles, unique_smiles)) {
-			unique_smiles.push_back(mol_smiles);
-		}
-	}
-	return unique_smiles;
 }
 
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
