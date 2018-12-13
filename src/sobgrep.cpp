@@ -27,9 +27,9 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 
 // Function prototypes
-void copyAtom(OBAtom* src, OBMol* dest);
-OBMol initMOF(OBMol *orig_in_uc);
-OBUnitCell* getPeriodicLattice(OBMol *mol);
+void local_copyAtom(OBAtom* src, OBMol* dest);
+OBMol local_initMOF(OBMol *orig_in_uc);
+OBUnitCell* local_getPeriodicLattice(OBMol *mol);
 
 
 int main(int argc, char* argv[])
@@ -84,10 +84,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	OBMol match = initMOF(&orig_mol);
+	OBMol match = local_initMOF(&orig_mol);
 	match.BeginModify();
 	for (std::set<OBAtom*>::iterator it=matched_atoms.begin(); it!=matched_atoms.end(); ++it) {
-		copyAtom(*it, &match);
+		local_copyAtom(*it, &match);
 	}
 	match.EndModify();
 	match.ConnectTheDots();
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 	return(0);
 }
 
-void copyAtom(OBAtom* src, OBMol* dest) {
+void local_copyAtom(OBAtom* src, OBMol* dest) {
 	// Copies properties of an atom from source to dest,
 	// without triggering hybridization, bond order detection, etc.
 	OBAtom* copied = dest->NewAtom();
@@ -118,15 +118,14 @@ void copyAtom(OBAtom* src, OBMol* dest) {
 	copied->SetType(OBElements::GetName(src->GetAtomicNum()));
 }
 
-OBMol initMOF(OBMol *orig_in_uc) {
+OBMol local_initMOF(OBMol *orig_in_uc) {
 	// Initializes a MOF with the same lattice params as *orig_in_uc
 	OBMol dest;
-	dest.SetData(getPeriodicLattice(orig_in_uc)->Clone(NULL));
+	dest.SetData(local_getPeriodicLattice(orig_in_uc)->Clone(NULL));
 	dest.SetPeriodicMol();
 	return dest;
 }
 
-OBUnitCell* getPeriodicLattice(OBMol *mol) {
-	// (temporary) replacement for the old OBMol.GetPeriodicLattice helper function
+OBUnitCell* local_getPeriodicLattice(OBMol *mol) {
 	return (OBUnitCell*)mol->GetData(OBGenericDataType::UnitCell);
 }
