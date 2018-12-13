@@ -193,8 +193,8 @@ std::string analyzeMOF(std::string filename) {
 	OBMol free_solvent = initMOF(&orig_mol);
 	OBMol bound_solvent = initMOF(&orig_mol);
 
+	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of readCIF)
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
-
 	std::ofstream file_info;
 	file_info.open("Test/mol_name.txt", std::ios::out | std::ios::trunc);
 	if (file_info.is_open()) {
@@ -428,6 +428,7 @@ std::string analyzeMOF(std::string filename) {
 			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly did not convert 4-coordinated linkers in MIL-like MOF", obWarning);
 		}
 	}
+	// TODO: this is where I could add other branch point detection, such as phenyl rings
 
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
