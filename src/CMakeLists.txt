@@ -23,6 +23,7 @@ set(tools
    )
 set(mofid_includes
         obdetails.cpp
+        periodic.cpp
 )
 
 ################################################################################

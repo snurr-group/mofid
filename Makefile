@@ -16,6 +16,9 @@ bin/searchdb: src/searchdb.cpp openbabel/build/lib/cifformat.so
 bin/tsfm_smiles: src/tsfm_smiles.cpp openbabel/build/lib/cifformat.so
 	cd bin && make tsfm_smiles
 
+exe:
+	cd bin && make
+
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
 openbabel/build/lib/cifformat.so: openbabel/src/formats/cifformat.cpp openbabel/src/mol.cpp
