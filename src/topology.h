@@ -50,6 +50,7 @@ public:
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
 	VirtualMol GetOrigAtomsOfRole(const std::string &role);
+	OBMol ToOBMol();
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

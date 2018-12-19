@@ -45,6 +45,7 @@ Topology::Topology(OBMol *parent_mol) {
 	std::map<OBAtom*, PseudoAtom> atom_to_pa;  // temporary var for bond accounting
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
 		OBAtom* new_atom;
+		// TODO: set the simplified net to fake pseudoatoms instead of real elements
 		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), orig_atom->GetAtomicNum());
 		atom_translator[new_atom].AddAtom(&*orig_atom);
 		atom_to_pa[&*orig_atom] = new_atom;
@@ -69,6 +70,12 @@ VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
 		}
 	}
 	return match;
+}
+
+OBMol Topology::ToOBMol() {
+	// TODO: eventually this code will assign pseudo-atom types based on SMILES (like ElementGen),
+	// but for now, just spit out the OBMol of interest
+	return simplified_net;
 }
 
 } // end namespace OpenBabel

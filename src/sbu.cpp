@@ -201,6 +201,12 @@ std::string analyzeMOF(std::string filename) {
 		file_info.close();
 	}
 
+	// TEMPORARY.  TODO: DELETE ME
+	// First, let's test out the topology.h code to make sure that we can write back the original OBMol
+	Topology testing_topology(&orig_mol);
+	OBMol testing_output_mol = testing_topology.ToOBMol();
+	writeCIF(&testing_output_mol, "Test/testing_topology.cif");
+
 
 	// Find linkers by deleting bonds to metals
 	std::vector<OBMol> fragments;
