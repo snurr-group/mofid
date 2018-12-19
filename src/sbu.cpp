@@ -25,8 +25,12 @@
 #include "config_sbu.h"
 #include "invector.h"
 #include "obdetails.h"
-#include "periodic.h"
 #include "framework.h"
+#include "periodic.h"
+#include "pseudo_atom.h"
+#include "topology.h"
+#include "virtual_mol.h"
+
 
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
@@ -160,6 +164,8 @@ int main(int argc, char* argv[])
 std::string analyzeMOF(std::string filename) {
 	// Extract components of the MOFid
 	// Reports nodes/linkers, number of nets found, and writes CIFs to Test/ directory
+	/* TODO: rewrite most of this code in Deconstructor and derived classes, saving "main"
+	for parsing input args.  MOFidDeconstructor, AllNodeDeconstructor, SingleNodeDeconstructor */
 
 	std::stringstream analysis;
 	OBMol orig_mol;

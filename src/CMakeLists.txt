@@ -15,16 +15,22 @@ project(sbu)
 # Set the name for the executable
 # set(executable_target sbu)
 # Use a loop like openbabel/tools/CMakeLists.txt
+
+# tools that do not require external MOFid headers/sources:
 set(tools
-        sbu
         sobgrep
         searchdb
         tsfm_smiles
    )
+# tools that do require external headers/sources:
+set(linked_tools sbu)
 set(mofid_includes
         obdetails.cpp
         framework.cpp
         periodic.cpp
+        pseudo_atom.cpp
+        topology.cpp
+        virtual_mol.cpp
 )
 
 ################################################################################
@@ -58,9 +64,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
 
 foreach(tool ${tools})
   # The executable
-  add_executable(${tool} ${tool}.cpp ${mofid_includes})
+  add_executable(${tool} ${tool}.cpp)  # no ${mofid_includes}
   # Link against imported openbabel target
   #target_link_libraries(${executable_target} openbabel ${LIBXML2_LIBRARIES})
   target_link_libraries(${tool} openbabel)
   # install(TARGETS ${executable_target} DESTINATION bin)
 endforeach(tool)
+foreach(linked_tool ${linked_tools})
+  add_executable(${linked_tool} ${linked_tool}.cpp ${mofid_includes})
+  target_link_libraries(${linked_tool} openbabel)
+endforeach(linked_tool)
