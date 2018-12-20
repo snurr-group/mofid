@@ -55,9 +55,14 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
 	// Makes a new atom with a specified location and atomic number
 	OBAtom* atom = mol->NewAtom();
 	atom->SetVector(loc);
+	changeAtomElement(atom, element);
+	return atom;
+}
+
+void changeAtomElement(OBAtom* atom, int element) {
+	// Changes an atom's atomic number
 	atom->SetAtomicNum(element);
 	atom->SetType(OBElements::GetName(element));
-	return atom;
 }
 
 int deleteBonds(OBMol *mol, bool only_metals) {

@@ -3,8 +3,10 @@
 #include "obdetails.h"
 #include "framework.h"
 
+#include <vector>
 #include <map>
 #include <set>
+#include <tuple>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
@@ -52,6 +54,38 @@ bool VirtualMol::AddVirtualMol(VirtualMol addition) {
 		_atoms.insert(*it);
 	}
 	return true;
+}
+
+int VirtualMol::ImportCopiedFragment(OBMol *fragment) {
+	std::vector<OBAtom*> atoms_to_add;
+	atoms_to_add.reserve(fragment->NumAtoms());
+	FOR_ATOMS_OF_MOL(a, *fragment) {
+		OBAtom* parent_a;
+		parent_a = atomInOtherMol(&*a, _parent_mol);
+		if (!parent_a) {  // NULL: atom does not exist
+			return 0;  // error, and no modifications to VirtualMol
+		}
+		atoms_to_add.push_back(parent_a);
+	}
+	for (std::vector<OBAtom*>::iterator it=atoms_to_add.begin(); it!=atoms_to_add.end(); ++it) {
+		AddAtom(*it);
+	}
+	return atoms_to_add.size();
+}
+
+ConnIntToExt VirtualMol::GetExternalConnections() {
+	// replaces getLinksToExt from sbu.cpp
+	// typedef std::set< std::pair<OBAtom*, OBAtom*> > ConnIntToExt;
+	ConnIntToExt connections;
+	for (std::set<OBAtom*>::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
+		FOR_NBORS_OF_ATOM(nbor, *it) {
+			if (!HasAtom(&*nbor)) {
+				std::pair<OBAtom*, OBAtom*> bond(*it, &*nbor);
+				connections.insert(bond);
+			}
+		}
+	}
+	return connections;
 }
 
 OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {

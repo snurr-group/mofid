@@ -35,10 +35,6 @@
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
 
-// Connections to an atom or fragment, in the form of a set where each element
-// is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
-typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
-
 typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
 
 
@@ -51,10 +47,6 @@ void writeSystre(OBMol* molp, std::string filepath, int element_x = 0, bool writ
 void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
-ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
-std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
-MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
-OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
@@ -62,13 +54,21 @@ std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 int sepPeriodicChains(OBMol *nodes);
-
+// replaced.  TODO remove:
+// Connections to an atom or fragment, in the form of a set where each element
+// is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
+typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
+ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
+std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
+OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
+MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
 const int X_CONN = 52;
 
-
+/*
+// TODO: delete after implementing the code in topology.cpp
 class ElementGen
 {
 	protected:
@@ -127,7 +127,7 @@ class ElementGen
 			return old_element;
 		}
 };
-
+*/
 
 int main(int argc, char* argv[])
 {
@@ -175,20 +175,10 @@ std::string analyzeMOF(std::string filename) {
 		return "";
 	}
 
-	/* Copy original definition to another variable for later use.
-	 * Earlier, we performed all copies at once to reduce the performance bottleneck.
-	 * In that case, copying internally called SSSR through EndModify(), so this statement was ~60% of the total code walltime.
-	 * When these statements were nested together, the compiler was smart enough to amortize the operation.
-	 * The biggest performance boost came from avoiding these perception behaviors altogether, which is the objective of copyMOF.
-	 * As a result, certain structures, like ToBaCCo MOF bct_sym_10_mc_10__L_12.cif, no longer require 2+ minutes.
-	 */
-	OBMol mol, nodes, linkers, simplified_net, mof_fsr, mof_asr;
-	copyMOF(&orig_mol, &mol);
-	copyMOF(&orig_mol, &nodes);
-	copyMOF(&orig_mol, &linkers);  // Can't do this by additions, because we need the UC data, etc.
-	copyMOF(&orig_mol, &simplified_net);
-	copyMOF(&orig_mol, &mof_fsr);
-	copyMOF(&orig_mol, &mof_asr);
+	Topology simplified(&orig_mol);
+	OBMol testing_output_mol = simplified.ToOBMol();
+	writeCIF(&testing_output_mol, "Test/simplified_test_orig.cif");
+	// TODO: implement FSR and ASR later
 	OBMol free_solvent = initMOFwithUC(&orig_mol);
 	OBMol bound_solvent = initMOFwithUC(&orig_mol);
 
@@ -201,17 +191,16 @@ std::string analyzeMOF(std::string filename) {
 		file_info.close();
 	}
 
-	// TEMPORARY.  TODO: DELETE ME
-	// First, let's test out the topology.h code to make sure that we can write back the original OBMol
-	Topology testing_topology(&orig_mol);
-	OBMol testing_output_mol = testing_topology.ToOBMol();
-	writeCIF(&testing_output_mol, "Test/testing_topology.cif");
-
+	OBMol split_mol;  // temporary molecule to setup the initial metal-based fragmentation
+	copyMOF(&orig_mol, &split_mol);
 
 	// Find linkers by deleting bonds to metals
+	// TODO: in this block, for SBU decomposition algorithms, do some manipulations to modify/restore bonds before fragmentation.
+	// That will probably take the form of an optional preprocessing step before fragment assignment.
+	// Similarly, there will probably be a fragmenter that breaks apart the nodes/linkers using a standard algorithm for node/linker SMILES names.
 	std::vector<OBMol> fragments;
-	deleteBonds(&mol, true);
-	fragments = mol.Separate();
+	deleteBonds(&split_mol, true);
+	fragments = split_mol.Separate();
 
 	OBConversion obconv;
 	// Universal SMILES:
@@ -228,17 +217,12 @@ std::string analyzeMOF(std::string filename) {
 
 	// Classify nodes and linkers based on composition.
 	// Consider all single atoms and hydroxyl species as node building materials.
-	nodes.BeginModify();
-	linkers.BeginModify();
-	simplified_net.BeginModify();
-	free_solvent.BeginModify();
-	mof_fsr.BeginModify();
-	mof_asr.BeginModify();
 	std::stringstream nonmetalMsg;
-	ElementGen linker_conv(false);
-	std::map<OBAtom*, OBMol*> pseudo_map;  // <pseudo atom location, fragment used to simplify it>
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		std::string mol_smiles = getSMILES(*it, obconv);
+		VirtualMol fragment_atoms(&orig_mol);
+		fragment_atoms.ImportCopiedFragment(&*it);
+
 		// If str comparisons are required, include a "\t\n" in the proposed smiles
 		bool all_oxygens = true;  // Also allow hydroxyls, etc.
 		FOR_ATOMS_OF_MOL(a, *it){
@@ -247,37 +231,36 @@ std::string analyzeMOF(std::string filename) {
 			}
 		}
 
-		if (uniqueExtAtoms(&simplified_net, &*it).size() == 0) {
+		if (fragment_atoms.GetExternalConnections().size() == 0) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
-			free_solvent += *it;
-			subtractMols(&linkers, &*it);
-			subtractMols(&nodes, &*it);
-			subtractMols(&simplified_net, &*it);
-			subtractMols(&mof_fsr, &*it);
-			subtractMols(&mof_asr, &*it);
+			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
+			// TODO: simplify the net as well
+			// Will probably have something to do with RemoveOrigAtoms
+			// Let's get the general test cases finished first, then come back and implement this one.
 		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
-			subtractMols(&linkers, &*it);
+			simplified.SetAtomsWithRole(fragment_atoms, "node");
 		} else if (all_oxygens) {
 			nonmetalMsg << "Found an oxygen species " << mol_smiles;
-			subtractMols(&linkers, &*it);
+			simplified.SetAtomsWithRole(fragment_atoms, "node");
+			// do we condense these yet?  probably later
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			subtractMols(&nodes, &*it);
-			OBAtom* pseudo_atom = collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
-			pseudo_map[pseudo_atom] = &*it;
+			simplified.SetAtomsWithRole(fragment_atoms, "linker");
+			// TODO COLLAPSE THEM
+			//OBAtom* pseudo_atom = collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
+			// this code is still in progress but underway
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
-	nodes.EndModify();
-	linkers.EndModify();
-	simplified_net.EndModify();
-	free_solvent.EndModify();
-	mof_fsr.EndModify();
-	mof_asr.EndModify();
-	writeCIF(&simplified_net, "Test/test_partial.cif");
+	OBMol test_partial = simplified.ToOBMol();
+	writeCIF(&test_partial, "Test/test_partial.cif");
 
+	return "fake results TODO";
+
+	// Temporarily comment out the rest of the code and test/implement them step-by-step
+	/*
 	// Simplify all the node SBUs into single points.
 	ElementGen node_conv(true);
 	simplified_net.BeginModify();
@@ -484,6 +467,7 @@ std::string analyzeMOF(std::string filename) {
 	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
 
 	return(analysis.str());
+	*/
 }
 
 extern "C" {
