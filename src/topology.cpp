@@ -190,7 +190,7 @@ VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
 	return match;
 }
 
-void Topology::SetAtomsWithRole(VirtualMol atoms, const std::string &role, bool val) {
+void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val) {
 	// Adds/removes the role from a list of original atoms in a VirtualMol
 	if (atoms.GetParent() != orig_molp) {
 		// Error

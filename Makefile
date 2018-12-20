@@ -21,6 +21,7 @@ exe:
 
 one:
 	cd bin && make; \
+	cd ..; \
 	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells

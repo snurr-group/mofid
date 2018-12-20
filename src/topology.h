@@ -78,7 +78,7 @@ public:
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
 	VirtualMol GetOrigAtomsOfRole(const std::string &role);
-	void SetAtomsWithRole(VirtualMol atoms, const std::string &role, bool val=true);
+	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
 	int RemoveOrigAtoms(VirtualMol atoms);
 	PseudoAtom CollapseOrigAtoms(VirtualMol atoms);
 	OBMol ToOBMol();

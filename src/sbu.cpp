@@ -240,14 +240,14 @@ std::string analyzeMOF(std::string filename) {
 			// Let's get the general test cases finished first, then come back and implement this one.
 		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
-			simplified.SetAtomsWithRole(fragment_atoms, "node");
+			simplified.SetRoleToAtoms( "node", fragment_atoms);
 		} else if (all_oxygens) {
 			nonmetalMsg << "Found an oxygen species " << mol_smiles;
-			simplified.SetAtomsWithRole(fragment_atoms, "node");
+			simplified.SetRoleToAtoms("node", fragment_atoms);
 			// do we condense these yet?  probably later
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			simplified.SetAtomsWithRole(fragment_atoms, "linker");
+			simplified.SetRoleToAtoms("linker", fragment_atoms);
 			// TODO COLLAPSE THEM
 			//OBAtom* pseudo_atom = collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
 			// this code is still in progress but underway
