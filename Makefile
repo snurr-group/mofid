@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html
+.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html one exe
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -18,6 +18,10 @@ bin/tsfm_smiles: src/tsfm_smiles.cpp openbabel/build/lib/cifformat.so
 
 exe:
 	cd bin && make
+
+one:
+	cd bin && make; \
+	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
