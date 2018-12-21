@@ -232,7 +232,7 @@ std::string analyzeMOF(std::string filename) {
 			}
 		}
 
-		if (fragment_atoms.GetExternalConnections().size() == 0) {
+		if (fragment_atoms.GetExternalBonds().size() == 0) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
 			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
@@ -249,9 +249,7 @@ std::string analyzeMOF(std::string filename) {
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			simplified.SetRoleToAtoms("linker", fragment_atoms);
-			// TODO COLLAPSE THEM
-			//OBAtom* pseudo_atom = collapseSBU(&simplified_net, &*it, linker_conv.key(mol_smiles), X_CONN);
-			// this code is still in progress but underway
+			simplified.CollapseOrigAtoms(fragment_atoms);
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);

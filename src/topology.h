@@ -55,6 +55,8 @@ public:
 	AtomSet GetConnEndpoints(PseudoAtom conn);
 	// Search for connection sites contained within a set of endpoints
 	VirtualMol GetInternalConns(VirtualMol atoms);
+	// possibly consider a RemoveAtom(PseudoAtom endpt) to handle ConnectionTable accounting
+	// but it wasn't necessary for Topology::DeleteAtom
 };
 
 
@@ -65,6 +67,8 @@ private:
 
 	OBMol *orig_molp;
 	OBMol simplified_net;  // warning: see notes below about OBBonds
+	// I'm wondering if simplified_net and related utilities should actually be a new class,
+	// which would prevent inadvertently deleting bonds, etc.
 	ConnectionTable conns;
 	VirtualMol deleted_atoms;
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
@@ -85,11 +89,10 @@ public:
 	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
-	// Not well defined since there could be multiple connections:
-	//void DeleteConnection(PseudoAtom begin, PseudoAtom end);
+	void DeleteAtomAndConns(PseudoAtom atom);
+	ConnIntToExt GetConnectedAtoms(VirtualMol internal);
 	PseudoAtom CollapseOrigAtoms(VirtualMol atoms);
 	OBMol ToOBMol();
-	//something about deleting PA's?
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

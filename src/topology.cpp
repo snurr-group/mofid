@@ -170,6 +170,7 @@ void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool va
 
 int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 	// FIXME: come back and implement at the end
+	// Used for solvent removal, etc.
 	if (atoms.GetParent() != orig_molp) {
 		return 0;  // error
 	}
@@ -187,10 +188,9 @@ int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 
 PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos) {
 	// Form the pseudo atom
-	// TODO: think about if they're already connected.  That's not a problem
-	// (in fact it's the whole point, for structures like MOF-5), but I should consider
-	// what happens with the ConnectionTable class, etc., under those circumstances.
-	// Also how we consider valence of an atom, etc.
+	// It's not a problem if they're already connected.
+	// In fact it's the whole point for structures like MOF-5, and the ConnectionTable is built to handle it.
+	// As such, the valence of a pseudoatom will be it's OBAtom valence or size of ConnectionTable::GetAtomConns
 	vector3 conn_pos;
 	if (pos != NULL) {
 		conn_pos = *pos;
@@ -216,58 +216,79 @@ void Topology::DeleteConnection(PseudoAtom conn) {
 	simplified_net.DeleteAtom(conn);  // automatically deletes attached bonds
 }
 
-PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {
-	// FIXME still implementing
-	if (atoms.GetParent() != orig_molp) {
+void Topology::DeleteAtomAndConns(PseudoAtom atom) {
+	// Removes an atom and relevant bonds/connections
+	AtomSet nbors;
+	FOR_NBORS_OF_ATOM(nbor, *atom) {
+		if (!IsConnection(&*nbor)) {
+			return;  // ERROR.  No atoms should be bonded directly to each other
+		}
+		nbors.insert(&*nbor);
+	}
+	for (AtomSet::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
+		DeleteConnection(*it);
+	}
+	simplified_net.DeleteAtom(atom);
+}
+
+ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
+	// Gets the next shell of PseudoAtom neighbors external to the internal VirtualMol.
+	// Automatically passes over connection pseudoatoms.
+
+	// VirtualMol::GetExternalBonds() will also return internal connections, so let's specify those ahead of time
+	VirtualMol pa_with_conns = internal_pa;
+	pa_with_conns.AddVirtualMol(conns.GetInternalConns(internal_pa));
+	// Then GetExternalBonds() can only return extra bonds
+	ConnIntToExt bonds = pa_with_conns.GetExternalBonds();
+
+	// Translate external connections to external pseudoatoms
+	ConnIntToExt external_nbors;
+	for (ConnIntToExt::iterator e_it=bonds.begin(); e_it!=bonds.end(); ++e_it) {
+		PseudoAtom int_to_conn = e_it->first;
+		PseudoAtom ext_conn = e_it->second;
+		PseudoAtom ext_from_conn = NULL;
+		AtomSet conn_endpts = conns.GetConnEndpoints(ext_conn);
+
+		// Figure out which of the conn_endpts is the new external endpoint
+		for (AtomSet::iterator c_it=conn_endpts.begin(); c_it!=conn_endpts.end(); ++c_it) {
+			if (*c_it != int_to_conn) {
+				ext_from_conn = *c_it;
+			}
+		}
+		std::pair<OBAtom*, OBAtom*> ConnExt(int_to_conn, ext_from_conn);
+		external_nbors.insert(ConnExt);
+	}
+
+	return external_nbors;
+}
+
+// TODO: consider renaming as CollapseFragment, using pseudo atoms and
+// another public translator method?
+// That will probably be less cobbled together and more reproducible.
+PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
+	// Simplifies the net by combining all original atoms specified in the fragment
+	// into a single pseudo-atom, maintaining existing connections.
+	// Returns the pointer to the generated pseudo atom.
+	if (fragment.GetParent() != orig_molp) {
 		return NULL;  // error
 	}
 
-	// Find the relevant pseudoatoms and their external connections
-	VirtualMol pa_int(&simplified_net);
-	std::set<OBAtom*> act_atoms = atoms.GetAtoms();
+	// Find the relevant set of pseudoatoms
+	// We don't need to handle internal connections because atom manipulation will automatically take care of it.
+	std::set<OBAtom*> act_atoms = fragment.GetAtoms();
+	VirtualMol orig_pa(&simplified_net);
 	for (std::set<OBAtom*>::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
-		pa_int.AddAtom(act_to_pa[*it]);
+		orig_pa.AddAtom(act_to_pa[*it]);
 	}
-	// Add connections inside pa_int
-	// this whole sectino will be replaced by GetInternalConns:
-	std::set<OBAtom*> orig_pa = pa_int.GetAtoms();
-	std::set<OBAtom*> internal_connections;
-	for (std::set<OBAtom*>::iterator it=orig_pa.begin(); it!=orig_pa.end(); ++it) {
-		FOR_NBORS_OF_ATOM(nbor, *it) {
-			if (IsConnection(&*nbor)) {
-				std::set<OBAtom*> visited;
-				visited.insert(*it);
-				OBAtom* next = &*nbor;
-				// stuff
-				// TODO: going to get connections sorted out
-				//while
-			}
-		}
-	}
-	// get X_CONN - loop over conn
-	// Check for consistency in the
-	// loop to verify pa_int<unique atoms>.length vs. number in VirtualMol
+	// TODO consider a consistency check that the PA's don't include any other atoms (a length check for fragment vs. sum of PA AtomSets)
 
+	// Get external neighbors on the other side of the connections.
+	ConnIntToExt external_nbors = GetConnectedAtoms(orig_pa);
 
-
-
-	// TODO deleteME
-	// Get external connections for the corresponding pseudo atoms
-	ConnIntToExt atom_conn = atoms.GetExternalConnections();
-	// warning: we can't do the external connections this way.  What if there were already simplifications to the topology?
-	// However, we can probably just translate atoms -> pa, then run GetExternalConnections()
-	ConnIntToExt pa_conn;
-	for (ConnIntToExt::iterator it=atom_conn.begin(); it!=atom_conn.end(); ++it) {
-		PseudoAtom pa_int = act_to_pa[it->first];
-		PseudoAtom pa_ext = act_to_pa[it->second];
-		// some sort of consistency check required
-		// but what to do about connection pseudo atoms?
-		std::pair<OBAtom*, OBAtom*> pa_bond(pa_int, pa_ext);
-		pa_conn.insert(pa_bond);
-	}
-	//ConnIntToExt atom_conn = atoms.GetExternalConnections();
-	// check NULL and length of pseudo atoms?
-	// will also need to update the PA/act arrays
+	// Make the new pseudoatom at the centroid
+	OBMol mol_orig_pa = orig_pa.ToOBMol(false);  // we only need positions, not bonds
+	vector3 centroid = getCentroid(&mol_orig_pa, false);  // without weights
+	PseudoAtom new_atom = formAtom(&simplified_net, centroid, DEFAULT_ELEMENT);
 
 	// Put the connection point 1/3 of the way between the centroid and the connection midpoint to the exterior
 	// (e.g. 1/3 of the way between a BDC centroid and the O-M bond in the -COO group).
@@ -275,26 +296,26 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {
 	// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
 	// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
 	// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
-	OBMol center_of_atoms = atoms.ToOBMol(false);  // TODO RENAME
-	vector3 centroid = getCentroid(&center_of_atoms, false);  // without bonds or weights
-	for (ConnIntToExt::iterator it=pa_conn.begin(); it!=pa_conn.end(); ++it) {
-		OBUnitCell* lattice = getPeriodicLattice(&simplified_net);
+	for (ConnIntToExt::iterator it=external_nbors.begin(); it!=external_nbors.end(); ++it) {
 		OBAtom* pa_int = it->first;
 		OBAtom* pa_ext = it->second;
 
+		// Positions of the internal/external bonding atoms, to get the bond location
+		OBUnitCell* lattice = getPeriodicLattice(&simplified_net);
 		vector3 int_loc = lattice->UnwrapCartesianNear(pa_int->GetVector(), centroid);
 		vector3 ext_loc = lattice->UnwrapCartesianNear(pa_ext->GetVector(), int_loc);
+
 		vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + int_loc + ext_loc) / 6.0);
-
-		OBAtom* conn_atom = formAtom(&simplified_net, conn_loc, CONNECTION_ELEMENT);
-		//connections.AddAtom(conn_atom);
-		formBond(&simplified_net, conn_atom, pa_int, 1);  // Connect to internal
-		formBond(&simplified_net, conn_atom, pa_ext, 1);
+		ConnectAtoms(new_atom, pa_ext, &conn_loc);
 	}
-	// update arrays, etc.
 
+	// Delete the original fragment pseudoatoms
+	AtomSet orig_pa_set = orig_pa.GetAtoms();
+	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {
+		DeleteAtomAndConns(*it);
+	}
 
-	return NULL;
+	return new_atom;
 }
 
 OBMol Topology::ToOBMol() {
