@@ -50,8 +50,6 @@ void Connections::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
 	if (begin == end) { return; }  // trivial loop: TODO raise ERROR
 	std::pair<PseudoAtom, PseudoAtom> endpoints(begin, end);
 	conn2endpts[conn] = endpoints;
-	endpt_nbors[begin].insert(end);
-	endpt_nbors[end].insert(begin);
 	endpt_conns[begin].insert(conn);
 	endpt_conns[end].insert(conn);
 }
@@ -60,8 +58,6 @@ void Connections::RemoveConn(PseudoAtom conn) {
 	std::pair<PseudoAtom, PseudoAtom> endpoints;
 	endpoints = conn2endpts[conn];
 	conn2endpts.erase(conn);
-	endpt_nbors.erase(endpoints.first);
-	endpt_nbors.erase(endpoints.second);
 	endpt_conns.erase(endpoints.first);
 	endpt_conns.erase(endpoints.second);
 }
@@ -70,28 +66,18 @@ bool Connections::IsConn(PseudoAtom atom) {
 	return (conn2endpts.find(atom) == conn2endpts.end());
 }
 
-AtomSet Connections::GetAtomConns(PseudoAtom atom) {
-	return endpt_conns[atom];
+AtomSet Connections::GetAtomConns(PseudoAtom endpt) {
+	return endpt_conns[endpt];
 }
 
-AtomSet Connections::GetAtomNeighbors(PseudoAtom atom) {
-	return endpt_nbors[atom];
-}
-
-PseudoAtom Connections::GetConn(PseudoAtom begin, PseudoAtom end) {
-	// Error if the second atom is not a neighbor of the first
-	AtomSet begin_nbors = GetAtomNeighbors(begin);
-	if (begin_nbors.find(end) == begin_nbors.end()) { return NULL; }
-
-	PseudoAtom connection_site = NULL;
-	AtomSet all_conns = GetAtomConns(begin);
-	for (AtomSet::iterator it=all_conns.begin(); it!=all_conns.end(); ++it) {
-		PseudoAtom test_conn = *it;
-		if ((conn2endpts[test_conn].first==end) || (conn2endpts[test_conn].second==end)) {
-			connection_site = test_conn;
+bool Connections::HasNeighbor(PseudoAtom begin, PseudoAtom end) {
+	AtomSet begin_conn = GetAtomConns(begin);
+	for (AtomSet::iterator it=begin_conn.begin(); it!=begin_conn.end(); ++it) {
+		if ((conn2endpts[*it].first == end) || (conn2endpts[*it].second == end)) {
+			return true;
 		}
 	}
-	return connection_site;
+	return false;
 }
 
 AtomSet Connections::GetConnEndpoints(PseudoAtom conn) {
@@ -228,10 +214,6 @@ void Topology::DeleteConnection(PseudoAtom conn) {
 	// Removes connections between two atoms (no longer directly bonded through a connection site)
 	conns.RemoveConn(conn);
 	simplified_net.DeleteAtom(conn);  // automatically deletes attached bonds
-}
-
-void Topology::DeleteConnection(PseudoAtom begin, PseudoAtom end) {
-	DeleteConnection(conns.GetConn(begin, end));
 }
 
 PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {

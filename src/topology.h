@@ -40,7 +40,9 @@ class Connections {
 private:
 	OBMol *parent_net;
 	std::map< PseudoAtom, std::pair<PseudoAtom, PseudoAtom> > conn2endpts;
-	std::map< PseudoAtom, std::set<PseudoAtom> > endpt_nbors;
+	// Don't keep track of endpoint neighbors, since there may be multiple
+	// connections between atoms 1 and 2 (e.g. different directions in IRMOF-1)
+	// std::map< PseudoAtom, std::set<PseudoAtom> > endpt_nbors;
 	std::map< PseudoAtom, std::set<PseudoAtom> > endpt_conns;
 public:
 	Connections(OBMol* parent = NULL);
@@ -48,9 +50,8 @@ public:
 	void AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end);
 	void RemoveConn(PseudoAtom conn);
 	bool IsConn(PseudoAtom atom);
-	AtomSet GetAtomConns(PseudoAtom atom);
-	AtomSet GetAtomNeighbors(PseudoAtom atom);
-	PseudoAtom GetConn(PseudoAtom begin, PseudoAtom end);
+	AtomSet GetAtomConns(PseudoAtom endpt);
+	bool HasNeighbor(PseudoAtom begin, PseudoAtom end);
 	AtomSet GetConnEndpoints(PseudoAtom conn);
 	// Search for connection sites contained within a set of endpoints
 	VirtualMol GetInternalConns(VirtualMol atoms);
@@ -84,7 +85,8 @@ public:
 	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
-	void DeleteConnection(PseudoAtom begin, PseudoAtom end);
+	// Not well defined since there could be multiple connections:
+	//void DeleteConnection(PseudoAtom begin, PseudoAtom end);
 	PseudoAtom CollapseOrigAtoms(VirtualMol atoms);
 	OBMol ToOBMol();
 	//something about deleting PA's?
