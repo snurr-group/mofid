@@ -95,15 +95,15 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 	// Could redo formAtom/(getAtom?) with a minimalAtom if necessary.
 	// Warning: the copy_bonds=false path is untested
 
-	OBMol mol;
+	OBMol mol = initMOFwithUC(_parent_mol);
 	typedef std::map<OBAtom*, OBAtom*> amap_t;
-	amap_t virtual_to_real;
+	amap_t virtual_to_mol;
 	// Copy atoms
 	for (std::set<OBAtom*>::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
 		OBAtom* virtual_atom = (*it);
-		OBAtom* real_atom;
-		real_atom = formAtom(&mol, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
-		virtual_to_real[virtual_atom] = real_atom;
+		OBAtom* mol_atom;
+		mol_atom = formAtom(&mol, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
+		virtual_to_mol[virtual_atom] = mol_atom;
 	}
 
 	if (!export_bonds) {
@@ -112,17 +112,20 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 
 	if (copy_bonds) {
 		std::set<OBBond*> virtual_bonds;
-		for(amap_t::iterator it=virtual_to_real.begin(); it!=virtual_to_real.end(); ++it) {
+		for(amap_t::iterator it=virtual_to_mol.begin(); it!=virtual_to_mol.end(); ++it) {
 			OBAtom* v_atom = it->first;
+			// Only export bonds if both atoms (v_atom and n) are in the VirtualMol
 			FOR_NBORS_OF_ATOM(n, *(v_atom)) {
-				virtual_bonds.insert(v_atom->GetBond(&*n));
+				if (HasAtom(&*n)) {
+					virtual_bonds.insert(v_atom->GetBond(&*n));
+				}
 			}
 		}
 		for (std::set<OBBond*>::iterator it=virtual_bonds.begin(); it!=virtual_bonds.end(); ++it) {
 			OBAtom* v_a1 = (*it)->GetBeginAtom();
 			OBAtom* v_a2 = (*it)->GetEndAtom();
 			int v_order = (*it)->GetBondOrder();
-			formBond(&mol, virtual_to_real[v_a1], virtual_to_real[v_a2], v_order);
+			formBond(&mol, virtual_to_mol[v_a1], virtual_to_mol[v_a2], v_order);
 		}
 	} else {  // recalculating bonds based on distance, etc.
 		resetBonds(&mol);

@@ -80,11 +80,16 @@ bool ConnectionTable::HasNeighbor(PseudoAtom begin, PseudoAtom end) {
 	return false;
 }
 
-AtomSet ConnectionTable::GetConnEndpoints(PseudoAtom conn) {
+AtomSet ConnectionTable::GetConnEndpointSet(PseudoAtom conn) {
 	std::set<PseudoAtom> endpoints;
 	endpoints.insert(conn2endpts[conn].first);
 	endpoints.insert(conn2endpts[conn].second);
 	return endpoints;
+}
+
+std::pair<PseudoAtom, PseudoAtom> ConnectionTable::GetConnEndpoints(PseudoAtom conn) {
+	// unordered pair of <begin, end> endpoints
+	return conn2endpts[conn];
 }
 
 VirtualMol ConnectionTable::GetInternalConns(VirtualMol atoms) {
@@ -118,10 +123,12 @@ Topology::Topology(OBMol *parent_mol) {
 	orig_molp = parent_mol;
 	simplified_net = initMOFwithUC(parent_mol);
 
-	ConnectionTable conns(&simplified_net);
-	VirtualMol deleted_atoms(orig_molp);
-	PseudoAtomMap pa_to_act(&simplified_net, orig_molp);
-	std::map<OBAtom*, AtomRoles> act_roles();    // initialize to empty.  Automatically will add elements
+	// Remember not to declare the object types in the constructor.
+	// We're trying to initialize class members, not declare local variables with the same name.
+	conns = ConnectionTable(&simplified_net);
+	deleted_atoms = VirtualMol(orig_molp);
+	pa_to_act = PseudoAtomMap(&simplified_net, orig_molp);
+	act_roles = std::map<OBAtom*, AtomRoles>();    // initialize to empty.  Automatically will add elements
 
 	// Initialize simplified_net via copying orig_mol and creating the 1:1 mapping
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
@@ -257,9 +264,10 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 		PseudoAtom int_to_conn = e_it->first;
 		PseudoAtom ext_conn = e_it->second;
 		PseudoAtom ext_from_conn = NULL;
-		AtomSet conn_endpts = conns.GetConnEndpoints(ext_conn);
+		AtomSet conn_endpts = conns.GetConnEndpointSet(ext_conn);
 
 		// Figure out which of the conn_endpts is the new external endpoint
+		// TODO: rewrite using GetConnEndpoints for simplicity
 		for (AtomSet::iterator c_it=conn_endpts.begin(); c_it!=conn_endpts.end(); ++c_it) {
 			if (*c_it != int_to_conn) {
 				ext_from_conn = *c_it;
@@ -296,7 +304,7 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
 	ConnIntToExt external_nbors = GetConnectedAtoms(orig_pa);
 
 	// Make the new pseudoatom at the centroid
-	OBMol mol_orig_pa = orig_pa.ToOBMol(false);  // we only need positions, not bonds
+	OBMol mol_orig_pa = FragmentToOBMolNoConn(orig_pa);  // atoms and bonds
 	vector3 centroid = getCentroid(&mol_orig_pa, false);  // without weights
 	PseudoAtom new_atom = formAtom(&simplified_net, centroid, DEFAULT_ELEMENT);
 
@@ -334,9 +342,40 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
 	return new_atom;
 }
 
+OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {
+	// Based on VirtualMol::ToOBMol
+	OBMol mol = initMOFwithUC(&simplified_net);
+	std::map<OBAtom*, OBAtom*> virtual_to_mol;
+	AtomSet fragment_atoms = pa_fragment.GetAtoms();
+	// Copy atoms
+	for (AtomSet::iterator it=fragment_atoms.begin(); it!=fragment_atoms.end(); ++it) {
+		OBAtom* fragment_atom = (*it);
+		OBAtom* mol_atom;
+		if (IsConnection(fragment_atom)) { return OBMol(); }  // error
+		mol_atom = formAtom(&mol, fragment_atom->GetVector(), fragment_atom->GetAtomicNum());
+		virtual_to_mol[fragment_atom] = mol_atom;
+	}
+
+	// Convert connections into bonds
+	AtomSet internal_conns = conns.GetInternalConns(pa_fragment).GetAtoms();
+	for (AtomSet::iterator it=internal_conns.begin(); it!=internal_conns.end(); ++it) {
+		std::pair<PseudoAtom, PseudoAtom> begin_end = conns.GetConnEndpoints(*it);
+		PseudoAtom begin = virtual_to_mol[begin_end.first];
+		PseudoAtom end = virtual_to_mol[begin_end.second];
+		if (mol.GetBond(begin, end)) {
+			// raise a warning about undefined connections, more specific than formBond
+		} else {
+			formBond(&mol, begin, end, 1);
+		}
+	}
+
+	return mol;
+}
+
 OBMol Topology::ToOBMol() {
 	// TODO: eventually this code will assign pseudo-atom types based on SMILES (like ElementGen),
-	// but for now, just spit out the OBMol of interest
+	// but for now, just spit out the OBMol of interest.
+	// In the final version, be sure to initMOFwithUC to get the lattice params correctly
 
 	// For the interim, let's try coloring the atoms as a test.
 	// This will not likely be the implementation for the final version of the code, but it's worth trying now

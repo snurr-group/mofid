@@ -52,7 +52,8 @@ public:
 	bool IsConn(PseudoAtom atom);
 	AtomSet GetAtomConns(PseudoAtom endpt);
 	bool HasNeighbor(PseudoAtom begin, PseudoAtom end);
-	AtomSet GetConnEndpoints(PseudoAtom conn);
+	AtomSet GetConnEndpointSet(PseudoAtom conn);
+	std::pair<PseudoAtom, PseudoAtom> GetConnEndpoints(PseudoAtom conn);
 	// Search for connection sites contained within a set of endpoints
 	VirtualMol GetInternalConns(VirtualMol atoms);
 	// possibly consider a RemoveAtom(PseudoAtom endpt) to handle ConnectionTable accounting
@@ -92,6 +93,7 @@ public:
 	void DeleteAtomAndConns(PseudoAtom atom);
 	ConnIntToExt GetConnectedAtoms(VirtualMol internal);
 	PseudoAtom CollapseOrigAtoms(VirtualMol atoms);
+	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
 };
 // TODOs remaining
