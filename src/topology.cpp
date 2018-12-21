@@ -42,11 +42,11 @@ bool AtomRoles::RemoveRole(const std::string &role) {
 }
 
 
-Connections::Connections(OBMol* parent) {
+ConnectionTable::ConnectionTable(OBMol* parent) {
 	parent_net = parent;
 }
 
-void Connections::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
+void ConnectionTable::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
 	if (begin == end) { return; }  // trivial loop: TODO raise ERROR
 	std::pair<PseudoAtom, PseudoAtom> endpoints(begin, end);
 	conn2endpts[conn] = endpoints;
@@ -54,7 +54,7 @@ void Connections::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
 	endpt_conns[end].insert(conn);
 }
 
-void Connections::RemoveConn(PseudoAtom conn) {
+void ConnectionTable::RemoveConn(PseudoAtom conn) {
 	std::pair<PseudoAtom, PseudoAtom> endpoints;
 	endpoints = conn2endpts[conn];
 	conn2endpts.erase(conn);
@@ -62,15 +62,15 @@ void Connections::RemoveConn(PseudoAtom conn) {
 	endpt_conns.erase(endpoints.second);
 }
 
-bool Connections::IsConn(PseudoAtom atom) {
+bool ConnectionTable::IsConn(PseudoAtom atom) {
 	return (conn2endpts.find(atom) == conn2endpts.end());
 }
 
-AtomSet Connections::GetAtomConns(PseudoAtom endpt) {
+AtomSet ConnectionTable::GetAtomConns(PseudoAtom endpt) {
 	return endpt_conns[endpt];
 }
 
-bool Connections::HasNeighbor(PseudoAtom begin, PseudoAtom end) {
+bool ConnectionTable::HasNeighbor(PseudoAtom begin, PseudoAtom end) {
 	AtomSet begin_conn = GetAtomConns(begin);
 	for (AtomSet::iterator it=begin_conn.begin(); it!=begin_conn.end(); ++it) {
 		if ((conn2endpts[*it].first == end) || (conn2endpts[*it].second == end)) {
@@ -80,14 +80,14 @@ bool Connections::HasNeighbor(PseudoAtom begin, PseudoAtom end) {
 	return false;
 }
 
-AtomSet Connections::GetConnEndpoints(PseudoAtom conn) {
+AtomSet ConnectionTable::GetConnEndpoints(PseudoAtom conn) {
 	std::set<PseudoAtom> endpoints;
 	endpoints.insert(conn2endpts[conn].first);
 	endpoints.insert(conn2endpts[conn].second);
 	return endpoints;
 }
 
-VirtualMol Connections::GetInternalConns(VirtualMol atoms) {
+VirtualMol ConnectionTable::GetInternalConns(VirtualMol atoms) {
 	if (atoms.GetParent() != parent_net) { return VirtualMol(NULL); };  // error
 	VirtualMol int_conn(parent_net);
 	AtomSet pa = atoms.GetAtoms();
@@ -105,7 +105,7 @@ VirtualMol Connections::GetInternalConns(VirtualMol atoms) {
 }
 
 /*
-bool Connections::CheckConsistency() {
+bool ConnectionTable::CheckConsistency() {
 	// This would be a nice feature eventually
 	// number of bonds upstream must equal number of connections.
 	// also the two internal databases should match
@@ -118,7 +118,7 @@ Topology::Topology(OBMol *parent_mol) {
 	orig_molp = parent_mol;
 	simplified_net = initMOFwithUC(parent_mol);
 
-	Connections conns(&simplified_net);
+	ConnectionTable conns(&simplified_net);
 	VirtualMol deleted_atoms(orig_molp);
 	PseudoAtomMap pa_to_act(&simplified_net, orig_molp);
 	std::map<OBAtom*, AtomRoles> act_roles();    // initialize to empty.  Automatically will add elements
@@ -130,7 +130,7 @@ Topology::Topology(OBMol *parent_mol) {
 		pa_to_act[new_atom].AddAtom(&*orig_atom);
 		act_to_pa[&*orig_atom] = new_atom;
 	}
-	// Bonds in the simplified net are handled specially with a shadow Connections table
+	// Bonds in the simplified net are handled specially with a shadow ConnectionTable object
 	FOR_BONDS_OF_MOL(orig_bond, *orig_molp) {
 		PseudoAtom begin_pa = act_to_pa[orig_bond->GetBeginAtom()];
 		PseudoAtom end_pa = act_to_pa[orig_bond->GetEndAtom()];
@@ -189,7 +189,7 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 	// Form the pseudo atom
 	// TODO: think about if they're already connected.  That's not a problem
 	// (in fact it's the whole point, for structures like MOF-5), but I should consider
-	// what happens with the Connections class, etc., under those circumstances.
+	// what happens with the ConnectionTable class, etc., under those circumstances.
 	// Also how we consider valence of an atom, etc.
 	vector3 conn_pos;
 	if (pos != NULL) {
@@ -203,7 +203,7 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 	}
 	PseudoAtom new_conn = formAtom(&simplified_net, conn_pos, CONNECTION_ELEMENT);
 
-	// Form bonds and update accounting for Connections object
+	// Form bonds and update accounting for ConnectionTable object
 	formBond(&simplified_net, begin, new_conn, 1);
 	formBond(&simplified_net, end, new_conn, 1);
 	conns.AddConn(new_conn, begin, end);

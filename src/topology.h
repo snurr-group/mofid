@@ -36,7 +36,7 @@ public:
 };
 
 
-class Connections {
+class ConnectionTable {
 private:
 	OBMol *parent_net;
 	std::map< PseudoAtom, std::pair<PseudoAtom, PseudoAtom> > conn2endpts;
@@ -45,7 +45,7 @@ private:
 	// std::map< PseudoAtom, std::set<PseudoAtom> > endpt_nbors;
 	std::map< PseudoAtom, std::set<PseudoAtom> > endpt_conns;
 public:
-	Connections(OBMol* parent = NULL);
+	ConnectionTable(OBMol* parent = NULL);
 	//bool CheckConsistency();
 	void AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end);
 	void RemoveConn(PseudoAtom conn);
@@ -65,7 +65,7 @@ private:
 
 	OBMol *orig_molp;
 	OBMol simplified_net;  // warning: see notes below about OBBonds
-	Connections conns;
+	ConnectionTable conns;
 	VirtualMol deleted_atoms;
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
 	std::map<OBAtom*, AtomRoles> act_roles;  // roles of the original atoms
