@@ -264,14 +264,15 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 		PseudoAtom int_to_conn = e_it->first;
 		PseudoAtom ext_conn = e_it->second;
 		PseudoAtom ext_from_conn = NULL;
-		AtomSet conn_endpts = conns.GetConnEndpointSet(ext_conn);
 
 		// Figure out which of the conn_endpts is the new external endpoint
-		// TODO: rewrite using GetConnEndpoints for simplicity
-		for (AtomSet::iterator c_it=conn_endpts.begin(); c_it!=conn_endpts.end(); ++c_it) {
-			if (*c_it != int_to_conn) {
-				ext_from_conn = *c_it;
-			}
+		std::pair<PseudoAtom, PseudoAtom> conn_endpts = conns.GetConnEndpoints(ext_conn);
+		if (int_to_conn == conn_endpts.first) {
+			ext_from_conn = conn_endpts.second;
+		} else if (int_to_conn == conn_endpts.second) {
+			ext_from_conn = conn_endpts.first;
+		} else {
+			return ConnIntToExt();
 		}
 		std::pair<OBAtom*, OBAtom*> ConnExt(int_to_conn, ext_from_conn);
 		external_nbors.insert(ConnExt);
@@ -363,7 +364,7 @@ OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {
 		PseudoAtom begin = virtual_to_mol[begin_end.first];
 		PseudoAtom end = virtual_to_mol[begin_end.second];
 		if (mol.GetBond(begin, end)) {
-			// raise a warning about undefined connections, more specific than formBond
+			// TODO: raise a warning about undefined connections, more specific than formBond
 		} else {
 			formBond(&mol, begin, end, 1);
 		}
