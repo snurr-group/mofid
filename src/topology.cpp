@@ -63,7 +63,7 @@ void ConnectionTable::RemoveConn(PseudoAtom conn) {
 }
 
 bool ConnectionTable::IsConn(PseudoAtom atom) {
-	return (conn2endpts.find(atom) == conn2endpts.end());
+	return (conn2endpts.find(atom) != conn2endpts.end());
 }
 
 AtomSet ConnectionTable::GetAtomConns(PseudoAtom endpt) {
@@ -228,7 +228,17 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom) {
 	for (AtomSet::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
 		DeleteConnection(*it);
 	}
-	simplified_net.DeleteAtom(atom);
+	simplified_net.DeleteAtom(atom);  // automatically deletes bonds
+
+	// Remove original atoms if present
+	AtomSet act_atoms = pa_to_act[atom].GetAtoms();
+	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
+		act_to_pa[*it] = NULL;
+		deleted_atoms.AddAtom(*it);
+		act_roles[*it].ClearRoles();
+		act_roles[*it].AddRole("deleted by DeleteAtomAndConns");
+	}
+	pa_to_act.RemoveAtom(atom);  // and remove it from the key of PA's
 }
 
 ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
@@ -309,9 +319,15 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
 		ConnectAtoms(new_atom, pa_ext, &conn_loc);
 	}
 
-	// Delete the original fragment pseudoatoms
+	// Update the mapping between PA's and original atoms, then delete the
+	// original pseudoatoms corresponding with the fragment
+	pa_to_act[new_atom] = fragment;
+	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
+		act_to_pa[*it] = new_atom;
+	}
 	AtomSet orig_pa_set = orig_pa.GetAtoms();
 	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {
+		pa_to_act.RemoveAtom(*it);
 		DeleteAtomAndConns(*it);
 	}
 
@@ -326,6 +342,7 @@ OBMol Topology::ToOBMol() {
 	// This will not likely be the implementation for the final version of the code, but it's worth trying now
 	for (std::map<OBAtom*, AtomRoles>::iterator it=act_roles.begin(); it!=act_roles.end(); ++it) {
 		PseudoAtom a = act_to_pa[it->first];
+		if (!a) { continue; }  // skip over deleted atoms
 		if (it->second.HasRole("node")) {
 			changeAtomElement(a, 40);  // Zr (teal)
 		} else if (it->second.HasRole("linker")) {

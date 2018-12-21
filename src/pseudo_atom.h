@@ -31,6 +31,7 @@ public:
 	// void MapOneToOne();  // This will be implemented when the simplified net is created
 	OBMol ToCombinedMol(bool export_bonds = true, bool copy_bonds = true);
 	VirtualMol& operator[] (PseudoAtom i);
+	void RemoveAtom(PseudoAtom atom);
 	// Possibly also a helper utility to reassign atom classifications in _full_mol.
 	// It would move an original OBAtom* from one <PA,VirtualMol> to a different one.
 	// A utility to find unique SMILES may also be useful, but something to consider later.

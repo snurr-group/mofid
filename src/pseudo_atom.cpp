@@ -26,4 +26,8 @@ OBMol PseudoAtomMap::ToCombinedMol(bool export_bonds, bool copy_bonds) {
 	return combined.ToOBMol(export_bonds, copy_bonds);
 }
 
+void PseudoAtomMap::RemoveAtom(PseudoAtom atom) {
+	_mapping.erase(atom);
+}
+
 } // end namespace OpenBabel
