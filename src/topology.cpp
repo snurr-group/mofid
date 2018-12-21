@@ -46,8 +46,8 @@ Connections::Connections(OBMol* parent) {
 	parent_net = parent;
 }
 
-PseudoAtom Connections::FormConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
-	if (begin == end) { return NULL; }  // trivial loop
+void Connections::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
+	if (begin == end) { return; }  // trivial loop: TODO raise ERROR
 	std::pair<PseudoAtom, PseudoAtom> endpoints(begin, end);
 	conn2endpts[conn] = endpoints;
 	endpt_nbors[begin].insert(end);
@@ -56,7 +56,7 @@ PseudoAtom Connections::FormConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom e
 	endpt_conns[end].insert(conn);
 }
 
-PseudoAtom Connections::RemoveConn(PseudoAtom conn) {
+void Connections::RemoveConn(PseudoAtom conn) {
 	std::pair<PseudoAtom, PseudoAtom> endpoints;
 	endpoints = conn2endpts[conn];
 	conn2endpts.erase(conn);
@@ -76,6 +76,22 @@ AtomSet Connections::GetAtomConns(PseudoAtom atom) {
 
 AtomSet Connections::GetAtomNeighbors(PseudoAtom atom) {
 	return endpt_nbors[atom];
+}
+
+PseudoAtom Connections::GetConn(PseudoAtom begin, PseudoAtom end) {
+	// Error if the second atom is not a neighbor of the first
+	AtomSet begin_nbors = GetAtomNeighbors(begin);
+	if (begin_nbors.find(end) == begin_nbors.end()) { return NULL; }
+
+	PseudoAtom connection_site = NULL;
+	AtomSet all_conns = GetAtomConns(begin);
+	for (AtomSet::iterator it=all_conns.begin(); it!=all_conns.end(); ++it) {
+		PseudoAtom test_conn = *it;
+		if ((conn2endpts[test_conn].first==end) || (conn2endpts[test_conn].second==end)) {
+			connection_site = test_conn;
+		}
+	}
+	return connection_site;
 }
 
 AtomSet Connections::GetConnEndpoints(PseudoAtom conn) {
@@ -116,7 +132,7 @@ Topology::Topology(OBMol *parent_mol) {
 	orig_molp = parent_mol;
 	simplified_net = initMOFwithUC(parent_mol);
 
-	VirtualMol connections(&simplified_net);
+	Connections conns(&simplified_net);
 	VirtualMol deleted_atoms(orig_molp);
 	PseudoAtomMap pa_to_act(&simplified_net, orig_molp);
 	std::map<OBAtom*, AtomRoles> act_roles();    // initialize to empty.  Automatically will add elements
@@ -124,60 +140,20 @@ Topology::Topology(OBMol *parent_mol) {
 	// Initialize simplified_net via copying orig_mol and creating the 1:1 mapping
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
 		OBAtom* new_atom;
-		// TODO: set the simplified net to fake pseudoatoms instead of real elements (consider which atom type to use)
-		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), 6);
+		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), DEFAULT_ELEMENT);
 		pa_to_act[new_atom].AddAtom(&*orig_atom);
 		act_to_pa[&*orig_atom] = new_atom;
 	}
-	// TODO FIX THIS ACCOUNTING WITH THE NEW CONNECTIONS() CLASS
+	// Bonds in the simplified net are handled specially with a shadow Connections table
 	FOR_BONDS_OF_MOL(orig_bond, *orig_molp) {
-		OBAtom* orig_a1 = orig_bond->GetBeginAtom();
-		OBAtom* orig_a2 = orig_bond->GetEndAtom();
-		int new_order = 1;  // don't need to assign bond orders in the simplified topolgy
-		formBond(&simplified_net, act_to_pa[orig_a1], act_to_pa[orig_a2], new_order);
+		PseudoAtom begin_pa = act_to_pa[orig_bond->GetBeginAtom()];
+		PseudoAtom end_pa = act_to_pa[orig_bond->GetEndAtom()];
+		ConnectAtoms(begin_pa, end_pa);
 	}
 }
 
-bool Topology::IsConnection(OBAtom* a) {
-	return connections.HasAtom(a);
-}
-
-std::vector<OBAtom*> Topology::GetConnectionPath(PseudoAtom conn) {
-	// modified from neighborsOverConn
-	// TODO: delete!  deprecated code by Connections::GetAtomNeighbors()
-	std::vector<OBAtom*> path;
-	if (!IsConnection(conn)) { return path; }
-	std::queue<OBAtom*> to_visit;
-	std::set<OBAtom*> visited;
-	OBAtom* one_endpt = NULL;  // one of the two "real" endpoints, to establish the path at the end
-
-	to_visit.push(conn);
-	visited.insert(conn);
-
-	while (!to_visit.empty()) {
-		OBAtom* current = to_visit.front();
-		to_visit.pop();
-		if (IsConnection(current)) {
-			if (current->GetValence() != 2) { return path; }  // unexpected valence!
-			FOR_NBORS_OF_ATOM(nbor, *current) {
-				if (visited.find(&*nbor) == visited.end()) {
-					to_visit.push(&*nbor);
-					visited.insert(&*nbor);
-				}
-			}
-		} else {
-			one_endpt = current;
-		}
-	}
-
-	// Now generate the path.
-	OBAtom* path_progress = one_endpt;
-
-	path.push_back(one_endpt);
-
-	// check size of path
-
-	return path;
+bool Topology::IsConnection(PseudoAtom a) {
+	return conns.IsConn(a);
 }
 
 VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
@@ -223,6 +199,41 @@ int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 	//deleted_atoms
 }
 
+PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos) {
+	// Form the pseudo atom
+	// TODO: think about if they're already connected.  That's not a problem
+	// (in fact it's the whole point, for structures like MOF-5), but I should consider
+	// what happens with the Connections class, etc., under those circumstances.
+	// Also how we consider valence of an atom, etc.
+	vector3 conn_pos;
+	if (pos != NULL) {
+		conn_pos = *pos;
+	} else {  // use the midpoint by default
+		OBUnitCell* uc = getPeriodicLattice(&simplified_net);
+		vector3 begin_pos = begin->GetVector();
+		vector3 end_pos = uc->UnwrapCartesianNear(end->GetVector(), begin_pos);
+
+		conn_pos = uc->WrapCartesianCoordinate((begin_pos+end_pos) / 2.0);
+	}
+	PseudoAtom new_conn = formAtom(&simplified_net, conn_pos, CONNECTION_ELEMENT);
+
+	// Form bonds and update accounting for Connections object
+	formBond(&simplified_net, begin, new_conn, 1);
+	formBond(&simplified_net, end, new_conn, 1);
+	conns.AddConn(new_conn, begin, end);
+	return new_conn;
+}
+
+void Topology::DeleteConnection(PseudoAtom conn) {
+	// Removes connections between two atoms (no longer directly bonded through a connection site)
+	conns.RemoveConn(conn);
+	simplified_net.DeleteAtom(conn);  // automatically deletes attached bonds
+}
+
+void Topology::DeleteConnection(PseudoAtom begin, PseudoAtom end) {
+	DeleteConnection(conns.GetConn(begin, end));
+}
+
 PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {
 	// FIXME still implementing
 	if (atoms.GetParent() != orig_molp) {
@@ -236,6 +247,7 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {
 		pa_int.AddAtom(act_to_pa[*it]);
 	}
 	// Add connections inside pa_int
+	// this whole sectino will be replaced by GetInternalConns:
 	std::set<OBAtom*> orig_pa = pa_int.GetAtoms();
 	std::set<OBAtom*> internal_connections;
 	for (std::set<OBAtom*>::iterator it=orig_pa.begin(); it!=orig_pa.end(); ++it) {
@@ -293,7 +305,7 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol atoms) {
 		vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + int_loc + ext_loc) / 6.0);
 
 		OBAtom* conn_atom = formAtom(&simplified_net, conn_loc, CONNECTION_ELEMENT);
-		connections.AddAtom(conn_atom);
+		//connections.AddAtom(conn_atom);
 		formBond(&simplified_net, conn_atom, pa_int, 1);  // Connect to internal
 		formBond(&simplified_net, conn_atom, pa_ext, 1);
 	}
@@ -312,9 +324,9 @@ OBMol Topology::ToOBMol() {
 	for (std::map<OBAtom*, AtomRoles>::iterator it=act_roles.begin(); it!=act_roles.end(); ++it) {
 		PseudoAtom a = act_to_pa[it->first];
 		if (it->second.HasRole("node")) {
-			changeAtomElement(a, 30);
+			changeAtomElement(a, 40);  // Zr (teal)
 		} else if (it->second.HasRole("linker")) {
-			changeAtomElement(a, 8);
+			changeAtomElement(a, 7);  // N (blue)
 		}
 	}
 	// I did the coloring this way out of convenience, but honestly it's actually

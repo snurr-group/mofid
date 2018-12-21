@@ -48,7 +48,6 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
-int collapseXX(OBMol *net, int element_x);
 int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
 std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
 int fourToTwoThree(OBMol *net, int X_CONN);
@@ -61,7 +60,9 @@ typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
-MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);
+MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);  // entirely deprecated, as well as collapseXX, if we don't have extraneous bonds in our network
+int collapseXX(OBMol *net, int element_x);
+// these changes to XX will also greatly simplify Systre
 
 /* Define global parameters for MOF decomposition */
 // Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
