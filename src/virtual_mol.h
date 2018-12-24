@@ -6,6 +6,7 @@ virtual_mol.h - Collection of OBAtom*, plus adapters for OBMol, etc.
 #define VIRTUAL_MOL_H
 
 #include <string>
+#include <vector>
 #include <set>
 #include <tuple>
 
@@ -43,6 +44,7 @@ public:
 	OBMol ToOBMol(bool export_bonds = true, bool copy_bonds = true);
 	// TODO: consider implementing SMILES in a parent class due to OBConv
 	// std::string ToSmiles();}
+	std::vector<VirtualMol> Separate();
 };
 
 } // end namespace OpenBabel

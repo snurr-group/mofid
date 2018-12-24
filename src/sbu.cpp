@@ -195,6 +195,8 @@ std::string analyzeMOF(std::string filename) {
 	OBMol split_mol;  // temporary molecule to setup the initial metal-based fragmentation
 	copyMOF(&orig_mol, &split_mol);
 
+	// TODO: does topology.h, etc., use Begin/EndModify routines?
+
 	// Find linkers by deleting bonds to metals
 	// TODO: in this block, for SBU decomposition algorithms, do some manipulations to modify/restore bonds before fragmentation.
 	// That will probably take the form of an optional preprocessing step before fragment assignment.
@@ -257,11 +259,26 @@ std::string analyzeMOF(std::string filename) {
 	OBMol test_partial = simplified.ToOBMol();
 	writeCIF(&test_partial, "Test/test_partial.cif");
 
-	return "fake results TODO";
-
-	// Temporarily comment out the rest of the code and test/implement them step-by-step
-	/*
 	// Simplify all the node SBUs into single points.
+	VirtualMol node_pa = simplified.GetAtomsOfRole("node");
+	node_pa = simplified.FragmentWithIntConns(node_pa);
+	std::vector<VirtualMol> node_fragments = node_pa.Separate();
+	for (std::vector<VirtualMol>::iterator it=node_fragments.begin(); it!=node_fragments.end(); ++it) {
+		OBMol fragment_mol = it->ToOBMol();
+		if (isPeriodicChain(&fragment_mol)) {
+			obErrorLog.ThrowError(__FUNCTION__, "Infinite chains not yet implemented!!", obWarning);
+		} else {
+			PseudoAtom collapsed = simplified.CollapseFragment(*it);
+			simplified.SetRoleToAtom("node", collapsed);
+		}
+	}
+
+	OBMol test_nodes = simplified.ToOBMol();
+	writeCIF(&test_nodes, "Test/test_with_simplified_nodes.cif");
+
+
+	/*
+	// TODO: implement MIL-like periodic chains
 	ElementGen node_conv(true);
 	simplified_net.BeginModify();
 
@@ -283,8 +300,12 @@ std::string analyzeMOF(std::string filename) {
 		pseudo_map[pseudo_node] = &*it;
 	}
 	simplified_net.EndModify();
+*/
 
+	return "fake results TODO";
 
+	// Temporarily comment out the rest of the code and test/implement them step-by-step
+/*
 	// Handle one-connected species, notably bound solvents and metal-containing ligands.
 	// Consider making this a do-while loop while the one-connected ends exist?
 	simplified_net.BeginModify();

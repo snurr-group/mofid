@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html one exe
+.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html one exe btc
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -23,6 +23,9 @@ one:
 	cd bin && make; \
 	cd ..; \
 	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
+
+btc:
+	bin/sbu Resources/TestCIFs/P1-Cu-BTC.cif
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats

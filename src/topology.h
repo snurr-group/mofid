@@ -100,6 +100,9 @@ public:
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
+
+	VirtualMol FragmentWithoutConns(VirtualMol fragment);
+	VirtualMol FragmentWithIntConns(VirtualMol fragment);
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

@@ -307,8 +307,7 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 	// Automatically passes over connection pseudoatoms.
 
 	// VirtualMol::GetExternalBonds() will also return internal connections, so let's specify those ahead of time
-	VirtualMol pa_with_conns = internal_pa;
-	pa_with_conns.AddVirtualMol(conns.GetInternalConns(internal_pa));
+	VirtualMol pa_with_conns = FragmentWithIntConns(internal_pa);
 	// Then GetExternalBonds() can only return extra bonds
 	ConnIntToExt bonds = pa_with_conns.GetExternalBonds();
 
@@ -373,11 +372,12 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 
 	// Update the mapping between PA's and original atoms, then delete the
 	// original pseudoatoms corresponding with the fragment
-	AtomSet act_atoms = PseudoToOrig(pa_fragment).GetAtoms();
+	VirtualMol pa_without_conn = FragmentWithoutConns(pa_fragment);
+	AtomSet act_atoms = PseudoToOrig(pa_without_conn).GetAtoms();
 	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
 		act_to_pa[*it] = new_atom;
 	}
-	AtomSet orig_pa_set = pa_fragment.GetAtoms();
+	AtomSet orig_pa_set = pa_without_conn.GetAtoms();
 	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {
 		pa_to_act.RemoveAtom(*it);
 		DeleteAtomAndConns(*it);
@@ -394,9 +394,8 @@ OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {
 	// Copy atoms
 	for (AtomSet::iterator it=fragment_atoms.begin(); it!=fragment_atoms.end(); ++it) {
 		OBAtom* fragment_atom = (*it);
-		OBAtom* mol_atom;
-		if (IsConnection(fragment_atom)) { return OBMol(); }  // error
-		mol_atom = formAtom(&mol, fragment_atom->GetVector(), fragment_atom->GetAtomicNum());
+		if (IsConnection(fragment_atom)) { continue; }  // skip over connections
+		OBAtom* mol_atom = formAtom(&mol, fragment_atom->GetVector(), fragment_atom->GetAtomicNum());
 		virtual_to_mol[fragment_atom] = mol_atom;
 	}
 
@@ -437,6 +436,24 @@ OBMol Topology::ToOBMol() {
 	// a really good way to visualize how the net turned out.
 	// A web app to combine/hide the different layers could work too.
 	return simplified_net;
+}
+
+VirtualMol Topology::FragmentWithoutConns(VirtualMol fragment) {
+	// remove connection pseudoatoms from a VirtualMol
+	VirtualMol cleaned(fragment.GetParent());
+	AtomSet all_atoms = fragment.GetAtoms();
+	for (AtomSet::iterator it=all_atoms.begin(); it!=all_atoms.end(); ++it) {
+		if (!IsConnection(*it)) {
+			cleaned.AddAtom(*it);
+		}
+	}
+	return cleaned;
+}
+
+VirtualMol Topology::FragmentWithIntConns(VirtualMol fragment) {
+	VirtualMol pa_and_conns = fragment;
+	pa_and_conns.AddVirtualMol(conns.GetInternalConns(fragment));
+	return pa_and_conns;
 }
 
 } // end namespace OpenBabel

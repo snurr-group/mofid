@@ -1,4 +1,3 @@
-// TODO: consider making the "false" returns raise an OBError/Warning
 #include "virtual_mol.h"
 #include "obdetails.h"
 #include "framework.h"
@@ -7,6 +6,7 @@
 #include <map>
 #include <set>
 #include <tuple>
+#include <stack>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
@@ -144,6 +144,45 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 		resetBonds(&mol);
 	}
 	return mol;
+}
+
+std::vector<VirtualMol> VirtualMol::Separate() {
+	std::vector<VirtualMol> fragments;  // return value
+
+	// Initalize visited: none visited at the beginning
+	std::map<OBAtom*, bool> visited;
+	for (AtomSet::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
+		visited[*it] = false;
+	}
+
+	// Outer loop through the full list of atoms to start new fragments
+	for (std::map<OBAtom*, bool>::iterator next_atom=visited.begin(); next_atom!=visited.end(); ++next_atom) {
+		if (next_atom->second) { continue; }  // not a new fragment: already visited
+		VirtualMol curr_fragment(GetParent());
+
+		// DFS through the network to map out the fragment
+		std::stack<OBAtom*> to_visit;
+		to_visit.push(next_atom->first);
+		visited[next_atom->first] = true;
+
+		while (!to_visit.empty()) {
+			OBAtom* curr_atom = to_visit.top();
+			to_visit.pop();
+			curr_fragment.AddAtom(curr_atom);
+
+			FOR_NBORS_OF_ATOM(nbor, *curr_atom) {
+				// Make sure we're not iterating on external parent_mol atoms
+				// or creating an infinite loop by continuously visiting the same atoms.
+				if (this->HasAtom(&*nbor) && !visited[&*nbor]) {
+					visited[&*nbor] = true;
+					to_visit.push(&*nbor);
+				}
+			}
+		}
+		fragments.push_back(curr_fragment);
+	}
+
+	return fragments;
 }
 
 } // end namespace OpenBabel
