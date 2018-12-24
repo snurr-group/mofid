@@ -221,8 +221,9 @@ std::string analyzeMOF(std::string filename) {
 	std::stringstream nonmetalMsg;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
 		std::string mol_smiles = getSMILES(*it, obconv);
-		VirtualMol fragment_atoms(&orig_mol);
-		fragment_atoms.ImportCopiedFragment(&*it);
+		VirtualMol fragment_act_atoms(&orig_mol);
+		fragment_act_atoms.ImportCopiedFragment(&*it);
+		VirtualMol fragment_pa = simplified.OrigToPseudo(fragment_act_atoms);;
 
 		// If str comparisons are required, include a "\t\n" in the proposed smiles
 		bool all_oxygens = true;  // Also allow hydroxyls, etc.
@@ -232,7 +233,7 @@ std::string analyzeMOF(std::string filename) {
 			}
 		}
 
-		if (fragment_atoms.GetExternalBonds().size() == 0) {
+		if (fragment_act_atoms.GetExternalBonds().size() == 0) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
 			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
@@ -241,15 +242,15 @@ std::string analyzeMOF(std::string filename) {
 			// Let's get the general test cases finished first, then come back and implement this one.
 		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
-			simplified.SetRoleToAtoms( "node", fragment_atoms);
+			simplified.SetRoleToAtoms( "node", fragment_pa);
 		} else if (all_oxygens) {
 			nonmetalMsg << "Found an oxygen species " << mol_smiles;
-			simplified.SetRoleToAtoms("node", fragment_atoms);
+			simplified.SetRoleToAtoms("node", fragment_pa);
 			// do we condense these yet?  probably later
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			simplified.SetRoleToAtoms("linker", fragment_atoms);
-			simplified.CollapseOrigAtoms(fragment_atoms);
+			PseudoAtom collapsed = simplified.CollapseOrigAtoms(fragment_act_atoms);
+			simplified.SetRoleToAtom("linker", collapsed);
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);

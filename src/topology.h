@@ -22,7 +22,7 @@ class OBMol;
 class OBAtom;
 
 class AtomRoles {
-// Roles of an orig_mol OBAtom in MOF simplification.
+// Roles of pseudoatoms in the MOF simplified net
 // Could potentially be re-implemented later as a bit vector.
 // Example roles: SBU, organic, nodes, linkers, free_solvent, bound_solvent, solvent
 private:
@@ -75,7 +75,7 @@ private:
 	ConnectionTable conns;
 	VirtualMol deleted_atoms;
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
-	std::map<OBAtom*, AtomRoles> act_roles;  // roles of the original atoms
+	std::map<OBAtom*, AtomRoles> pa_roles;  // roles of the simplified pseudoatoms
 	std::map<OBAtom*, PseudoAtom> act_to_pa;  // where did the orig_mol atoms end up in the simplified net?
 
 	// Is a member of the simplified net a pseudo atom or connection?
@@ -86,8 +86,10 @@ public:
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
 	VirtualMol GetOrigAtomsOfRole(const std::string &role);
+	void SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val=true);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
 	int RemoveOrigAtoms(VirtualMol atoms);
+	VirtualMol OrigToPseudo(VirtualMol orig_atoms);
 	// Modify bonds using a custom connection-based routine rather than standard OBBonds:
 	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);

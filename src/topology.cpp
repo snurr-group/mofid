@@ -138,7 +138,7 @@ Topology::Topology(OBMol *parent_mol) {
 	conns = ConnectionTable(&simplified_net);
 	deleted_atoms = VirtualMol(orig_molp);
 	pa_to_act = PseudoAtomMap(&simplified_net, orig_molp);
-	act_roles = std::map<OBAtom*, AtomRoles>();    // initialize to empty.  Automatically will add elements
+	pa_roles = std::map<OBAtom*, AtomRoles>();    // initialize to empty.  Automatically will add elements
 
 	// Initialize simplified_net via copying orig_mol and creating the 1:1 mapping
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
@@ -162,27 +162,34 @@ bool Topology::IsConnection(PseudoAtom a) {
 
 VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
 	VirtualMol match(orig_molp);
-	for (std::map<OBAtom*, AtomRoles>::iterator it=act_roles.begin(); it!=act_roles.end(); ++it) {
+	for (std::map<OBAtom*, AtomRoles>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
 		if (it->second.HasRole(role)) {
-			match.AddAtom(it->first);
+			AtomSet sub_atoms = pa_to_act[it->first].GetAtoms();
+			for (AtomSet::iterator a=sub_atoms.begin(); a!=sub_atoms.end(); ++a) {
+				match.AddAtom(*a);
+			}
 		}
 	}
 	return match;
 }
 
+void Topology::SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val) {
+	if (val) {
+		pa_roles[atom].AddRole(role);
+	} else {
+		pa_roles[atom].RemoveRole(role);
+	}
+}
+
 void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val) {
-	// Adds/removes the role from a list of original atoms in a VirtualMol
-	if (atoms.GetParent() != orig_molp) {
-		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
+	// Adds/removes the role from a list of PseudoAtoms in the simplified net
+	if (atoms.GetParent() != &simplified_net) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain PseudoAtoms of the simplified net.", obError);
 		return;
 	}
 	std::set<OBAtom*> atom_list = atoms.GetAtoms();
 	for (std::set<OBAtom*>::iterator it=atom_list.begin(); it!=atom_list.end(); ++it) {
-		if (val) {
-			act_roles[*it].AddRole(role);
-		} else {
-			act_roles[*it].RemoveRole(role);
-		}
+		SetRoleToAtom(role, *it, val);
 	}
 }
 
@@ -203,6 +210,23 @@ int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 	return 1;
 	// remove from the simplified net
 	//deleted_atoms
+}
+
+VirtualMol Topology::OrigToPseudo(VirtualMol orig_atoms) {
+	if (orig_atoms.GetParent() != orig_molp) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
+		return VirtualMol(NULL);
+	}
+	std::set<OBAtom*> act_atoms = orig_atoms.GetAtoms();
+	VirtualMol pa(&simplified_net);
+
+	// Find the relevant set of pseudoatoms
+	for (std::set<OBAtom*>::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
+		pa.AddAtom(act_to_pa[*it]);
+	}
+	// TODO consider a consistency check that the PA's don't include any other atoms (a length check for fragment vs. sum of PA AtomSets)
+
+	return pa;
 }
 
 PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos) {
@@ -226,6 +250,7 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 		conn_pos = uc->WrapCartesianCoordinate((begin_pos+end_pos) / 2.0);
 	}
 	PseudoAtom new_conn = formAtom(&simplified_net, conn_pos, CONNECTION_ELEMENT);
+	pa_roles[new_conn].AddRole("connection");
 
 	// Form bonds and update accounting for ConnectionTable object
 	formBond(&simplified_net, begin, new_conn, 1);
@@ -238,6 +263,7 @@ void Topology::DeleteConnection(PseudoAtom conn) {
 	// Removes connections between two atoms (no longer directly bonded through a connection site)
 	conns.RemoveConn(conn);
 	simplified_net.DeleteAtom(conn);  // automatically deletes attached bonds
+	pa_roles.erase(conn);
 }
 
 void Topology::DeleteAtomAndConns(PseudoAtom atom) {
@@ -260,10 +286,9 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom) {
 	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
 		act_to_pa[*it] = NULL;
 		deleted_atoms.AddAtom(*it);
-		act_roles[*it].ClearRoles();
-		act_roles[*it].AddRole("deleted by DeleteAtomAndConns");
 	}
 	pa_to_act.RemoveAtom(atom);  // and remove it from the key of PA's
+	pa_roles.erase(atom);
 }
 
 ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
@@ -400,13 +425,14 @@ OBMol Topology::ToOBMol() {
 
 	// For the interim, let's try coloring the atoms as a test.
 	// This will not likely be the implementation for the final version of the code, but it's worth trying now
-	for (std::map<OBAtom*, AtomRoles>::iterator it=act_roles.begin(); it!=act_roles.end(); ++it) {
+	for (std::map<OBAtom*, AtomRoles>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
 		PseudoAtom a = act_to_pa[it->first];
-		if (!a) { continue; }  // skip over deleted atoms
 		if (it->second.HasRole("node")) {
-			changeAtomElement(a, 40);  // Zr (teal)
+			changeAtomElement(it->first, 40);  // Zr (teal)
 		} else if (it->second.HasRole("linker")) {
-			changeAtomElement(a, 7);  // N (blue)
+			changeAtomElement(it->first, 7);  // N (blue)
+		} else if (it->second.HasRole("connection")) {
+			changeAtomElement(it->first, 8);  // O (red)
 		}
 	}
 	// I did the coloring this way out of convenience, but honestly it's actually
