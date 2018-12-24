@@ -249,7 +249,7 @@ std::string analyzeMOF(std::string filename) {
 			// do we condense these yet?  probably later
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			PseudoAtom collapsed = simplified.CollapseOrigAtoms(fragment_act_atoms);
+			PseudoAtom collapsed = simplified.CollapseFragment(fragment_pa);
 			simplified.SetRoleToAtom("linker", collapsed);
 		}
 	}

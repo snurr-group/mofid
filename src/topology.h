@@ -85,18 +85,19 @@ public:
 	//Topology() = delete;
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
-	VirtualMol GetOrigAtomsOfRole(const std::string &role);
+	VirtualMol GetAtomsOfRole(const std::string &role);
 	void SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val=true);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
 	int RemoveOrigAtoms(VirtualMol atoms);
 	VirtualMol OrigToPseudo(VirtualMol orig_atoms);
+	VirtualMol PseudoToOrig(VirtualMol pa_atoms);
 	// Modify bonds using a custom connection-based routine rather than standard OBBonds:
 	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
 	void DeleteAtomAndConns(PseudoAtom atom);
 	ConnIntToExt GetConnectedAtoms(VirtualMol internal);
-	PseudoAtom CollapseOrigAtoms(VirtualMol atoms);
+	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
 };

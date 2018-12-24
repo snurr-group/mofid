@@ -160,14 +160,11 @@ bool Topology::IsConnection(PseudoAtom a) {
 	return conns.IsConn(a);
 }
 
-VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
-	VirtualMol match(orig_molp);
+VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
+	VirtualMol match(&simplified_net);
 	for (std::map<OBAtom*, AtomRoles>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
 		if (it->second.HasRole(role)) {
-			AtomSet sub_atoms = pa_to_act[it->first].GetAtoms();
-			for (AtomSet::iterator a=sub_atoms.begin(); a!=sub_atoms.end(); ++a) {
-				match.AddAtom(*a);
-			}
+			match.AddAtom(it->first);
 		}
 	}
 	return match;
@@ -227,6 +224,20 @@ VirtualMol Topology::OrigToPseudo(VirtualMol orig_atoms) {
 	// TODO consider a consistency check that the PA's don't include any other atoms (a length check for fragment vs. sum of PA AtomSets)
 
 	return pa;
+}
+
+VirtualMol Topology::PseudoToOrig(VirtualMol pa_atoms) {
+	if (pa_atoms.GetParent() != &simplified_net) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the simplified net.", obError);
+		return VirtualMol(NULL);
+	}
+
+	VirtualMol orig_atoms(orig_molp);
+	AtomSet pa_set = pa_atoms.GetAtoms();
+	for (std::set<OBAtom*>::iterator it=pa_set.begin(); it!=pa_set.end(); ++it) {
+		orig_atoms.AddVirtualMol(pa_to_act[*it]);
+	}
+	return orig_atoms;
 }
 
 PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos) {
@@ -325,32 +336,19 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 	return external_nbors;
 }
 
-// TODO: consider renaming as CollapseFragment, using pseudo atoms and
-// another public translator method?
-// That will probably be less cobbled together and more reproducible.
-PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
-	// Simplifies the net by combining all original atoms specified in the fragment
-	// into a single pseudo-atom, maintaining existing connections.
-	// Returns the pointer to the generated pseudo atom.
-	if (fragment.GetParent() != orig_molp) {
-		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
+PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
+	// Simplifies the net by combining pa_fragment PseudoAtoms into a single point,
+	// maintaining existing connections.  Returns a pointer to the generated PseudoAtom.
+	if (pa_fragment.GetParent() != &simplified_net) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the simplified net.", obError);
 		return NULL;
 	}
 
-	// Find the relevant set of pseudoatoms
-	// We don't need to handle internal connections because atom manipulation will automatically take care of it.
-	std::set<OBAtom*> act_atoms = fragment.GetAtoms();
-	VirtualMol orig_pa(&simplified_net);
-	for (std::set<OBAtom*>::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
-		orig_pa.AddAtom(act_to_pa[*it]);
-	}
-	// TODO consider a consistency check that the PA's don't include any other atoms (a length check for fragment vs. sum of PA AtomSets)
-
 	// Get external neighbors on the other side of the connections.
-	ConnIntToExt external_nbors = GetConnectedAtoms(orig_pa);
+	ConnIntToExt external_nbors = GetConnectedAtoms(pa_fragment);
 
 	// Make the new pseudoatom at the centroid
-	OBMol mol_orig_pa = FragmentToOBMolNoConn(orig_pa);  // atoms and bonds
+	OBMol mol_orig_pa = FragmentToOBMolNoConn(pa_fragment);  // atoms and bonds
 	vector3 centroid = getCentroid(&mol_orig_pa, false);  // without weights
 	PseudoAtom new_atom = formAtom(&simplified_net, centroid, DEFAULT_ELEMENT);
 
@@ -375,11 +373,11 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
 
 	// Update the mapping between PA's and original atoms, then delete the
 	// original pseudoatoms corresponding with the fragment
-	pa_to_act[new_atom] = fragment;
+	AtomSet act_atoms = PseudoToOrig(pa_fragment).GetAtoms();
 	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
 		act_to_pa[*it] = new_atom;
 	}
-	AtomSet orig_pa_set = orig_pa.GetAtoms();
+	AtomSet orig_pa_set = pa_fragment.GetAtoms();
 	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {
 		pa_to_act.RemoveAtom(*it);
 		DeleteAtomAndConns(*it);
