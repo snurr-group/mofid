@@ -63,8 +63,10 @@ public:
 
 class Topology {
 private:
-	const int DEFAULT_ELEMENT = 6;
-	const int CONNECTION_ELEMENT = 118;  // Og for now
+	static const int DEFAULT_ELEMENT = 6;
+	static const int CONNECTION_ELEMENT = 118;  // Og for now
+	// Be careful with in-class constants.  They become trickier for non-integers:
+	// http://www.stroustrup.com/bs_faq2.html#in-class
 
 	OBMol *orig_molp;
 	OBMol simplified_net;  // warning: see notes below about OBBonds
