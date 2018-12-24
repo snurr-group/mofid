@@ -8,7 +8,7 @@ topology.h - Simplified topological net and related classes
 #include <string>
 #include <vector>
 #include <set>
-#include <tuple>
+#include <utility>  // std::pair
 
 #include <openbabel/babelconfig.h>
 

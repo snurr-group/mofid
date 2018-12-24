@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 #include <set>
-#include <tuple>
+#include <utility>  // std::pair
 #include <queue>
 
 #include <openbabel/babelconfig.h>

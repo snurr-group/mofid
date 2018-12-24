@@ -8,7 +8,7 @@ virtual_mol.h - Collection of OBAtom*, plus adapters for OBMol, etc.
 #include <string>
 #include <vector>
 #include <set>
-#include <tuple>
+#include <utility>  // std::pair
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>

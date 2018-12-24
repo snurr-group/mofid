@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#include <tuple>
+#include <utility>  // std::pair
 #include <stack>
 
 #include <openbabel/babelconfig.h>
