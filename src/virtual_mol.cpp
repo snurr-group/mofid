@@ -34,21 +34,33 @@ bool VirtualMol::HasAtom(OBAtom *a) {
 }
 
 bool VirtualMol::AddAtom(OBAtom *a) {
-	if (a->GetParent() != _parent_mol) { return false; }
+	if (a->GetParent() != _parent_mol) {
+		obErrorLog.ThrowError(__FUNCTION__, "Atom does not have the same parent OBMol as the VirtualMol.", obError);
+		return false;
+	}
 	if (HasAtom(a)) { return false; }
 	_atoms.insert(a);
 	return true;
 }
 
 bool VirtualMol::RemoveAtom(OBAtom *a) {
-	if (a->GetParent() != _parent_mol) { return false; }
-	if (!HasAtom(a)) { return false; }
+	if (a->GetParent() != _parent_mol) {
+		obErrorLog.ThrowError(__FUNCTION__, "Atom does not have the same parent OBMol as the VirtualMol.", obError);
+		return false;
+	}
+	if (!HasAtom(a)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Tried to delete a nonexistent atom from VirtualMol.", obError);
+		return false;
+	}
 	_atoms.erase(a);
 	return true;
 }
 
 bool VirtualMol::AddVirtualMol(VirtualMol addition) {
-	if (addition.GetParent() != _parent_mol) { return false; }
+	if (addition.GetParent() != _parent_mol) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol parents do not match", obWarning);
+		return false;
+	}
 	std::set<OBAtom*> atoms_to_add = addition.GetAtoms();
 	for (std::set<OBAtom*>::iterator it=atoms_to_add.begin(); it!=atoms_to_add.end(); ++it) {
 		_atoms.insert(*it);
@@ -63,6 +75,7 @@ int VirtualMol::ImportCopiedFragment(OBMol *fragment) {
 		OBAtom* parent_a;
 		parent_a = atomInOtherMol(&*a, _parent_mol);
 		if (!parent_a) {  // NULL: atom does not exist
+			obErrorLog.ThrowError(__FUNCTION__, "Cannot import fragment with missing atom.", obError);
 			return 0;  // error, and no modifications to VirtualMol
 		}
 		atoms_to_add.push_back(parent_a);

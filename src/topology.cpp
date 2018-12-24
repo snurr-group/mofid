@@ -47,7 +47,14 @@ ConnectionTable::ConnectionTable(OBMol* parent) {
 }
 
 void ConnectionTable::AddConn(PseudoAtom conn, PseudoAtom begin, PseudoAtom end) {
-	if (begin == end) { return; }  // trivial loop: TODO raise ERROR
+	if (begin == end) {
+		obErrorLog.ThrowError(__FUNCTION__, "Adding a connection for a trivial loop.", obWarning);
+		// TODO: degrade to an Info level notification
+		// FIXME: before that, make sure the rest of the code is sufficiently robust to begin==end
+
+		// Do not return or otherwise cause an error.  This condition can naturally occur with
+		// a ConnectionTable (e.g. MOF-5) even though it can't with native OBBonds.
+	}
 	std::pair<PseudoAtom, PseudoAtom> endpoints(begin, end);
 	conn2endpts[conn] = endpoints;
 	endpt_conns[begin].insert(conn);
@@ -58,8 +65,8 @@ void ConnectionTable::RemoveConn(PseudoAtom conn) {
 	std::pair<PseudoAtom, PseudoAtom> endpoints;
 	endpoints = conn2endpts[conn];
 	conn2endpts.erase(conn);
-	endpt_conns.erase(endpoints.first);
-	endpt_conns.erase(endpoints.second);
+	endpt_conns[endpoints.first].erase(conn);
+	endpt_conns[endpoints.second].erase(conn);
 }
 
 bool ConnectionTable::IsConn(PseudoAtom atom) {
@@ -93,7 +100,10 @@ std::pair<PseudoAtom, PseudoAtom> ConnectionTable::GetConnEndpoints(PseudoAtom c
 }
 
 VirtualMol ConnectionTable::GetInternalConns(VirtualMol atoms) {
-	if (atoms.GetParent() != parent_net) { return VirtualMol(NULL); };  // error
+	if (atoms.GetParent() != parent_net) {
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol parent mismatch", obWarning);
+		return VirtualMol(NULL);
+	};
 	VirtualMol int_conn(parent_net);
 	AtomSet pa = atoms.GetAtoms();
 	for (AtomSet::iterator a_it=pa.begin(); a_it!=pa.end(); ++a_it) {
@@ -134,6 +144,7 @@ Topology::Topology(OBMol *parent_mol) {
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
 		OBAtom* new_atom;
 		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), DEFAULT_ELEMENT);
+		pa_to_act[new_atom] = VirtualMol(orig_molp);
 		pa_to_act[new_atom].AddAtom(&*orig_atom);
 		act_to_pa[&*orig_atom] = new_atom;
 	}
@@ -162,7 +173,7 @@ VirtualMol Topology::GetOrigAtomsOfRole(const std::string &role) {
 void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val) {
 	// Adds/removes the role from a list of original atoms in a VirtualMol
 	if (atoms.GetParent() != orig_molp) {
-		// Error
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
 		return;
 	}
 	std::set<OBAtom*> atom_list = atoms.GetAtoms();
@@ -179,6 +190,7 @@ int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 	// FIXME: come back and implement at the end
 	// Used for solvent removal, etc.
 	if (atoms.GetParent() != orig_molp) {
+		//obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
 		return 0;  // error
 	}
 	std::set<OBAtom*> atom_set = atoms.GetAtoms();
@@ -202,6 +214,11 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 	if (pos != NULL) {
 		conn_pos = *pos;
 	} else {  // use the midpoint by default
+		if (begin == end) {
+			obErrorLog.ThrowError(__FUNCTION__, "Underdefined: need an explicit connection location to connect an atom to itself.", obError);
+			return NULL;
+		}
+
 		OBUnitCell* uc = getPeriodicLattice(&simplified_net);
 		vector3 begin_pos = begin->GetVector();
 		vector3 end_pos = uc->UnwrapCartesianNear(end->GetVector(), begin_pos);
@@ -228,7 +245,8 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom) {
 	AtomSet nbors;
 	FOR_NBORS_OF_ATOM(nbor, *atom) {
 		if (!IsConnection(&*nbor)) {
-			return;  // ERROR.  No atoms should be bonded directly to each other
+			obErrorLog.ThrowError(__FUNCTION__, "Undefined behavior: Found atoms directly bonded to each other (instead of an intermediate connection site).", obError);
+			return;
 		}
 		nbors.insert(&*nbor);
 	}
@@ -272,6 +290,7 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 		} else if (int_to_conn == conn_endpts.second) {
 			ext_from_conn = conn_endpts.first;
 		} else {
+			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: ended at an unexpected endpoint", obError);
 			return ConnIntToExt();
 		}
 		std::pair<OBAtom*, OBAtom*> ConnExt(int_to_conn, ext_from_conn);
@@ -289,7 +308,8 @@ PseudoAtom Topology::CollapseOrigAtoms(VirtualMol fragment) {
 	// into a single pseudo-atom, maintaining existing connections.
 	// Returns the pointer to the generated pseudo atom.
 	if (fragment.GetParent() != orig_molp) {
-		return NULL;  // error
+		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
+		return NULL;
 	}
 
 	// Find the relevant set of pseudoatoms
@@ -364,7 +384,7 @@ OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {
 		PseudoAtom begin = virtual_to_mol[begin_end.first];
 		PseudoAtom end = virtual_to_mol[begin_end.second];
 		if (mol.GetBond(begin, end)) {
-			// TODO: raise a warning about undefined connections, more specific than formBond
+			obErrorLog.ThrowError(__FUNCTION__, "OBMol will have undefined connections due to multiply-bonded begin/end atoms.", obWarning);
 		} else {
 			formBond(&mol, begin, end, 1);
 		}
