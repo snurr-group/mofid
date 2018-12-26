@@ -83,6 +83,7 @@ public:
 	OBMol* GetOrigMol() { return orig_molp; };
 	VirtualMol GetAtomsOfRole(const std::string &role);
 	VirtualMol GetAtoms(bool include_conn=true);
+	VirtualMol GetConnectors();
 	bool AtomHasRole(PseudoAtom atom, const std::string &role);
 	void SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val=true);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
@@ -99,6 +100,7 @@ public:
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
+	void WriteSystre(const std::string &filepath, bool write_centers=true, bool simplify_two_conn=true);
 
 	VirtualMol FragmentWithoutConns(VirtualMol fragment);
 	VirtualMol FragmentWithIntConns(VirtualMol fragment);
