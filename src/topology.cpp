@@ -394,8 +394,10 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	// original pseudoatoms corresponding with the fragment
 	VirtualMol pa_without_conn = FragmentWithoutConns(pa_fragment);
 	AtomSet act_atoms = PseudoToOrig(pa_without_conn).GetAtoms();
+	pa_to_act[new_atom] = VirtualMol(orig_molp);
 	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
 		act_to_pa[*it] = new_atom;
+		pa_to_act[new_atom].AddAtom(*it);
 	}
 	AtomSet orig_pa_set = pa_without_conn.GetAtoms();
 	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {

@@ -338,31 +338,34 @@ std::string analyzeMOF(std::string filename) {
 	OBMol condensed_linkers = simplified.ToOBMol();
 	writeCIF(&condensed_linkers, "Test/condensed_linkers.cif");
 
-	return "fake results TODO";
-
-	// Temporarily comment out the rest of the code and test/implement them step-by-step
-/*
 	// Catenation: check that all interpenetrated nets contain identical components.
-	// If X_CONN tends to be overly inconsistent, we could remove it from the formula and
-	// resimplify the coefficients for just the nodes and linkers.
-	// Note: is this test really necessary if we check for topology later?
-	std::vector<OBMol> net_components = simplified_net.Separate();
+	std::vector<VirtualMol> net_components = simplified.GetAtoms().Separate();
 	std::string base_formula = "";
-	if (!net_components.size()) {
+	if (net_components.size() == 0) {
 		obErrorLog.ThrowError(__FUNCTION__, "No MOFs found in the simplified net.", obError);
 	} else {
-		base_formula = net_components[0].GetFormula();
+		VirtualMol orig_piece = simplified.PseudoToOrig(net_components[0]);
+		base_formula = orig_piece.ToOBMol(false).GetFormula();
 	}
-	for (std::vector<OBMol>::iterator it = net_components.begin(); it != net_components.end(); ++it) {
-		std::string component_formula = it->GetFormula();
+	// Compare separate topology graphs based on the orig_mol molecular formula
+	for (std::vector<VirtualMol>::iterator it=net_components.begin(); it!=net_components.end(); ++it) {
+		VirtualMol orig_piece = simplified.PseudoToOrig(*it);
+		std::string component_formula = orig_piece.ToOBMol(false).GetFormula();
 		if (component_formula != base_formula) {
 			std::string err_msg =
-				"Inconsistency in catenated nets.  Net with simplified formula " +
-				component_formula + " does not match " + base_formula;
+				"Inconsistency in catenated nets.  Simplified net fragment with formula\n" +
+				component_formula + " does not match first entry " + base_formula;
 			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
 		}
 	}
 
+	return "fake results TODO";
+
+
+
+
+	// Temporarily comment out the rest of the code and test/implement them step-by-step
+/*
 	bound_solvent.BeginModify();
 	mof_asr.BeginModify();
 	linkers.BeginModify();
