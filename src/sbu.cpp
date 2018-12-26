@@ -52,14 +52,12 @@ int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_
 std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
-int sepPeriodicChains(OBMol *nodes);
-// replaced.  TODO remove:
+// Replaced methods below. TODO remove:
 // Connections to an atom or fragment, in the form of a set where each element
 // is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
 typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
-OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element = 118, int conn_element = 0);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);  // entirely deprecated, as well as collapseXX, if we don't have extraneous bonds in our network
 int collapseXX(OBMol *net, int element_x);
 // these changes to XX will also greatly simplify Systre
@@ -289,15 +287,11 @@ std::string analyzeMOF(std::string filename) {
 			}
 
 			// Handle bridging atoms separately from the rest of the rod.
-			//std::cerr << "Num of bridging atoms:" << bridging_atoms.size() << std::endl;
-			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
 			for (AtomSet::iterator br_it=bridging_atoms.begin(); br_it!=bridging_atoms.end(); ++br_it) {
 				fragment_mol.RemoveAtom(*br_it);
 				simplified.SetRoleToAtom("node bridge", *br_it);
 			}
-			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
 			fragment_mol = simplified.FragmentWithoutConns(fragment_mol);
-			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
 
 			if (fragment_mol.NumAtoms() == 0) {
 				obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly deleted all atoms in a periodic rod during simplificaiton.", obError);
@@ -807,59 +801,6 @@ MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element) {
 	return results;
 }
 
-OBAtom* collapseSBU(OBMol *mol, OBMol *fragment, int element, int conn_element) {
-	// Simplifies *mol by combining all atoms from *fragment into a single pseudo-atom
-	// with atomic number element, maintaining connections to existing atoms.
-	// If conn_element != 0, then add that element as a spacer at the connection
-	// site (like "X" or "Q" atoms in top-down crystal generators).
-	// Returns the pointer to the generated pseudo atom.
-
-	ConnExtToInt connections = getLinksToExt(mol, fragment);
-
-	vector3 centroid = getCentroid(fragment, false);
-
-	mol->BeginModify();
-
-	OBAtom* pseudo_atom = formAtom(mol, centroid, element);
-	if (conn_element == 0) {  // Not using an "X" psuedo-atom
-		std::vector<OBAtom*> new_external_conn;
-		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
-			OBAtom* external_atom = (*it)[0];
-			if (!inVector<OBAtom*>(external_atom, new_external_conn)) {  // Only form external bonds once
-				formBond(mol, pseudo_atom, external_atom, 1);
-				new_external_conn.push_back(external_atom);
-			}
-		}
-	} else {
-		for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
-			// Put the connection point 1/3 of the way between the centroid and the connection midpoint to the exterior
-			// (e.g. 1/3 of the way between a BDC centroid and the O-M bond in the -COO group).
-			// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
-			// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
-			// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
-			// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
-			OBUnitCell* lattice = getPeriodicLattice(mol);
-			OBAtom* external_atom = (*it)[0];
-			OBAtom* internal_atom = (*it)[1];
-
-			vector3 internal_atom_loc = lattice->UnwrapCartesianNear(internal_atom->GetVector(), centroid);
-			vector3 external_atom_loc = lattice->UnwrapCartesianNear(external_atom->GetVector(), internal_atom_loc);
-			vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + internal_atom_loc + external_atom_loc) / 6.0);
-
-			OBAtom* conn_atom = formAtom(mol, conn_loc, conn_element);
-			formBond(mol, conn_atom, pseudo_atom, 1);  // Connect to internal
-			formBond(mol, conn_atom, external_atom, 1);
-		}
-	}
-
-	// Delete SBU from the original molecule
-	subtractMols(mol, fragment);
-
-	mol->EndModify();
-
-	return pseudo_atom;
-}
-
 int collapseTwoConn(OBMol *net, int ignore_element) {
 	// Collapses two-connected nodes into edges to simplify the topology
 	// Returns the number of nodes deleted from the network
@@ -1174,54 +1115,5 @@ OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn) {
 		}
 	}
 	return min_nbor;
-}
-
-int sepPeriodicChains(OBMol *nodes) {
-	// Separate periodic chains (rods like MIL-47) by disconnecting the M1-O-M2 bonds in *nodes.
-	// Returns the number of rods detected and simplified.
-
-	int simplifications = 0;
-	std::vector<OBBond*> delbonds;
-
-	std::vector<OBMol> sep_nodes = nodes->Separate();
-	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
-		if (isPeriodicChain(&*it)) {
-			FOR_ATOMS_OF_MOL(a, *it) {
-				if (a->GetAtomicNum() == 8) {
-					bool all_metals = true;
-					FOR_NBORS_OF_ATOM(n, *a) {
-						if (!isMetal(&*n)) {
-							all_metals = false;
-						}
-					}
-					if (all_metals) {
-						OBAtom* orig_atom = atomInOtherMol(&*a, nodes);
-						FOR_BONDS_OF_ATOM(b, *orig_atom) {
-							if (!inVector(&*b, delbonds)) {
-								delbonds.push_back(&*b);
-							}
-						}
-					}
-				}
-			}
-			simplifications += 1;
-		}
-	}
-
-	nodes->BeginModify();
-	for (std::vector<OBBond*>::iterator it=delbonds.begin(); it!=delbonds.end(); ++it) {
-		nodes->DeleteBond(*it);
-	}
-	nodes->EndModify();
-	if (simplifications) {  // Check that the periodic nodes are actually separated
-		std::vector<OBMol> fixed_sep_nodes = nodes->Separate();
-		for (std::vector<OBMol>::iterator it=fixed_sep_nodes.begin(); it!=fixed_sep_nodes.end(); ++it) {
-			if (isPeriodicChain(&*it)) {
-				std::string err_msg = "Node with formula " + it->GetFormula() + " still periodic after separations";
-				obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
-			}
-		}
-	}
-	return simplifications;
 }
 

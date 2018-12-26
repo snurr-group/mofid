@@ -144,8 +144,7 @@ Topology::Topology(OBMol *parent_mol) {
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
 		OBAtom* new_atom;
 		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), DEFAULT_ELEMENT);
-		pa_to_act[new_atom] = VirtualMol(orig_molp);
-		pa_to_act[new_atom].AddAtom(&*orig_atom);  // TODO: refactor with new VirtualMol constructor
+		pa_to_act[new_atom] = VirtualMol(&*orig_atom);
 		act_to_pa[&*orig_atom] = new_atom;
 	}
 	// Bonds in the simplified net are handled specially with a shadow ConnectionTable object
