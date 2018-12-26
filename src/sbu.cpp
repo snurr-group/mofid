@@ -48,7 +48,6 @@ void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
-int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x);
 std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
 int fourToTwoThree(OBMol *net, int X_CONN);
 OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
@@ -59,7 +58,6 @@ typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
 ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
 std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
 MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);  // entirely deprecated, as well as collapseXX, if we don't have extraneous bonds in our network
-int collapseXX(OBMol *net, int element_x);
 // these changes to XX will also greatly simplify Systre
 
 /* Define global parameters for MOF decomposition */
@@ -258,6 +256,7 @@ std::string analyzeMOF(std::string filename) {
 	writeCIF(&test_partial, "Test/test_partial.cif");
 
 	// Simplify all the node SBUs into single points.
+	bool mil_type_mof = false;
 	VirtualMol node_pa = simplified.GetAtomsOfRole("node");
 	node_pa = simplified.FragmentWithIntConns(node_pa);
 	std::vector<VirtualMol> node_fragments = node_pa.Separate();
@@ -272,6 +271,7 @@ std::string analyzeMOF(std::string filename) {
 			// TODO: consider refactoring this code to a method within topology.cpp
 			// or the upcoming simplification class
 			obErrorLog.ThrowError(__FUNCTION__, "Detecting infinite chains", obInfo);
+			mil_type_mof = true;
 
 			// Detect single-atom nonmetal bridging atoms
 			AtomSet bridging_atoms;
@@ -359,37 +359,42 @@ std::string analyzeMOF(std::string filename) {
 		}
 	}
 
-	return "fake results TODO";
-
-
-
-
-	// Temporarily comment out the rest of the code and test/implement them step-by-step
-/*
-	bound_solvent.BeginModify();
-	mof_asr.BeginModify();
-	linkers.BeginModify();
-	int simplifications;
+	// Simplify the topological net
+	int simplifications = 0;
 	do {
 		simplifications = 0;
-		simplifications += simplifyLX(&simplified_net, linker_conv.used_elements(), X_CONN);
-		simplifications += collapseXX(&simplified_net, X_CONN);
+		simplifications += simplified.SimplifyAxB();  // replacement for simplifyLX
+		// collapseXX is no longer necessary now that we're properly tracking connections
 
+		/*
 		std::vector<OBMol> one_conn = removeOneConn(&simplified_net, pseudo_map, linker_conv.used_elements(), X_CONN);
 		for (std::vector<OBMol>::iterator it=one_conn.begin(); it!=one_conn.end(); ++it) {
 			bound_solvent += *it;
 			subtractMols(&linkers, &*it);
 		}
 		simplifications += one_conn.size();
+		*/
 
 		// Do collapsing last, so we can still simplify "trivial loops" like M1-X-L-X-M1
-		simplifications += collapseTwoConn(&simplified_net, X_CONN);
-	} while(simplifications);
-	subtractMols(&mof_asr, &bound_solvent);
-	bound_solvent.EndModify();
-	mof_asr.EndModify();
-	linkers.EndModify();
+		//simplifications += collapseTwoConn(&simplified_net, X_CONN);
+		// TODO: think about small topologies and similar cases
+	} while(simplifications);  // repeat until self-consistent
+	//subtractMols(&mof_asr, &bound_solvent);
 
+
+
+// TODO: fill in some missing details and exports here
+
+	OBMol removed_two_conn_for_topology = simplified.ToOBMol();
+	writeCIF(&removed_two_conn_for_topology, "Test/removed_two_conn_for_topology.cif");
+
+	// calculate MOF-ASR and FSR separately, based on free_ and bound_solvent molecules
+	return "fake results TODO";
+
+
+
+	// Temporarily comment out the rest of the code and test/implement them step-by-step
+/*
 	if (mil_type_mof) {  // Split 4-coordinated linkers into 3+3 by convention
 		if (!fourToTwoThree(&simplified_net, X_CONN)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly did not convert 4-coordinated linkers in MIL-like MOF", obWarning);
@@ -772,150 +777,6 @@ int collapseTwoConn(OBMol *net, int ignore_element) {
 			formBond(net, nbors[0], nbors[1]);
 		}
 
-		net->DeleteAtom(*it);
-	}
-	net->EndModify();
-
-	return to_delete.size();
-}
-
-int collapseXX(OBMol *net, int element_x) {
-	// Simplify X-X bonds in the simplified net with their midpoint
-	// Returns the number of X-X bonds simplified
-	int simplifications = 0;
-	OBUnitCell* lattice = getPeriodicLattice(net);
-
-	net->BeginModify();
-	bool new_simplification = true;
-	while (new_simplification) {
-		new_simplification = false;
-		FOR_ATOMS_OF_MOL(a, *net) {
-			OBAtom* x1 = &*a;
-			if (x1->GetAtomicNum() == element_x) {  // Found the first X
-				OBAtom* x2 = NULL;
-				FOR_NBORS_OF_ATOM(n, *x1) {
-					if (n->GetAtomicNum() == element_x) {
-						x2 = &*n;
-					}
-				}
-				if (x2) { // X-X exists, so simplify
-					std::vector<OBAtom*> x_nbors;  // Get the neighbors of both X's
-					FOR_NBORS_OF_ATOM(m, *x1) {
-						if (&*m != x2) {
-							x_nbors.push_back(&*m);
-						}
-					}
-					FOR_NBORS_OF_ATOM(m, *x2) {
-						if (&*m != x1) {
-							x_nbors.push_back(&*m);
-						}
-					}
-					if (x_nbors.size() != 2) {  // Each X should have one additional neighbor
-						std::stringstream nborMsg;
-						nborMsg << "y-X-X-y should be 4 atoms.  Found " << 2 + x_nbors.size() << std::endl;
-						obErrorLog.ThrowError(__FUNCTION__, nborMsg.str(), obWarning);
-					}
-					if (x_nbors.size() == 2 && x_nbors[0] == x_nbors[1]) {
-						// x1 and x2 are bonded to the same psuedo-atom (M-x1-x2-M').
-						// They're not redundant, because M' is often the periodic image of M.
-						// Simplifying x1-x2 will cause an inconsistency with two M-X bonds, so skip these x's
-						continue;
-					}
-
-					// Replace X-X with a new atom at the midpointMake a new atom at the X-X midpoint
-					OBAtom* mid_atom = formAtom(net, getMidpoint(x1, x2), element_x);
-					for (std::vector<OBAtom*>::iterator it = x_nbors.begin(); it != x_nbors.end(); ++it) {
-						formBond(net, mid_atom, *it, 1);
-					}
-					net->DeleteAtom(x1);
-					net->DeleteAtom(x2);
-
-					// Break out of the FOR_ATOMS loop so we can start with a fresh, unmodified loop
-					new_simplification = true;
-					break;
-				}
-			}
-		}
-		if (new_simplification) {
-			simplifications += 1;
-		}
-	}
-	net->EndModify();
-
-	return simplifications;
-}
-
-int simplifyLX(OBMol *net, const std::vector<int> &linker_elements, int element_x) {
-	// Remove redundant L-X bonds connecting the same linkers and nodes in the same direction.
-	// Simplify the pair of L-X bonds with a new X connector at the midpoint of the two X's.
-	// Returns the number of modifications to L-X bonds.
-
-	std::vector<OBAtom*> to_delete;
-
-	FOR_ATOMS_OF_MOL(L, *net) {  // Iterating over linkers
-		if (inVector<int>(L->GetAtomicNum(), linker_elements)) {  // if linker atom
-			std::vector<OBAtom*> connectors;
-			std::map<OBAtom*,OBAtom*> metals;  // <Atom X, M of L-X-M>
-			bool found_metals = true;  // Checks if L-X-M format is actually valid
-			FOR_NBORS_OF_ATOM(n, *L) {
-				if (n->GetAtomicNum() == element_x) {  // connection site
-					connectors.push_back(&*n);
-					FOR_NBORS_OF_ATOM(M, *n) {  // So we can compare the node connections later
-						if (!inVector<int>(M->GetAtomicNum(), linker_elements) && M->GetAtomicNum() != element_x) {
-							metals[&*n] = &*M;
-						}
-					}
-					if (metals.find(&*n) == metals.end()) {
-						found_metals = false;
-					}
-				}
-			}
-			if (!found_metals) {
-				obErrorLog.ThrowError(__FUNCTION__, "Cannot simplify LX: no metal at other end of L-X-M", obDebug);
-				continue;
-			}
-
-			// Iterate through the bonded L-X's to find redundant pairs: two X's
-			// that connect to the same node in the same unit cell are deleted here.
-			for (std::vector<OBAtom*>::iterator x1 = connectors.begin(); x1 != connectors.end(); ++x1) {
-				for (std::vector<OBAtom*>::iterator x2 = connectors.begin(); x2 != connectors.end(); ++x2) {
-					// By merit of the FOR loop over L, we've already established that L is the same.  Also check M with the metals map.
-					if ( *x1 != *x2
-						&& !inVector<OBAtom*>(*x1, to_delete)
-						&& !inVector<OBAtom*>(*x2, to_delete)
-						&& metals[*x1] == metals[*x2] )
-					{
-						OBMol x_test = initMOFwithUC(net);
-						x_test.BeginModify();
-						std::vector<OBAtom*> test_atoms;  // Copy of M1-X1-L-X2-M2, where M2 might equal M1
-						test_atoms.push_back(formAtom(&x_test, metals[*x1]->GetVector(), metals[*x1]->GetAtomicNum()));
-						test_atoms.push_back(formAtom(&x_test, (*x1)->GetVector(), (*x1)->GetAtomicNum()));
-						test_atoms.push_back(formAtom(&x_test, (&*L)->GetVector(), (&*L)->GetAtomicNum()));
-						test_atoms.push_back(formAtom(&x_test, (*x2)->GetVector(), (*x2)->GetAtomicNum()));
-						// M2 atom is already defined by metals[*x1].  See parent conditional statement.
-						formBond(&x_test, test_atoms[0], test_atoms[1], 1);
-						formBond(&x_test, test_atoms[1], test_atoms[2], 1);
-						formBond(&x_test, test_atoms[2], test_atoms[3], 1);
-						formBond(&x_test, test_atoms[3], test_atoms[0], 1);
-						x_test.EndModify();
-
-						// If x_test is periodic, then M2 is in a different UC than M1, thus X1-X2 is a bridge.
-						if (!isPeriodicChain(&x_test)) {
-							to_delete.push_back(*x1);
-							to_delete.push_back(*x2);
-							OBAtom* x_mid = formAtom(net, getMidpoint(*x1, *x2, false), element_x);
-							formBond(net, x_mid, metals[*x1], 1);
-							formBond(net, x_mid, &*L, 1);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Delete the redundant (original) X's (which will also remove their X-L and X-M bonds)
-	net->BeginModify();
-	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
 		net->DeleteAtom(*it);
 	}
 	net->EndModify();

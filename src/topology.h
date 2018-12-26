@@ -106,6 +106,7 @@ public:
 	// Is a member of the simplified net a pseudo atom or connection?
 	bool IsConnection(PseudoAtom a);
 	//std::vector<VirtualMol> SeparatePeriodicRodIntoFragments(VirtualMol fragment);
+	int SimplifyAxB();
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

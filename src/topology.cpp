@@ -4,6 +4,7 @@
 #include "pseudo_atom.h"
 #include "periodic.h"
 #include "obdetails.h"
+#include "invector.h"
 
 #include <vector>
 #include <string>
@@ -508,6 +509,72 @@ VirtualMol Topology::FragmentWithIntConns(VirtualMol fragment) {
 	VirtualMol pa_and_conns = fragment;
 	pa_and_conns.AddVirtualMol(conns.GetInternalConns(fragment));
 	return pa_and_conns;
+}
+
+int Topology::SimplifyAxB() {
+	// Remove pairs of redundant connections x1 and x2 linking together the same
+	// pseudoatoms A and B (e.g. nodes and linkers) in the same direction,
+	// simplifying them with a new connection site x3 at their midpoint.
+	// Returns the number of modifications to connection sites.
+	// Based on simplifyLX in the previous version of the code.
+	// May require multiple passes to fully simplify the network (when it returns 0).
+
+	std::vector<PseudoAtom> to_delete;  // X's to delete at the end
+
+	AtomSet a_atoms = GetAtoms(false).GetAtoms();  // get non-connector atoms
+	for (AtomSet::iterator a_it=a_atoms.begin(); a_it!=a_atoms.end(); ++a_it) {
+		PseudoAtom a = *a_it;  // looping over A sites
+		std::map<PseudoAtom, AtomSet> nbor_to_xs;  // all the connection X's per nbor
+		AtomSet a_x_list = conns.GetAtomConns(a);
+		for (AtomSet::iterator x=a_x_list.begin(); x!=a_x_list.end(); ++x) {
+			std::pair<PseudoAtom,PseudoAtom> x_endpoints = conns.GetConnEndpoints(*x);
+			if (x_endpoints.first == a) {
+				nbor_to_xs[x_endpoints.second].insert(*x);
+			} else if (x_endpoints.second == a) {
+				nbor_to_xs[x_endpoints.first].insert(*x);
+			}
+		}
+
+		for (std::map<PseudoAtom, AtomSet>::iterator b_it=nbor_to_xs.begin(); b_it!=nbor_to_xs.end(); ++b_it) {
+			PseudoAtom b = b_it->first;  // looping over neighbor B sites
+			AtomSet ab_xs = b_it->second;  // connections for A-x-B
+			if (ab_xs.size() == 1) continue;  // no duplicate X's to check
+
+			for (AtomSet::iterator x1=ab_xs.begin(); x1!=ab_xs.end(); ++x1) {
+				for (AtomSet::iterator x2=x1; x2!=ab_xs.end(); ++x2) {
+					if (
+						*x1 != *x2 &&
+						!inVector<PseudoAtom>(*x1, to_delete) &&
+						!inVector<PseudoAtom>(*x2, to_delete)
+					) {
+						// Form a test molecule with A-x1-B-x2-A'
+						VirtualMol test_xs(a->GetParent());
+						test_xs.AddAtom(a);
+						test_xs.AddAtom(b);
+						test_xs.AddAtom(*x1);
+						test_xs.AddAtom(*x2);
+						OBMol test_xs_mol = test_xs.ToOBMol();
+						if (!isPeriodicChain(&test_xs_mol)) {
+							// If test_xs is periodic, then A' is in a different UC than A,
+							// so X1 and X2 are a bridge.  If non-periodic (this case),
+							// then X1 and X2 are redundant connections between A and B.
+							to_delete.push_back(*x1);
+							to_delete.push_back(*x2);
+							vector3 loc = getMidpoint(*x1, *x2, false);
+							ConnectAtoms(a, b, &loc);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Delete the redundant X's (which will also remove their X-L and X-M bonds)
+	for (std::vector<PseudoAtom>::iterator it=to_delete.begin(); it!=to_delete.end(); ++it) {
+		DeleteConnection(*it);
+	}
+
+	return to_delete.size();
 }
 
 } // end namespace OpenBabel
