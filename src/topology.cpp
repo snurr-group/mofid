@@ -169,6 +169,24 @@ VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
 	return match;
 }
 
+VirtualMol Topology::GetAtoms(bool include_conn) {
+	VirtualMol atoms(&simplified_net);
+	FOR_ATOMS_OF_MOL(a, simplified_net) {
+		if (include_conn || !IsConnection(&*a)) {
+			atoms.AddAtom(&*a);
+		}
+	}
+	return atoms;
+}
+
+bool Topology::AtomHasRole(PseudoAtom atom, const std::string &role) {
+	if (pa_roles.find(atom) == pa_roles.end()) {
+		obErrorLog.ThrowError(__FUNCTION__, "Could not find pseudoatom in pa_roles mapping", obWarning);
+		return false;
+	}
+	return pa_roles[atom].HasRole(role);
+}
+
 void Topology::SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val) {
 	if (val) {
 		pa_roles[atom].AddRole(role);
@@ -386,6 +404,38 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	}
 
 	return new_atom;
+}
+
+void Topology::MergeAtomToAnother(PseudoAtom from, PseudoAtom to) {
+	// like CollapseFragment, but moves contents from a "from"
+	// PseudoAtom to a compatible "to" atom without moving the second atom.
+
+	// Check compatibility of the two atoms:
+	// all of the first PA's neighbors must be either the to/from atom or a mutual neighbor.
+	FOR_NBORS_OF_ATOM(from_conn, *from) {
+		FOR_NBORS_OF_ATOM(from_nbor, *from_conn) {
+			if ((&*from_nbor!=to) && (&*from_nbor!=from) && !conns.HasNeighbor(to, &*from_nbor)) {
+				obErrorLog.ThrowError(__FUNCTION__, "Cannot merge incompatible atoms with mismatched neighbors", obError);
+				return;
+			}
+		}
+	}
+
+	// Move content from origin to destination, then delete the origin
+	AtomSet from_mapping = pa_to_act[from].GetAtoms();
+	for (AtomSet::iterator it=from_mapping.begin(); it!=from_mapping.end(); ++it) {
+		if (pa_to_act[to].HasAtom(*it)) {
+			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: orig_atom should not be a child of both origin and destination PseudoAtoms", obError);
+		}
+		pa_to_act[to].AddAtom(*it);
+
+		if (act_to_pa[*it] != from) {
+			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: inconsistency in original PA ownership of orig_atom", obError);
+		}
+		act_to_pa[*it] = to;
+	}
+	// skip updating the atom roles
+	DeleteAtomAndConns(from);
 }
 
 OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {

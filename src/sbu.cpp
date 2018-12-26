@@ -315,91 +315,33 @@ std::string analyzeMOF(std::string filename) {
 	OBMol test_nodes = simplified.ToOBMol();
 	writeCIF(&test_nodes, "Test/test_with_simplified_nodes.cif");
 
+	// Handle one-connected species, notably bound solvents and metal-containing ligands.
+	AtomSet net_1c_without_conn = simplified.GetAtoms(false).GetAtoms();
+	for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
+		ConnIntToExt unique_nbors = simplified.GetConnectedAtoms(VirtualMol(*it));
+		if (unique_nbors.size() == 1) {
+			PseudoAtom nbor_of_1c = unique_nbors.begin()->second;
+			if (simplified.AtomHasRole(*it, "node")) {
+				simplified.MergeAtomToAnother(*it, nbor_of_1c);
+			} else if (simplified.AtomHasRole(*it, "node bridge")) {
+				// probably not uncommon due to PBC and unique OBAtoms
+				continue;
+			} else if (simplified.AtomHasRole(*it, "linker")) {
+				// Bound ligands, such as capping agents or bound solvents for ASR removal.
+				// This case will be handled below after the nets are fully simplified.
+				continue;
+			} else {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
+			}
+		}
+	}
+	OBMol condensed_linkers = simplified.ToOBMol();
+	writeCIF(&condensed_linkers, "Test/condensed_linkers.cif");
+
 	return "fake results TODO";
 
 	// Temporarily comment out the rest of the code and test/implement them step-by-step
 /*
-	// Handle one-connected species, notably bound solvents and metal-containing ligands.
-	// Consider making this a do-while loop while the one-connected ends exist?
-	simplified_net.BeginModify();
-	nodes.BeginModify();
-	linkers.BeginModify();
-	std::vector<OBAtom*> pseudo_deletions;  // Save deletions for the end to avoid invalidating the iterator over simplified_net
-	FOR_ATOMS_OF_MOL(a, simplified_net) {
-		std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
-		if (a_nbors.size() == 1) {
-			int point_type = a->GetAtomicNum();
-
-			if (inVector<int>(point_type, node_conv.used_elements())) {  // Metal-containing linker
-				if (X_CONN) {  // Simplify by removing the connection point, simplifying the problem to the base case
-					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
-					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
-						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
-					}
-					formBond(&simplified_net, *(a_nbors.begin()), &*a);
-				}
-
-				// Reclassify the node atoms as part of the linker
-				OBMol* fragment_mol = pseudo_map[&*a];
-				linkers += *fragment_mol;
-				subtractMols(&nodes, fragment_mol);
-
-				// Use the original CIF to reconnect the metal-containing linker
-				ConnExtToInt orig_links = getLinksToExt(&orig_mol, fragment_mol);
-				for (ConnExtToInt::iterator it=orig_links.begin(); it!=orig_links.end(); ++it) {
-					OBAtom* node_pos = atomInOtherMol((*it)[1], &linkers);
-					OBAtom* linker_pos = atomInOtherMol((*it)[0], &linkers);
-					formBond(&linkers, node_pos, linker_pos, 1);  // All bonds in the original CIF are single bonds by default
-				}
-
-				// At the end, delete the one-connected "nodes"
-				pseudo_deletions.push_back(&*a);
-				pseudo_map.erase(&*a);
-
-			} else if (inVector<int>(point_type, linker_conv.used_elements())) {
-				// Bound ligands, such as capping agents or bound solvents for ASR removal
-				// This will be handled below after the nets are fully simplified
-				continue;
-			} else if (point_type == X_CONN) {
-				obErrorLog.ThrowError(__FUNCTION__, "Found singly-connected connection atom in the simplified net.", obError);
-			} else {
-				std::string err_msg =
-					"Unexpected atom type " +
-					std::string(OBElements::GetName(point_type)) +
-					"in the simplified net.";
-				obErrorLog.ThrowError(__FUNCTION__, err_msg, obError);
-			}
-		}
-	}
-	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
-		simplified_net.DeleteAtom(*it);
-	}
-	// Self-consistency bookkeeping: update pseudo atom map
-	std::vector<OBMol> split_linkers = linkers.Separate();
-	for (std::map<OBAtom*, OBMol*>::iterator it=pseudo_map.begin(); it!=pseudo_map.end(); ++it) {
-		for (std::vector<OBMol>::iterator it2=split_linkers.begin(); it2!=split_linkers.end(); ++it2) {
-			if (isSubMol(it->second, &*it2)) {
-				it->second = &*it2;  // use the updated linker fragment
-				break;
-			}
-		}
-	}
-	// Also update pseudo-atom element types for the linkers (ignoring nodes and linkers)
-	FOR_ATOMS_OF_MOL(a, simplified_net) {
-		int a_element = a->GetAtomicNum();
-		if (a_element != X_CONN && !inVector<int>(a_element, node_conv.used_elements())) {
-			std::string a_smiles = getSMILES(*(pseudo_map[&*a]), obconv);
-			a->SetAtomicNum(linker_conv.key(a_smiles));  // Looks for an old key, or assigns a new one if it's an updated linker
-		}
-	}
-	simplified_net.EndModify();
-	nodes.EndModify();
-	linkers.EndModify();
-
-
-	writeCIF(&simplified_net, "Test/condensed_linkers.cif");
-
-
 	// Catenation: check that all interpenetrated nets contain identical components.
 	// If X_CONN tends to be overly inconsistent, we could remove it from the formula and
 	// resimplify the coefficients for just the nodes and linkers.

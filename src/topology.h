@@ -82,6 +82,8 @@ public:
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
 	VirtualMol GetAtomsOfRole(const std::string &role);
+	VirtualMol GetAtoms(bool include_conn=true);
+	bool AtomHasRole(PseudoAtom atom, const std::string &role);
 	void SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val=true);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
 	int RemoveOrigAtoms(VirtualMol atoms);
@@ -94,6 +96,7 @@ public:
 	void DeleteAtomAndConns(PseudoAtom atom);
 	ConnIntToExt GetConnectedAtoms(VirtualMol internal);
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
+	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
 
