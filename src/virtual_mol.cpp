@@ -21,8 +21,17 @@ VirtualMol::VirtualMol(OBMol *parent) {
 	_parent_mol = parent;
 }
 
+VirtualMol::VirtualMol(OBAtom *single_atom) {
+	_parent_mol = single_atom->GetParent();
+	AddAtom(single_atom);
+}
+
 OBMol* VirtualMol::GetParent() {
 	return _parent_mol;
+}
+
+int VirtualMol::NumAtoms() {
+	return _atoms.size();
 }
 
 std::set<OBAtom*> VirtualMol::GetAtoms() {

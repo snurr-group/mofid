@@ -77,10 +77,6 @@ private:
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
 	std::map<OBAtom*, AtomRoles> pa_roles;  // roles of the simplified pseudoatoms
 	std::map<OBAtom*, PseudoAtom> act_to_pa;  // where did the orig_mol atoms end up in the simplified net?
-
-	// Is a member of the simplified net a pseudo atom or connection?
-	bool IsConnection(PseudoAtom a);
-
 public:
 	//Topology() = delete;
 	Topology(OBMol *parent_mol = NULL);
@@ -103,6 +99,10 @@ public:
 
 	VirtualMol FragmentWithoutConns(VirtualMol fragment);
 	VirtualMol FragmentWithIntConns(VirtualMol fragment);
+
+	// Is a member of the simplified net a pseudo atom or connection?
+	bool IsConnection(PseudoAtom a);
+	//std::vector<VirtualMol> SeparatePeriodicRodIntoFragments(VirtualMol fragment);
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

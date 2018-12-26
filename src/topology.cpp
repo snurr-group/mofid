@@ -102,7 +102,7 @@ std::pair<PseudoAtom, PseudoAtom> ConnectionTable::GetConnEndpoints(PseudoAtom c
 VirtualMol ConnectionTable::GetInternalConns(VirtualMol atoms) {
 	if (atoms.GetParent() != parent_net) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol parent mismatch", obWarning);
-		return VirtualMol(NULL);
+		return VirtualMol();  // null parent
 	};
 	VirtualMol int_conn(parent_net);
 	AtomSet pa = atoms.GetAtoms();
@@ -145,7 +145,7 @@ Topology::Topology(OBMol *parent_mol) {
 		OBAtom* new_atom;
 		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), DEFAULT_ELEMENT);
 		pa_to_act[new_atom] = VirtualMol(orig_molp);
-		pa_to_act[new_atom].AddAtom(&*orig_atom);
+		pa_to_act[new_atom].AddAtom(&*orig_atom);  // TODO: refactor with new VirtualMol constructor
 		act_to_pa[&*orig_atom] = new_atom;
 	}
 	// Bonds in the simplified net are handled specially with a shadow ConnectionTable object
@@ -212,7 +212,7 @@ int Topology::RemoveOrigAtoms(VirtualMol atoms) {
 VirtualMol Topology::OrigToPseudo(VirtualMol orig_atoms) {
 	if (orig_atoms.GetParent() != orig_molp) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
-		return VirtualMol(NULL);
+		return VirtualMol();
 	}
 	std::set<OBAtom*> act_atoms = orig_atoms.GetAtoms();
 	VirtualMol pa(&simplified_net);
@@ -229,7 +229,7 @@ VirtualMol Topology::OrigToPseudo(VirtualMol orig_atoms) {
 VirtualMol Topology::PseudoToOrig(VirtualMol pa_atoms) {
 	if (pa_atoms.GetParent() != &simplified_net) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the simplified net.", obError);
-		return VirtualMol(NULL);
+		return VirtualMol();
 	}
 
 	VirtualMol orig_atoms(orig_molp);
@@ -261,12 +261,14 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 		conn_pos = uc->WrapCartesianCoordinate((begin_pos+end_pos) / 2.0);
 	}
 	PseudoAtom new_conn = formAtom(&simplified_net, conn_pos, CONNECTION_ELEMENT);
-	pa_roles[new_conn].AddRole("connection");
 
-	// Form bonds and update accounting for ConnectionTable object
+	// Form bonds and update accounting
 	formBond(&simplified_net, begin, new_conn, 1);
 	formBond(&simplified_net, end, new_conn, 1);
 	conns.AddConn(new_conn, begin, end);
+	pa_roles[new_conn].AddRole("connection");
+	pa_to_act[new_conn] = VirtualMol(orig_molp);
+
 	return new_conn;
 }
 
@@ -275,6 +277,7 @@ void Topology::DeleteConnection(PseudoAtom conn) {
 	conns.RemoveConn(conn);
 	simplified_net.DeleteAtom(conn);  // automatically deletes attached bonds
 	pa_roles.erase(conn);
+	pa_to_act.RemoveAtom(conn);
 }
 
 void Topology::DeleteAtomAndConns(PseudoAtom atom) {

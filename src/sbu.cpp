@@ -264,43 +264,62 @@ std::string analyzeMOF(std::string filename) {
 	node_pa = simplified.FragmentWithIntConns(node_pa);
 	std::vector<VirtualMol> node_fragments = node_pa.Separate();
 	for (std::vector<VirtualMol>::iterator it=node_fragments.begin(); it!=node_fragments.end(); ++it) {
-		OBMol fragment_mol = it->ToOBMol();
-		if (isPeriodicChain(&fragment_mol)) {
-			obErrorLog.ThrowError(__FUNCTION__, "Infinite chains not yet implemented!!", obWarning);
-		} else {
+		VirtualMol fragment_mol = *it;
+
+		OBMol fragment_obmol = fragment_mol.ToOBMol();
+		if (!isPeriodicChain(&fragment_obmol)) {  // normal, nonperiodic case
 			PseudoAtom collapsed = simplified.CollapseFragment(*it);
 			simplified.SetRoleToAtom("node", collapsed);
+		} else {  // based on sepPeriodicChains
+			// TODO: consider refactoring this code to a method within topology.cpp
+			// or the upcoming simplification class
+			obErrorLog.ThrowError(__FUNCTION__, "Detecting infinite chains", obInfo);
+
+			// Detect single-atom nonmetal bridging atoms
+			AtomSet bridging_atoms;
+			AtomSet rod_atoms = it->GetAtoms();
+			for (AtomSet::iterator rod_it=rod_atoms.begin(); rod_it!=rod_atoms.end(); ++rod_it) {
+				AtomSet rod_orig = simplified.PseudoToOrig(VirtualMol(*rod_it)).GetAtoms();
+				if (rod_orig.size() == 1) {
+					OBAtom* single_atom = *(rod_orig.begin());
+					if (!isMetal(single_atom)) {
+						bridging_atoms.insert(*rod_it);  // the PA, not single_atom from the original MOF
+					}
+				}
+			}
+
+			// Handle bridging atoms separately from the rest of the rod.
+			//std::cerr << "Num of bridging atoms:" << bridging_atoms.size() << std::endl;
+			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
+			for (AtomSet::iterator br_it=bridging_atoms.begin(); br_it!=bridging_atoms.end(); ++br_it) {
+				fragment_mol.RemoveAtom(*br_it);
+				simplified.SetRoleToAtom("node bridge", *br_it);
+			}
+			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
+			fragment_mol = simplified.FragmentWithoutConns(fragment_mol);
+			//std::cerr << "Fragment atoms:" << fragment_mol.NumAtoms() << std::endl;
+
+			if (fragment_mol.NumAtoms() == 0) {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly deleted all atoms in a periodic rod during simplificaiton.", obError);
+				continue;
+			}
+
+			// Simplify the non-bridging metals
+			std::vector<VirtualMol> rod_fragments = fragment_mol.Separate();
+			for (std::vector<VirtualMol>::iterator frag_it=rod_fragments.begin(); frag_it!=rod_fragments.end(); ++frag_it) {
+				if (frag_it->NumAtoms() > 1) {
+					obErrorLog.ThrowError(__FUNCTION__, "Combining metal atoms within a periodic rod (likely okay, but untested code--check it).", obError);
+					fragment_mol = simplified.FragmentWithoutConns(fragment_mol);
+					PseudoAtom collapsed = simplified.CollapseFragment(fragment_mol);
+					simplified.SetRoleToAtom("node", collapsed);
+				}  // else, if a single-metal fragment, there's nothing to simplify
+
+			}
 		}
 	}
 
 	OBMol test_nodes = simplified.ToOBMol();
 	writeCIF(&test_nodes, "Test/test_with_simplified_nodes.cif");
-
-
-	/*
-	// TODO: implement MIL-like periodic chains
-	ElementGen node_conv(true);
-	simplified_net.BeginModify();
-
-	bool mil_type_mof = false;
-	if (sepPeriodicChains(&nodes)) {
-		mil_type_mof = true;
-	}
-
-	std::vector<OBMol> sep_nodes = nodes.Separate();
-	for (std::vector<OBMol>::iterator it = sep_nodes.begin(); it != sep_nodes.end(); ++it) {
-		std::string node_smiles = getSMILES(*it, obconv);
-		OBAtom* pseudo_node;
-		if (node_smiles == "[O]\t\n") {  // These oxygen atoms behave more like linkers
-			pseudo_node = collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles), X_CONN);
-		} else {
-			// Don't need extra connection atoms from the nodes
-			pseudo_node = collapseSBU(&simplified_net, &*it, node_conv.key(node_smiles));
-		}
-		pseudo_map[pseudo_node] = &*it;
-	}
-	simplified_net.EndModify();
-*/
 
 	return "fake results TODO";
 

@@ -32,7 +32,9 @@ public:
 	// Note: the map STL container requires a no-argument constructor in case map[key] has an unknown key.
 	// For more info, see https://stackoverflow.com/questions/695645/why-does-the-c-map-type-argument-require-an-empty-constructor-when-using
 	VirtualMol(OBMol *parent = NULL);
+	VirtualMol(OBAtom *single_atom);
 	OBMol* GetParent();
+	int NumAtoms();
 	std::set<OBAtom*> GetAtoms();
 	bool HasAtom(OBAtom *a);
 	bool AddAtom(OBAtom *a);
