@@ -380,79 +380,60 @@ std::string analyzeMOF(std::string filename) {
 	} while(simplifications);  // repeat until self-consistent
 	//subtractMols(&mof_asr, &bound_solvent);
 
-
-
-// TODO: fill in some missing details and exports here
-
-	// Export the simplified net
-	OBMol removed_two_conn_for_topology = simplified.ToOBMol();
-	writeCIF(&removed_two_conn_for_topology, "Test/removed_two_conn_for_topology.cif");
-	simplified.WriteSystre("Test/topology.cgd");
-
-	// calculate MOF-ASR and FSR separately, based on free_ and bound_solvent molecules
-	return "fake results TODO";
-
-
-
-	// Temporarily comment out the rest of the code and test/implement them step-by-step
-/*
+/*  // still missing linker simplification for rod-containing MOFs
 	if (mil_type_mof) {  // Split 4-coordinated linkers into 3+3 by convention
 		if (!fourToTwoThree(&simplified_net, X_CONN)) {
 			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly did not convert 4-coordinated linkers in MIL-like MOF", obWarning);
 		}
 	}
 	// TODO: this is where I could add other branch point detection, such as phenyl rings
-
+*/
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
+	/*
 	analysis << writeFragments(nodes.Separate(), obconv);
 	analysis << writeFragments(linkers.Separate(), obconv);
+	*/
+	VirtualMol node_export = simplified.GetAtomsOfRole("node");
+	// TODO: need to handle node and node_bridge separately to match old test SMILES
+	node_export.AddVirtualMol(simplified.GetAtomsOfRole("node bridge"));
+	node_export = simplified.PseudoToOrig(node_export);
+	OBMol node_mol = node_export.ToOBMol();
+	analysis << writeFragments(node_mol.Separate(), obconv);
+
+	VirtualMol linker_export = simplified.GetAtomsOfRole("linker");
+	linker_export = simplified.PseudoToOrig(linker_export);
+	OBMol linker_mol = linker_export.ToOBMol();
+	analysis << writeFragments(linker_mol.Separate(), obconv);
+
 	analysis << "Found " << net_components.size() << " simplified net(s)";
 
+
 	// Write out the decomposed and simplified MOF, including bond orders
+	/*
 	resetBonds(&nodes);
 	resetBonds(&linkers);
 	writeCIF(&nodes, "Test/nodes.cif");
 	writeCIF(&linkers, "Test/linkers.cif");
+	*/
+	writeCIF(&node_mol, "Test/nodes.cif");
+	writeCIF(&linker_mol, "Test/linkers.cif");
 
 	// Write out detected solvents
+	/*
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
 	writeCIF(&bound_solvent, "Test/bound_solvent.cif");
 	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
 	writeCIF(&mof_asr, "Test/mof_asr.cif");
+	*/
+	// TODO: calculate MOF-ASR and FSR separately, based on free_ and bound_solvent molecules
 
-	// Topologically relevant information about the simplified net
-	writeCIF(&simplified_net, "Test/removed_two_conn_for_topology.cif");
-	writeSystre(&simplified_net, "Test/topology.cgd", X_CONN);
-
-	// Format the fragment keys (psuedo atoms to SMILES) after invalidating unused fragments
-	std::map<int,int> active_pseudo_atoms = getNumericFormula(&simplified_net);
-	std::vector<int> active_pseudo_elements;
-	for (std::map<int,int>::iterator it=active_pseudo_atoms.begin(); it!=active_pseudo_atoms.end(); ++it) {
-		active_pseudo_elements.push_back(it->first);
-	}
-	std::map<std::string,int> removed_keys;
-	std::map<std::string,int> gen = node_conv.get_map();
-	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
-		if (!inVector<int>(it->second, active_pseudo_elements)) {
-			removed_keys[it->first] = it->second;
-		}
-	}
-	gen = linker_conv.get_map();
-	for (std::map<std::string,int>::iterator it=gen.begin(); it!=gen.end(); ++it) {
-		if (!inVector<int>(it->second, active_pseudo_elements)) {
-			removed_keys[it->first] = it->second;
-		}
-	}
-	for (std::map<std::string,int>::iterator it=removed_keys.begin(); it!=removed_keys.end(); ++it) {
-		// Remove unused SMILES codes.  remove_key does not delete anything if the key does not exist
-		node_conv.remove_key(it->first);
-		linker_conv.remove_key(it->first);
-	}
-	writeFragmentKeys(node_conv.get_map(), linker_conv.get_map(), removed_keys, X_CONN, "Test/keys_for_condensed_linkers.txt");
+	// Export the simplified net
+	OBMol removed_two_conn_for_topology = simplified.ToOBMol();
+	writeCIF(&removed_two_conn_for_topology, "Test/removed_two_conn_for_topology.cif");
+	simplified.WriteSystre("Test/topology.cgd");
 
 	return(analysis.str());
-	*/
 }
 
 extern "C" {
