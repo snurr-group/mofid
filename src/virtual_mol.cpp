@@ -113,8 +113,6 @@ ConnIntToExt VirtualMol::GetExternalBonds() {
 
 OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 	// Adapts VirtualMol to an OpenBabel::OBMol
-	// FIXME: does not copy paddlewheel properties.
-	// Could redo formAtom/(getAtom?) with a minimalAtom if necessary.
 	// Warning: the copy_bonds=false path is untested
 
 	OBMol mol = initMOFwithUC(_parent_mol);
@@ -126,6 +124,14 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 		OBAtom* mol_atom;
 		mol_atom = formAtom(&mol, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
 		virtual_to_mol[virtual_atom] = mol_atom;
+
+		// Also copy paddlewheel detection.  Based on framework.cpp:resetBonds
+		bool is_paddlewheel = mol_atom->HasData("Paddlewheel");
+		if (is_paddlewheel) {
+			OBPairData *dp = new OBPairData;
+			dp->SetAttribute("Paddlewheel");
+			mol_atom->SetData(dp);
+		}
 	}
 
 	if (!export_bonds) {
