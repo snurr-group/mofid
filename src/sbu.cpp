@@ -294,6 +294,7 @@ std::string analyzeMOF(std::string filename) {
 			for (AtomSet::iterator br_it=bridging_atoms.begin(); br_it!=bridging_atoms.end(); ++br_it) {
 				fragment_mol.RemoveAtom(*br_it);
 				simplified.SetRoleToAtom("node bridge", *br_it);
+				simplified.SetRoleToAtom("node", *br_it, false);
 			}
 			fragment_mol = simplified.FragmentWithoutConns(fragment_mol);
 
@@ -392,11 +393,16 @@ std::string analyzeMOF(std::string filename) {
 	analysis << writeFragments(linkers.Separate(), obconv);
 	*/
 	VirtualMol node_export = simplified.GetAtomsOfRole("node");
-	// TODO: need to handle node and node_bridge separately to match old test SMILES
-	node_export.AddVirtualMol(simplified.GetAtomsOfRole("node bridge"));
+	// Handle node and node_bridge separately to match old test SMILES
+	//node_export.AddVirtualMol(simplified.GetAtomsOfRole("node bridge"));
 	node_export = simplified.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
 	analysis << writeFragments(node_mol.Separate(), obconv);
+
+	VirtualMol node_bridge_export = simplified.GetAtomsOfRole("node bridge");
+	node_bridge_export = simplified.PseudoToOrig(node_bridge_export);
+	OBMol node_bridge_mol = node_bridge_export.ToOBMol();
+	analysis << writeFragments(node_bridge_mol.Separate(), obconv);
 
 	VirtualMol linker_export = simplified.GetAtomsOfRole("linker");
 	linker_export = simplified.PseudoToOrig(linker_export);
@@ -415,6 +421,7 @@ std::string analyzeMOF(std::string filename) {
 	*/
 	writeCIF(&node_mol, "Test/nodes.cif");
 	writeCIF(&linker_mol, "Test/linkers.cif");
+	writeCIF(&node_bridge_mol, "Test/node_bridges.cif");
 
 	// Write out detected solvents
 	/*
