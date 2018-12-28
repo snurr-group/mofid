@@ -234,8 +234,13 @@ std::string analyzeMOF(std::string filename) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
 			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
+			// FIXME: revisit this loop and implementation in the main loop as well
+			AtomSet free_set = fragment_pa.GetAtoms();
+			for (AtomSet::iterator free_it=free_set.begin(); free_it!=free_set.end(); ++free_it) {
+				simplified.DeleteAtomAndConns(*free_it);
+			}
 			// TODO: simplify the net as well
-			// Will probably have something to do with RemoveOrigAtoms
+			// (and think about improving or removing Topology::RemoveOrigAtoms)
 			// Let's get the general test cases finished first, then come back and implement this one.
 		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
@@ -314,28 +319,42 @@ std::string analyzeMOF(std::string filename) {
 	OBMol test_nodes = simplified.ToOBMol();
 	writeCIF(&test_nodes, "Test/test_with_simplified_nodes.cif");
 
-	// Handle one-connected species, notably bound solvents and metal-containing ligands.
-	AtomSet net_1c_without_conn = simplified.GetAtoms(false).GetAtoms();
-	for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
-		ConnIntToExt unique_nbors = simplified.GetConnectedAtoms(VirtualMol(*it));
-		if (unique_nbors.size() == 1) {
-			PseudoAtom nbor_of_1c = unique_nbors.begin()->second;
-			if (simplified.AtomHasRole(*it, "node")) {
-				simplified.MergeAtomToAnother(*it, nbor_of_1c);
-			} else if (simplified.AtomHasRole(*it, "node bridge")) {
-				// probably not uncommon due to PBC and unique OBAtoms
-				continue;
-			} else if (simplified.AtomHasRole(*it, "linker")) {
-				// Bound ligands, such as capping agents or bound solvents for ASR removal.
-				// This case will be handled below after the nets are fully simplified.
-				continue;
-			} else {
-				obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
+	// Simplify the topological net
+	int simplifications = 0;
+	do {
+		simplifications = 0;
+		simplifications += simplified.SimplifyAxB();  // replacement for simplifyLX
+		// collapseXX is no longer necessary now that we're properly tracking connections
+
+		// Handle one-connected species, notably bound solvents and metal-containing ligands.
+		// TODO: check the composition of free solvents and consider connecting charged anions back to the node
+		AtomSet net_1c_without_conn = simplified.GetAtoms(false).GetAtoms();
+		for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
+			ConnIntToExt unique_nbors = simplified.GetConnectedAtoms(VirtualMol(*it));
+			//if (unique_nbors.size() == 1) {
+			// TODO: clean up this analysis
+			// Unlike the earlier algorithm, we can use the raw valence of the test point
+			// because the SimplifyAxB method takes care of duplicate connections
+			if ((*it)->GetValence() == 1) {
+				PseudoAtom nbor_of_1c = unique_nbors.begin()->second;
+				if (simplified.AtomHasRole(*it, "node")) {
+					simplified.MergeAtomToAnother(*it, nbor_of_1c);
+				} else if (simplified.AtomHasRole(*it, "node bridge")) {
+					// probably not uncommon due to PBC and unique OBAtoms
+					continue;
+				} else if (simplified.AtomHasRole(*it, "linker")) {
+					// Bound ligands, such as capping agents or bound solvents for ASR removal.
+					// TODO: consider accounting and labeling a free solvent atom type
+					// TODO: revisit this bound solvent and the earlier free solvent code
+					simplified.DeleteAtomAndConns(*it);
+				} else {
+					obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
+				}
 			}
 		}
-	}
-	OBMol condensed_linkers = simplified.ToOBMol();
-	writeCIF(&condensed_linkers, "Test/condensed_linkers.cif");
+	} while(simplifications);  // repeat until self-consistent
+	//subtractMols(&mof_asr, &bound_solvent);
+
 
 	// Catenation: check that all interpenetrated nets contain identical components.
 	std::vector<VirtualMol> net_components = simplified.GetAtoms().Separate();
@@ -357,28 +376,6 @@ std::string analyzeMOF(std::string filename) {
 			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
 		}
 	}
-
-	// Simplify the topological net
-	int simplifications = 0;
-	do {
-		simplifications = 0;
-		simplifications += simplified.SimplifyAxB();  // replacement for simplifyLX
-		// collapseXX is no longer necessary now that we're properly tracking connections
-
-		/*
-		std::vector<OBMol> one_conn = removeOneConn(&simplified_net, pseudo_map, linker_conv.used_elements(), X_CONN);
-		for (std::vector<OBMol>::iterator it=one_conn.begin(); it!=one_conn.end(); ++it) {
-			bound_solvent += *it;
-			subtractMols(&linkers, &*it);
-		}
-		simplifications += one_conn.size();
-		*/
-
-		// Do collapsing last, so we can still simplify "trivial loops" like M1-X-L-X-M1
-		//simplifications += collapseTwoConn(&simplified_net, X_CONN);
-		// TODO: think about small topologies and similar cases
-	} while(simplifications);  // repeat until self-consistent
-	//subtractMols(&mof_asr, &bound_solvent);
 
 /*  // still missing linker simplification for rod-containing MOFs
 	if (mil_type_mof) {  // Split 4-coordinated linkers into 3+3 by convention
