@@ -126,7 +126,7 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 		virtual_to_mol[virtual_atom] = mol_atom;
 
 		// Also copy paddlewheel detection.  Based on framework.cpp:resetBonds
-		bool is_paddlewheel = mol_atom->HasData("Paddlewheel");
+		bool is_paddlewheel = virtual_atom->HasData("Paddlewheel");
 		if (is_paddlewheel) {
 			OBPairData *dp = new OBPairData;
 			dp->SetAttribute("Paddlewheel");
