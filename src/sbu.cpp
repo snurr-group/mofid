@@ -48,8 +48,6 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 int collapseTwoConn(OBMol* net, int ignore_element = 0);
 std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
-int fourToTwoThree(OBMol *net, int X_CONN);
-OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 // Replaced methods below. TODO remove:
 // Connections to an atom or fragment, in the form of a set where each element
 // is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
@@ -356,6 +354,17 @@ std::string analyzeMOF(std::string filename) {
 	} while(simplifications);  // repeat until self-consistent
 	//subtractMols(&mof_asr, &bound_solvent);
 
+	// Split 4-coordinated linkers into 3+3 by convention for MIL-47, etc.
+	if (mil_type_mof) {
+		AtomSet for_net_4c = simplified.GetAtoms(false).GetAtoms();
+		for (AtomSet::iterator it_4c=for_net_4c.begin(); it_4c!=for_net_4c.end(); ++it_4c) {
+			PseudoAtom sq_4c = *it_4c;
+			if (sq_4c->GetValence() == 4 && simplified.AtomHasRole(sq_4c, "linker")) {
+				simplified.SplitFourVertexIntoTwoThree(sq_4c);
+			}
+		}
+	}
+	// TODO: this is where I could add other branch point detection, such as phenyl rings
 
 	// Catenation: check that all interpenetrated nets contain identical components.
 	std::vector<VirtualMol> net_components = simplified.GetAtoms().Separate();
@@ -377,15 +386,6 @@ std::string analyzeMOF(std::string filename) {
 			obErrorLog.ThrowError(__FUNCTION__, err_msg, obWarning);
 		}
 	}
-
-/*  // still missing linker simplification for rod-containing MOFs
-	if (mil_type_mof) {  // Split 4-coordinated linkers into 3+3 by convention
-		if (!fourToTwoThree(&simplified_net, X_CONN)) {
-			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly did not convert 4-coordinated linkers in MIL-like MOF", obWarning);
-		}
-	}
-	// TODO: this is where I could add other branch point detection, such as phenyl rings
-*/
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
 	/*
@@ -695,100 +695,5 @@ std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to
 	net->EndModify();
 
 	return fragments_removed;
-}
-
-int fourToTwoThree(OBMol *net, int X_CONN) {
-	// Transforms four-connected atoms to two three-connected pseudo atoms.
-	// This satisfies the convention used for MIL-47-like topologies.
-	// Returns the number of simplified linkers
-
-	int changes = 0;
-	std::queue<OBAtom*> to_change;
-
-	FOR_ATOMS_OF_MOL(a, *net) {
-		if (a->GetValence() == 4) {
-			to_change.push(&*a);
-		}
-	}
-
-	net->BeginModify();
-	while (!to_change.empty()) {
-		OBAtom* current = to_change.front();
-		to_change.pop();
-		std::vector<OBAtom*> nbors;
-		FOR_NBORS_OF_ATOM(n, *current) {
-			nbors.push_back(&*n);
-		}
-
-		// The four-connected node will have two sides to break apart the one node into two
-		std::vector<OBAtom*> side1;
-		side1.push_back(nbors[0]);
-		side1.push_back(minAngleNbor(current, side1[0]));
-		std::vector<OBAtom*> side2;
-		for(std::vector<OBAtom*>::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
-			if (!inVector<OBAtom*>(*it, side1)) {
-				side2.push_back(*it);
-			}
-		}
-
-		if ((side1[0])->GetAngle(current, side1[1]) > 85) {
-			obErrorLog.ThrowError(__FUNCTION__, "Trying to simplify a square-like four-connected pseudo atom", obWarning);
-		}
-		bool mismatch = false;  // Verify that the pairings are self-consistent for all four atoms
-		for (std::vector<OBAtom*>::iterator it=nbors.begin(); it!=nbors.end(); ++it) {
-			if (inVector<OBAtom*>(*it, side1)) {
-				if (!inVector<OBAtom*>(minAngleNbor(current, *it), side1)) {
-					mismatch = true;
-				}
-			} else {
-				if (inVector<OBAtom*>(minAngleNbor(current, *it), side1)) {
-					mismatch = true;
-				}
-			}
-		}
-		if (mismatch) {
-			obErrorLog.ThrowError(__FUNCTION__, "Mismatched neighbors when assigning the split", obWarning);
-		}
-
-		int pseudo_element = current->GetAtomicNum();
-		vector3 current_loc = current->GetVector();
-		vector3 pseudo_loc;
-		OBAtom* pseudo_1 = formAtom(net, getMidpoint(side1[0], side1[1]), pseudo_element);
-		OBAtom* pseudo_2 = formAtom(net, getMidpoint(side2[0], side2[1]), pseudo_element);
-		formBond(net, pseudo_1, side1[0], 1);
-		formBond(net, pseudo_1, side1[1], 1);
-		formBond(net, pseudo_2, side2[0], 1);
-		formBond(net, pseudo_2, side2[1], 1);
-
-		if (X_CONN) {
-			OBAtom* conn_atom = formAtom(net, current_loc, X_CONN);
-			formBond(net, pseudo_1, conn_atom, 1);
-			formBond(net, pseudo_2, conn_atom, 1);
-		} else {  // Note: usage without X_CONN is untested.
-			formBond(net, pseudo_1, pseudo_2, 1);
-		}
-		net->DeleteAtom(current);
-		changes += 1;
-	}
-	net->EndModify();
-
-	return changes;
-}
-
-OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn) {
-	// Which neighbor to base has the smallest first-base-nbor bond angle?
-	// (excluding first_conn, of course)
-	OBAtom* min_nbor = NULL;
-	double min_angle = 360.0;
-	FOR_NBORS_OF_ATOM(n, *base) {
-		if (&*n != first_conn) {
-			double test_angle = first_conn->GetAngle(base, &*n);
-			if (test_angle < min_angle) {
-				min_angle = test_angle;
-				min_nbor = &*n;
-			}
-		}
-	}
-	return min_nbor;
 }
 

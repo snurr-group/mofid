@@ -109,6 +109,7 @@ public:
 	bool IsConnection(PseudoAtom a);
 	//std::vector<VirtualMol> SeparatePeriodicRodIntoFragments(VirtualMol fragment);
 	int SimplifyAxB();
+	int SplitFourVertexIntoTwoThree(PseudoAtom site);
 };
 // TODOs remaining
 // How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?

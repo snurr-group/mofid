@@ -694,4 +694,98 @@ int Topology::SimplifyAxB() {
 	return to_delete.size();
 }
 
+int Topology::SplitFourVertexIntoTwoThree(PseudoAtom site) {
+	// Transforms four-connected atoms to two three-connected pseudo atoms.
+	// This step satisfies the convention used for MIL-47-like topologies.
+	// All of the original atoms will be randomly assigned to one of the two PA's.
+	// This function returns the number of simplified linkers
+	if (site->GetValence() != 4) {
+		obErrorLog.ThrowError(__FUNCTION__, "Cannot process site with incorrect valence.", obError);
+		return 0;
+	}
+
+	// Collect the relevant pseudoatoms for the four connection sites.
+	// These vectors are in sync, but in no particular order overall,
+	// so vector[0] will be one of the four connections pseudorandomly.
+	std::vector<PseudoAtom> site_conns;
+	std::map<PseudoAtom, PseudoAtom> site_nbors;
+	FOR_NBORS_OF_ATOM(nbor, *site) {
+		site_conns.push_back(&*nbor);
+		std::pair<PseudoAtom,PseudoAtom> site_conn_endpts = conns.GetConnEndpoints(&*nbor);
+		if (site_conn_endpts.first == site) {
+			site_nbors[&*nbor] = site_conn_endpts.second;
+		} else {
+			site_nbors[&*nbor] = site_conn_endpts.first;
+		}
+	}
+
+	// The four-connected node will have two sides to break apart the one node into two.
+	std::vector<PseudoAtom> side1;  // connection sites on the first site
+	side1.push_back(site_conns[0]);
+	side1.push_back(minAngleNbor(site, side1[0]));
+	std::vector<PseudoAtom> side2;
+	for (std::vector<PseudoAtom>::iterator it=site_conns.begin(); it!=site_conns.end(); ++it) {
+		if (!inVector<PseudoAtom>(*it, side1)) {
+			side2.push_back(*it);
+		}
+	}
+
+	// Verify that the pairings are self consistent
+	if ((side1[0])->GetAngle(site, side1[1]) > 85) {
+		obErrorLog.ThrowError(__FUNCTION__, "Trying to simplify a square-like four-connected pseudo atom", obWarning);
+	}
+	bool mismatched_sides = false;
+	for (std::vector<PseudoAtom>::iterator it=site_conns.begin(); it!=site_conns.end(); ++it) {
+		bool in_side1 = inVector<PseudoAtom>(*it, side1);
+		if (in_side1) {
+			if (!inVector<PseudoAtom>(minAngleNbor(site, *it), side1)) {
+				mismatched_sides = true;
+			}
+		} else {  // If not in_side1, it should be part of side2
+			if (!inVector<PseudoAtom>(minAngleNbor(site, *it), side2)) {
+				mismatched_sides = true;
+			}
+		}
+	}
+	if (mismatched_sides) {
+		obErrorLog.ThrowError(__FUNCTION__, "Inconsistent neighbors when assigning sides to the 4-c PA", obWarning);
+	}
+
+	// Start the PA split, now that sides (connections) have been assigned.
+	VirtualMol side1_frag = VirtualMol(site);
+	side1_frag.AddAtom(side1[0]);
+	side1_frag.AddAtom(side1[1]);
+	OBMol side1_mol = side1_frag.ToOBMol();
+	vector3 side1_loc = getCentroid(&side1_mol, false);
+
+	VirtualMol side2_frag = VirtualMol(site);
+	side2_frag.AddAtom(side2[0]);
+	side2_frag.AddAtom(side2[1]);
+	OBMol side2_mol = side2_frag.ToOBMol();
+	vector3 side2_loc = getCentroid(&side2_mol, false);
+
+	// Use the original 4-c PA as one of the connections
+	vector3 orig_site_loc = vector3(site->GetVector());  // copy the vector instead of using a reference
+	site->SetVector(side1_loc);
+
+	// And add a new 3-c site
+	PseudoAtom new_3c = formAtom(&simplified_net, side2_loc, DEFAULT_ELEMENT);
+	// no need to set act_to_pa since new_3c is empty
+	pa_to_act[new_3c] = VirtualMol(orig_molp);  // empty: no atoms
+
+	// Connect the new site to its two neighbors and the other 3-c
+	vector3 side2_n0_loc = side2[0]->GetVector();
+	vector3 side2_n1_loc = side2[1]->GetVector();
+	ConnectAtoms(new_3c, site_nbors[side2[0]], &side2_n0_loc);
+	ConnectAtoms(new_3c, site_nbors[side2[1]], &side2_n1_loc);
+	ConnectAtoms(new_3c, site, &orig_site_loc);
+
+	// Side 1 is no longer connected to side2
+	DeleteConnection(side2[0]);
+	DeleteConnection(side2[1]);
+
+	return 1;
+}
+
+
 } // end namespace OpenBabel

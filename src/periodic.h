@@ -63,6 +63,7 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod = false, bool warn_rod = 
 bool unwrapFragmentMol(OBMol* fragment);
 vector3 getCentroid(OBMol *fragment, bool weighted);
 vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted = false);
+OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn);
 
 } // end namespace OpenBabel
 

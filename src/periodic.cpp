@@ -5,6 +5,7 @@
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/obiter.h>
 #include <openbabel/atom.h>
 #include <openbabel/bond.h>
 #include <openbabel/generic.h>
@@ -199,6 +200,23 @@ vector3 getMidpoint(OBAtom* a1, OBAtom* a2, bool weighted) {
 	} else {
 		return (wt_1 * a1_raw + wt_2 * a2_raw) / (wt_1 + wt_2);
 	}
+}
+
+OBAtom* minAngleNbor(OBAtom* base, OBAtom* first_conn) {
+	// Which neighbor to base has the smallest first-base-nbor bond angle?
+	// (excluding first_conn, of course)
+	OBAtom* min_nbor = NULL;
+	double min_angle = 360.0;
+	FOR_NBORS_OF_ATOM(n, *base) {
+		if (&*n != first_conn) {
+			double test_angle = first_conn->GetAngle(base, &*n);
+			if (test_angle < min_angle) {
+				min_angle = test_angle;
+				min_nbor = &*n;
+			}
+		}
+	}
+	return min_nbor;
 }
 
 } // end namespace OpenBabel
