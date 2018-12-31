@@ -338,6 +338,7 @@ std::string analyzeMOF(std::string filename) {
 				PseudoAtom nbor_of_1c = unique_nbors.begin()->second;
 				if (simplified.AtomHasRole(*it, "node")) {
 					simplified.MergeAtomToAnother(*it, nbor_of_1c);
+					++simplifications;
 				} else if (simplified.AtomHasRole(*it, "node bridge")) {
 					// probably not uncommon due to PBC and unique OBAtoms
 					continue;
@@ -346,6 +347,7 @@ std::string analyzeMOF(std::string filename) {
 					// TODO: consider accounting and labeling a free solvent atom type
 					// TODO: revisit this bound solvent and the earlier free solvent code
 					simplified.DeleteAtomAndConns(*it);
+					++simplifications;
 				} else {
 					obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
 				}
