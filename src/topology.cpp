@@ -348,29 +348,6 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom) {
 	pa_roles.erase(atom);
 }
 
-ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
-	// Gets the next shell of PseudoAtom neighbors external to the internal VirtualMol.
-	// Automatically passes over connection pseudoatoms.
-
-	// VirtualMol::GetExternalBondsOrConns() will also return internal connections, so let's specify those ahead of time
-	VirtualMol pa_with_conns = FragmentWithIntConns(internal_pa);
-	// Then GetExternalBondsOrConns() can only return extra bonds
-	ConnIntToExt bonds = pa_with_conns.GetExternalBondsOrConns();
-
-	// Translate external connections to external pseudoatoms
-	ConnIntToExt external_nbors;
-	for (ConnIntToExt::iterator e_it=bonds.begin(); e_it!=bonds.end(); ++e_it) {
-		PseudoAtom int_to_conn = e_it->first;
-		PseudoAtom ext_conn = e_it->second;
-		PseudoAtom ext_from_conn = conns.GetOtherEndpoint(ext_conn, int_to_conn);
-
-		std::pair<OBAtom*, OBAtom*> ConnExt(int_to_conn, ext_from_conn);
-		external_nbors.insert(ConnExt);
-	}
-
-	return external_nbors;
-}
-
 PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	// Simplifies the net by combining pa_fragment PseudoAtoms into a single point,
 	// maintaining existing connections.  Returns a pointer to the generated PseudoAtom.
@@ -379,8 +356,12 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 		return NULL;
 	}
 
-	// Get external neighbors on the other side of the connections.
-	ConnIntToExt external_nbors = GetConnectedAtoms(pa_fragment);
+	// Get external connection sites to the fragment
+	// VirtualMol::GetExternalBondsOrConns() will also return internal connections,
+	// so let's specify those ahead of time.
+	VirtualMol pa_with_conns = FragmentWithIntConns(pa_fragment);
+	// Then GetExternalBondsOrConns() can only return extra bonds
+	ConnIntToExt external_conns = pa_with_conns.GetExternalBondsOrConns();
 
 	// Make the new pseudoatom at the centroid
 	OBMol mol_orig_pa = FragmentToOBMolNoConn(pa_fragment);  // atoms and bonds
@@ -393,9 +374,10 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
 	// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
 	// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
-	for (ConnIntToExt::iterator it=external_nbors.begin(); it!=external_nbors.end(); ++it) {
+	for (ConnIntToExt::iterator it=external_conns.begin(); it!=external_conns.end(); ++it) {
 		OBAtom* pa_int = it->first;
-		OBAtom* pa_ext = it->second;
+		OBAtom* pa_conn = it->second;
+		OBAtom* pa_ext = conns.GetOtherEndpoint(pa_conn, pa_int);
 
 		// Positions of the internal/external bonding atoms, to get the bond location
 		OBUnitCell* lattice = getPeriodicLattice(&simplified_net);

@@ -96,7 +96,6 @@ public:
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
 	void DeleteAtomAndConns(PseudoAtom atom);
-	ConnIntToExt GetConnectedAtoms(VirtualMol internal);  // TODO: deprecate
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);

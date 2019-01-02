@@ -329,13 +329,17 @@ std::string analyzeMOF(std::string filename) {
 		// TODO: check the composition of free solvents and consider connecting charged anions back to the node
 		AtomSet net_1c_without_conn = simplified.GetAtoms(false).GetAtoms();
 		for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
-			ConnIntToExt unique_nbors = simplified.GetConnectedAtoms(VirtualMol(*it));
-			//if (unique_nbors.size() == 1) {
 			// TODO: clean up this analysis
 			// Unlike the earlier algorithm, we can use the raw valence of the test point
 			// because the SimplifyAxB method takes care of duplicate connections
 			if ((*it)->GetValence() == 1) {
-				PseudoAtom nbor_of_1c = unique_nbors.begin()->second;
+				// Find the neighbor of the 1-coordinated PA.
+				// .begin() returns the first (in this case, only) element in the internal->external map.
+				PseudoAtom it_conn = VirtualMol(*it).GetExternalBondsOrConns().begin()->second;
+				VirtualMol it_and_conn = VirtualMol(*it);
+				it_and_conn.AddAtom(it_conn);
+				PseudoAtom nbor_of_1c = it_and_conn.GetExternalBondsOrConns().begin()->second;
+
 				if (simplified.AtomHasRole(*it, "node")) {
 					simplified.MergeAtomToAnother(*it, nbor_of_1c);
 					++simplifications;
