@@ -54,6 +54,7 @@ public:
 	bool HasNeighbor(PseudoAtom begin, PseudoAtom end);
 	AtomSet GetConnEndpointSet(PseudoAtom conn);
 	std::pair<PseudoAtom, PseudoAtom> GetConnEndpoints(PseudoAtom conn);
+	PseudoAtom GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin);
 	// Search for connection sites contained within a set of endpoints
 	VirtualMol GetInternalConns(VirtualMol atoms);
 	// possibly consider a RemoveAtom(PseudoAtom endpt) to handle ConnectionTable accounting
@@ -95,7 +96,7 @@ public:
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
 	void DeleteAtomAndConns(PseudoAtom atom);
-	ConnIntToExt GetConnectedAtoms(VirtualMol internal);
+	ConnIntToExt GetConnectedAtoms(VirtualMol internal);  // TODO: deprecate
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
@@ -111,12 +112,7 @@ public:
 	int SimplifyAxB();
 	int SplitFourVertexIntoTwoThree(PseudoAtom site);
 };
-// TODOs remaining
-// How to handle PA connections?  Move/update SBU simplification methods from sbu.cpp?
-// Same with topology simplification
-// Export to Systre in systre.h or maybe an OBFormat
-// Export topology as an OBMol with Og pseudoatoms?
-// ToOBMol will require assigning pa_to_colors, based on unique SMILES etc.
+
 
 } // end namespace OpenBabel
 #endif // TOPOLOGY_H

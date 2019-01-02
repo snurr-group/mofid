@@ -102,6 +102,19 @@ std::pair<PseudoAtom, PseudoAtom> ConnectionTable::GetConnEndpoints(PseudoAtom c
 	return conn2endpts[conn];
 }
 
+PseudoAtom ConnectionTable::GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin) {
+	// Given a connection and one endpoint, what is the other endpoint?
+	std::pair<PseudoAtom, PseudoAtom> endpoints = GetConnEndpoints(conn);
+	if (begin == endpoints.first) {
+		return endpoints.second;
+	} else if (begin == endpoints.second) {
+		return endpoints.first;
+	} else {
+		obErrorLog.ThrowError(__FUNCTION__, "PseudoAtom not part of the connection", obError);
+		return NULL;
+	}
+}
+
 VirtualMol ConnectionTable::GetInternalConns(VirtualMol atoms) {
 	if (atoms.GetParent() != parent_net) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol parent mismatch", obWarning);
@@ -349,18 +362,8 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 	for (ConnIntToExt::iterator e_it=bonds.begin(); e_it!=bonds.end(); ++e_it) {
 		PseudoAtom int_to_conn = e_it->first;
 		PseudoAtom ext_conn = e_it->second;
-		PseudoAtom ext_from_conn = NULL;
+		PseudoAtom ext_from_conn = conns.GetOtherEndpoint(ext_conn, int_to_conn);
 
-		// Figure out which of the conn_endpts is the new external endpoint
-		std::pair<PseudoAtom, PseudoAtom> conn_endpts = conns.GetConnEndpoints(ext_conn);
-		if (int_to_conn == conn_endpts.first) {
-			ext_from_conn = conn_endpts.second;
-		} else if (int_to_conn == conn_endpts.second) {
-			ext_from_conn = conn_endpts.first;
-		} else {
-			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: ended at an unexpected endpoint", obError);
-			return ConnIntToExt();
-		}
 		std::pair<OBAtom*, OBAtom*> ConnExt(int_to_conn, ext_from_conn);
 		external_nbors.insert(ConnExt);
 	}
@@ -586,12 +589,7 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 		std::vector<vector3> v2_pos;
 		FOR_NBORS_OF_ATOM(c2x, *c2_linker) {
 			vector3 x_pos = uc->UnwrapFractionalNear(uc->CartesianToFractional(c2x->GetVector()), c2_pos);
-			vector3 vertex_pos;
-			if (conns.GetConnEndpoints(&*c2x).first == c2_linker) {
-				vertex_pos = conns.GetConnEndpoints(&*c2x).second->GetVector();
-			} else {
-				vertex_pos = conns.GetConnEndpoints(&*c2x).first->GetVector();
-			}
+			vector3 vertex_pos = conns.GetOtherEndpoint(&*c2x, c2_linker)->GetVector();
 			vertex_pos = uc->UnwrapFractionalNear(uc->CartesianToFractional(vertex_pos), x_pos);
 			v2_pos.push_back(vertex_pos);
 		}
@@ -644,12 +642,8 @@ int Topology::SimplifyAxB() {
 		std::map<PseudoAtom, AtomSet> nbor_to_xs;  // all the connection X's per nbor
 		AtomSet a_x_list = conns.GetAtomConns(a);
 		for (AtomSet::iterator x=a_x_list.begin(); x!=a_x_list.end(); ++x) {
-			std::pair<PseudoAtom,PseudoAtom> x_endpoints = conns.GetConnEndpoints(*x);
-			if (x_endpoints.first == a) {
-				nbor_to_xs[x_endpoints.second].insert(*x);
-			} else if (x_endpoints.second == a) {
-				nbor_to_xs[x_endpoints.first].insert(*x);
-			}
+			PseudoAtom external_nbor = conns.GetOtherEndpoint(*x, a);
+			nbor_to_xs[external_nbor].insert(*x);
 		}
 
 		for (std::map<PseudoAtom, AtomSet>::iterator b_it=nbor_to_xs.begin(); b_it!=nbor_to_xs.end(); ++b_it) {
@@ -708,15 +702,10 @@ int Topology::SplitFourVertexIntoTwoThree(PseudoAtom site) {
 	// These vectors are in sync, but in no particular order overall,
 	// so vector[0] will be one of the four connections pseudorandomly.
 	std::vector<PseudoAtom> site_conns;
-	std::map<PseudoAtom, PseudoAtom> site_nbors;
+	std::map<PseudoAtom, PseudoAtom> site_x_to_nbors;
 	FOR_NBORS_OF_ATOM(nbor, *site) {
 		site_conns.push_back(&*nbor);
-		std::pair<PseudoAtom,PseudoAtom> site_conn_endpts = conns.GetConnEndpoints(&*nbor);
-		if (site_conn_endpts.first == site) {
-			site_nbors[&*nbor] = site_conn_endpts.second;
-		} else {
-			site_nbors[&*nbor] = site_conn_endpts.first;
-		}
+		site_x_to_nbors[&*nbor] = conns.GetOtherEndpoint(&*nbor, site);
 	}
 
 	// The four-connected node will have two sides to break apart the one node into two.
@@ -776,8 +765,8 @@ int Topology::SplitFourVertexIntoTwoThree(PseudoAtom site) {
 	// Connect the new site to its two neighbors and the other 3-c
 	vector3 side2_n0_loc = side2[0]->GetVector();
 	vector3 side2_n1_loc = side2[1]->GetVector();
-	ConnectAtoms(new_3c, site_nbors[side2[0]], &side2_n0_loc);
-	ConnectAtoms(new_3c, site_nbors[side2[1]], &side2_n1_loc);
+	ConnectAtoms(new_3c, site_x_to_nbors[side2[0]], &side2_n0_loc);
+	ConnectAtoms(new_3c, site_x_to_nbors[side2[1]], &side2_n1_loc);
 	ConnectAtoms(new_3c, site, &orig_site_loc);
 
 	// Side 1 is no longer connected to side2
