@@ -379,12 +379,11 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 		OBAtom* pa_conn = it->second;
 		OBAtom* pa_ext = conns.GetOtherEndpoint(pa_conn, pa_int);
 
-		// Positions of the internal/external bonding atoms, to get the bond location
+		// Position of the new bond relative to the centroid and older, original location of the connection
 		OBUnitCell* lattice = getPeriodicLattice(&simplified_net);
-		vector3 int_loc = lattice->UnwrapCartesianNear(pa_int->GetVector(), centroid);
-		vector3 ext_loc = lattice->UnwrapCartesianNear(pa_ext->GetVector(), int_loc);
+		vector3 old_conn_loc = lattice->UnwrapCartesianNear(pa_conn->GetVector(), centroid);
+		vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + old_conn_loc) / 3.0);
 
-		vector3 conn_loc = lattice->WrapCartesianCoordinate((4.0*centroid + int_loc + ext_loc) / 6.0);
 		ConnectAtoms(new_atom, pa_ext, &conn_loc);
 	}
 
