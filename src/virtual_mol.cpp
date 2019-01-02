@@ -95,7 +95,7 @@ int VirtualMol::ImportCopiedFragment(OBMol *fragment) {
 	return atoms_to_add.size();
 }
 
-ConnIntToExt VirtualMol::GetExternalBonds() {
+ConnIntToExt VirtualMol::GetExternalBondsOrConns() {
 	// replaces getLinksToExt from sbu.cpp
 	// Warning: if this function is run on a simplified_net, it will consider connection sites as
 	// external unless they're part of the VirtualMol

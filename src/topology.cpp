@@ -339,10 +339,10 @@ ConnIntToExt Topology::GetConnectedAtoms(VirtualMol internal_pa) {
 	// Gets the next shell of PseudoAtom neighbors external to the internal VirtualMol.
 	// Automatically passes over connection pseudoatoms.
 
-	// VirtualMol::GetExternalBonds() will also return internal connections, so let's specify those ahead of time
+	// VirtualMol::GetExternalBondsOrConns() will also return internal connections, so let's specify those ahead of time
 	VirtualMol pa_with_conns = FragmentWithIntConns(internal_pa);
-	// Then GetExternalBonds() can only return extra bonds
-	ConnIntToExt bonds = pa_with_conns.GetExternalBonds();
+	// Then GetExternalBondsOrConns() can only return extra bonds
+	ConnIntToExt bonds = pa_with_conns.GetExternalBondsOrConns();
 
 	// Translate external connections to external pseudoatoms
 	ConnIntToExt external_nbors;

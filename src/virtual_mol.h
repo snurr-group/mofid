@@ -42,7 +42,7 @@ public:
 	bool AddVirtualMol(VirtualMol addition);  // consider writing as operator+= or +
 	// Imports an OBMol fragment with copies of atoms in the same positions as _parent_mol
 	int ImportCopiedFragment(OBMol *fragment);
-	ConnIntToExt GetExternalBonds();  // map of external connections in the parent molecule
+	ConnIntToExt GetExternalBondsOrConns();  // map of external connections in the parent molecule
 	OBMol ToOBMol(bool export_bonds = true, bool copy_bonds = true);
 	// TODO: consider implementing SMILES in a parent class due to OBConv
 	// std::string ToSmiles();}

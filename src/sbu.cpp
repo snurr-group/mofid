@@ -228,7 +228,7 @@ std::string analyzeMOF(std::string filename) {
 			}
 		}
 
-		if (fragment_act_atoms.GetExternalBonds().size() == 0) {
+		if (fragment_act_atoms.GetExternalBondsOrConns().size() == 0) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
 			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
