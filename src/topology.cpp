@@ -368,12 +368,7 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	vector3 centroid = getCentroid(&mol_orig_pa, false);  // without weights
 	PseudoAtom new_atom = formAtom(&simplified_net, centroid, DEFAULT_ELEMENT);
 
-	// Put the connection point 1/3 of the way between the centroid and the connection midpoint to the exterior
-	// (e.g. 1/3 of the way between a BDC centroid and the O-M bond in the -COO group).
-	// In a simplified M-X-X-M' system, this will have the convenient property of being mostly equidistant.
-	// Note: this follows the convention of many top-down MOF generators placing the connection point halfway on the node-linker bond.
-	// In this circumstance, the convention also has the benefit that a linker with many connections to the same metal (-COO)
-	// or connections to multiple metals (MOF-74 series) have unique positions for the X_CONN pseudo atoms.
+	// Put the connection point 1/2 way between the centroid and external connection PA
 	for (ConnIntToExt::iterator it=external_conns.begin(); it!=external_conns.end(); ++it) {
 		OBAtom* pa_int = it->first;
 		OBAtom* pa_conn = it->second;
@@ -382,7 +377,7 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 		// Position of the new bond relative to the centroid and older, original location of the connection
 		OBUnitCell* lattice = getPeriodicLattice(&simplified_net);
 		vector3 old_conn_loc = lattice->UnwrapCartesianNear(pa_conn->GetVector(), centroid);
-		vector3 conn_loc = lattice->WrapCartesianCoordinate((2.0*centroid + old_conn_loc) / 3.0);
+		vector3 conn_loc = lattice->WrapCartesianCoordinate((centroid + old_conn_loc) / 2.0);
 
 		ConnectAtoms(new_atom, pa_ext, &conn_loc);
 	}
