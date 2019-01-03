@@ -235,11 +235,8 @@ std::string analyzeMOF(std::string filename) {
 			// FIXME: revisit this loop and implementation in the main loop as well
 			AtomSet free_set = fragment_pa.GetAtoms();
 			for (AtomSet::iterator free_it=free_set.begin(); free_it!=free_set.end(); ++free_it) {
-				simplified.DeleteAtomAndConns(*free_it);
+				simplified.DeleteAtomAndConns(*free_it, "free solvent");
 			}
-			// TODO: simplify the net as well
-			// (and think about improving or removing Topology::RemoveOrigAtoms)
-			// Let's get the general test cases finished first, then come back and implement this one.
 		} else if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
 			simplified.SetRoleToAtoms( "node", fragment_pa);
@@ -347,9 +344,8 @@ std::string analyzeMOF(std::string filename) {
 					continue;
 				} else if (simplified.AtomHasRole(*it, "linker")) {
 					// Bound ligands, such as capping agents or bound solvents for ASR removal.
-					// TODO: consider accounting and labeling a free solvent atom type
-					// TODO: revisit this bound solvent and the earlier free solvent code
-					simplified.DeleteAtomAndConns(*it);
+					// TODO: consider if there are cases when the bound ligand should not be removed
+					simplified.DeleteAtomAndConns(*it, "bound solvent");
 					++simplifications;
 				} else {
 					obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);

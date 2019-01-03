@@ -131,7 +131,7 @@ Topology::Topology(OBMol *parent_mol) {
 	// Remember not to declare the object types in the constructor.
 	// We're trying to initialize class members, not declare local variables with the same name.
 	conns = ConnectionTable(&simplified_net);
-	deleted_atoms = VirtualMol(orig_molp);
+	deleted_atoms = std::map<std::string, VirtualMol>();  // empty: initially all atoms from orig_mol exist
 	pa_to_act = PseudoAtomMap(&simplified_net, orig_molp);
 	pa_roles = std::map<OBAtom*, std::string>();    // initialize to empty.  Automatically will add elements
 
@@ -213,25 +213,6 @@ std::string Topology::GetRoleFromAtom(PseudoAtom atom) {
 	return pa_roles[atom];
 }
 
-int Topology::RemoveOrigAtoms(VirtualMol atoms) {
-	// FIXME: come back and implement at the end
-	// Used for solvent removal, etc.
-	if (atoms.GetParent() != orig_molp) {
-		//obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
-		return 0;  // error
-	}
-	std::set<OBAtom*> atom_set = atoms.GetAtoms();
-	for (std::set<OBAtom*>::iterator it=atom_set.begin(); it!=atom_set.end(); ++it) {
-		deleted_atoms.AddAtom(*it);
-		// delete from simplified net
-		// other accounting to take care of?
-
-	}
-	return 1;
-	// remove from the simplified net
-	//deleted_atoms
-}
-
 VirtualMol Topology::OrigToPseudo(VirtualMol orig_atoms) {
 	if (orig_atoms.GetParent() != orig_molp) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain child atoms of the original, unsimplified MOF", obError);
@@ -303,8 +284,16 @@ void Topology::DeleteConnection(PseudoAtom conn) {
 	pa_to_act.RemoveAtom(conn);
 }
 
-void Topology::DeleteAtomAndConns(PseudoAtom atom) {
-	// Removes an atom and relevant bonds/connections
+void Topology::DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_orig_atoms) {
+	// Removes an atom and relevant bonds/connections.
+	// Also handles accounting for the orig_mol.  By default (role_for_orig_atoms="obError"), raise
+	// an error if the PA still has any original atoms assigned to it.  Otherwise, assign the orig
+	// atoms to a deleted_atom having the type "role_for_orig_atoms"
+	if (IsConnection(atom)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly trying to delete a connection site.  Skipping deletion.", obWarning);
+		return;
+	}
+
 	AtomSet nbors;
 	FOR_NBORS_OF_ATOM(nbor, *atom) {
 		if (!IsConnection(&*nbor)) {
@@ -320,9 +309,17 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom) {
 
 	// Remove original atoms if present
 	AtomSet act_atoms = pa_to_act[atom].GetAtoms();
-	for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
-		act_to_pa[*it] = NULL;
-		deleted_atoms.AddAtom(*it);
+	if (act_atoms.size()) {
+		if (role_for_orig_atoms == DELETE_ORIG_ATOM_ERROR) {
+			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly deleting a PA containing original atoms.  Assigning them to deleted_atoms[\"" + DELETE_ORIG_ATOM_ERROR + "\"]", obWarning);
+		}
+		if (deleted_atoms.find(role_for_orig_atoms) == deleted_atoms.end()) {
+			deleted_atoms[role_for_orig_atoms] = VirtualMol(orig_molp);  // initialize if new
+		}
+		for (AtomSet::iterator it=act_atoms.begin(); it!=act_atoms.end(); ++it) {
+			act_to_pa[*it] = NULL;
+			deleted_atoms[role_for_orig_atoms].AddAtom(*it);
+		}
 	}
 	pa_to_act.RemoveAtom(atom);  // and remove it from the key of PA's
 	pa_roles.erase(atom);
@@ -402,6 +399,7 @@ void Topology::MergeAtomToAnother(PseudoAtom from, PseudoAtom to) {
 			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: orig_atom should not be a child of both origin and destination PseudoAtoms", obError);
 		}
 		pa_to_act[to].AddAtom(*it);
+		pa_to_act[from].RemoveAtom(*it);
 
 		if (act_to_pa[*it] != from) {
 			obErrorLog.ThrowError(__FUNCTION__, "AssertionError: inconsistency in original PA ownership of orig_atom", obError);

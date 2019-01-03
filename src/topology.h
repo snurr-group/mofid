@@ -22,6 +22,9 @@ class OBMol;
 class OBAtom;
 
 
+const std::string DELETE_ORIG_ATOM_ERROR = "unexpected error";  // role for trying to delete PAs containing orig_mol atoms
+
+
 class ConnectionTable {
 private:
 	OBMol *parent_net;
@@ -60,7 +63,7 @@ private:
 	// I'm wondering if simplified_net and related utilities should actually be a new class,
 	// which would prevent inadvertently deleting bonds, etc.
 	ConnectionTable conns;
-	VirtualMol deleted_atoms;
+	std::map<std::string, VirtualMol> deleted_atoms;  // atoms "deleted" from orig_molp in the simplified net
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
 	std::map<OBAtom*, std::string> pa_roles;  // roles of the simplified pseudoatoms
 	std::map<OBAtom*, PseudoAtom> act_to_pa;  // where did the orig_mol atoms end up in the simplified net?
@@ -75,14 +78,13 @@ public:
 	void SetRoleToAtom(const std::string &role, PseudoAtom atom);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms);
 	std::string GetRoleFromAtom(PseudoAtom atom);
-	int RemoveOrigAtoms(VirtualMol atoms);
 	VirtualMol OrigToPseudo(VirtualMol orig_atoms);
 	VirtualMol PseudoToOrig(VirtualMol pa_atoms);
 	// Modify bonds using a custom connection-based routine rather than standard OBBonds:
 	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
-	void DeleteAtomAndConns(PseudoAtom atom);
+	void DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR);
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
