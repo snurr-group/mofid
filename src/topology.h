@@ -23,6 +23,7 @@ class OBAtom;
 
 
 const std::string DELETE_ORIG_ATOM_ERROR = "unexpected error";  // role for trying to delete PAs containing orig_mol atoms
+const std::string ALL_DELETED_ORIG_ATOMS = "get all atoms";  // role for trying to delete PAs containing orig_mol atoms
 
 
 class ConnectionTable {
@@ -71,6 +72,7 @@ public:
 	//Topology() = delete;
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
+	VirtualMol GetDeletedOrigAtoms(const std::string &deletion_reason=ALL_DELETED_ORIG_ATOMS);
 	VirtualMol GetAtomsOfRole(const std::string &role);
 	VirtualMol GetAtoms(bool include_conn=true);
 	VirtualMol GetConnectors();

@@ -172,9 +172,6 @@ std::string analyzeMOF(std::string filename) {
 	Topology simplified(&orig_mol);
 	OBMol testing_output_mol = simplified.ToOBMol();
 	writeCIF(&testing_output_mol, "Test/simplified_test_orig.cif");
-	// TODO: implement FSR and ASR later
-	OBMol free_solvent = initMOFwithUC(&orig_mol);
-	OBMol bound_solvent = initMOFwithUC(&orig_mol);
 
 	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of importCIF)
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
@@ -231,8 +228,6 @@ std::string analyzeMOF(std::string filename) {
 		if (fragment_act_atoms.GetExternalBondsOrConns().size() == 0) {
 			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
 			nonmetalMsg << "Deleting free solvent " << mol_smiles;
-			free_solvent += *it;  // TODO: just delete in the simplified object and assign the requisite roles
-			// FIXME: revisit this loop and implementation in the main loop as well
 			AtomSet free_set = fragment_pa.GetAtoms();
 			for (AtomSet::iterator free_it=free_set.begin(); free_it!=free_set.end(); ++free_it) {
 				simplified.DeleteAtomAndConns(*free_it, "free solvent");
@@ -325,7 +320,6 @@ std::string analyzeMOF(std::string filename) {
 		// TODO: check the composition of free solvents and consider connecting charged anions back to the node
 		AtomSet net_1c_without_conn = simplified.GetAtoms(false).GetAtoms();
 		for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
-			// TODO: clean up this analysis
 			// Unlike the earlier algorithm, we can use the raw valence of the test point
 			// because the SimplifyAxB method takes care of duplicate connections
 			if ((*it)->GetValence() == 1) {
@@ -353,7 +347,6 @@ std::string analyzeMOF(std::string filename) {
 			}
 		}
 	} while(simplifications);  // repeat until self-consistent
-	//subtractMols(&mof_asr, &bound_solvent);
 
 	// Split 4-coordinated linkers into 3+3 by convention for MIL-47, etc.
 	if (mil_type_mof) {
@@ -389,13 +382,8 @@ std::string analyzeMOF(std::string filename) {
 	}
 
 	// Print out the SMILES for nodes and linkers, and the detected catenation
-	/*
-	analysis << writeFragments(nodes.Separate(), obconv);
-	analysis << writeFragments(linkers.Separate(), obconv);
-	*/
 	VirtualMol node_export = simplified.GetAtomsOfRole("node");
 	// Handle node and node_bridge separately to match old test SMILES
-	//node_export.AddVirtualMol(simplified.GetAtomsOfRole("node bridge"));
 	node_export = simplified.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
 	analysis << writeFragments(node_mol.Separate(), obconv);
@@ -414,24 +402,23 @@ std::string analyzeMOF(std::string filename) {
 
 
 	// Write out the decomposed and simplified MOF, including bond orders
-	/*
-	resetBonds(&nodes);
-	resetBonds(&linkers);
-	writeCIF(&nodes, "Test/nodes.cif");
-	writeCIF(&linkers, "Test/linkers.cif");
-	*/
 	writeCIF(&node_mol, "Test/nodes.cif");
 	writeCIF(&linker_mol, "Test/linkers.cif");
 	writeCIF(&node_bridge_mol, "Test/node_bridges.cif");
 
 	// Write out detected solvents
-	/*
+	OBMol free_solvent = simplified.GetDeletedOrigAtoms("free solvent").ToOBMol();
 	writeCIF(&free_solvent, "Test/free_solvent.cif");
+	OBMol bound_solvent = simplified.GetDeletedOrigAtoms("bound solvent").ToOBMol();
 	writeCIF(&bound_solvent, "Test/bound_solvent.cif");
-	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
+
+	// Also write out the original MOF, desolvated into -FSR and -ASR versions
+	OBMol mof_asr = simplified.PseudoToOrig(simplified.GetAtoms(false)).ToOBMol();
 	writeCIF(&mof_asr, "Test/mof_asr.cif");
-	*/
-	// TODO: calculate MOF-ASR and FSR separately, based on free_ and bound_solvent molecules
+	VirtualMol mof_fsr_vmol = simplified.PseudoToOrig(simplified.GetAtoms(false));
+	mof_fsr_vmol.AddVirtualMol(simplified.GetDeletedOrigAtoms("bound solvent"));
+	OBMol mof_fsr = mof_fsr_vmol.ToOBMol();
+	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
 
 	// Export the simplified net
 	OBMol removed_two_conn_for_topology = simplified.ToOBMol();

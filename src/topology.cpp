@@ -155,6 +155,23 @@ bool Topology::IsConnection(PseudoAtom a) {
 	return conns.IsConn(a);
 }
 
+VirtualMol Topology::GetDeletedOrigAtoms(const std::string &deletion_reason) {
+	if (deletion_reason != ALL_DELETED_ORIG_ATOMS) {
+		if (deleted_atoms.find(deletion_reason) == deleted_atoms.end()) {
+			obErrorLog.ThrowError(__FUNCTION__, "No deleted atoms of type: " + deletion_reason, obInfo);
+			return VirtualMol(orig_molp);  // avoid [], which would make a new molecule
+		} else {
+			return deleted_atoms[deletion_reason];
+		}
+	} else {
+		VirtualMol combined_deleted_atoms(orig_molp);
+		for (std::map<std::string,VirtualMol>::iterator it=deleted_atoms.begin(); it!=deleted_atoms.end(); ++it) {
+			combined_deleted_atoms.AddVirtualMol(it->second);
+		}
+		return combined_deleted_atoms;
+	}
+}
+
 VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
 	VirtualMol match(&simplified_net);
 	for (std::map<OBAtom*, std::string>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
