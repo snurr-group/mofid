@@ -1,3 +1,7 @@
+// Main MOFid code to decompose a CIF into nodes, linkers, and solvents.
+// Writes the SMILES and catenation info to stdout, errors to stderr, and
+// relevant CIFs and simplified topology.cgd to the Test/ directory.
+
 // See https://openbabel.org/docs/dev/UseTheLibrary/CppExamples.html
 // Get iterator help from http://openbabel.org/dev-api/group__main.shtml
 // Visualize with http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
@@ -8,14 +12,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <algorithm>
-#include <queue>
 #include <vector>
 #include <map>
 #include <set>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
+#include <string>
 #include <openbabel/obconversion.h>
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
@@ -35,93 +38,14 @@
 using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBabel.shtml
 
 
-typedef std::map<std::string,std::set<OBAtom*> > MapOfAtomVecs;
-
-
 // Function prototypes
 std::string analyzeMOF(std::string filename);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
 
-void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath);
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
-int collapseTwoConn(OBMol* net, int ignore_element = 0);
-std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector);
-// Replaced methods below. TODO remove:
-// Connections to an atom or fragment, in the form of a set where each element
-// is the vector of OBAtom pointers: <External atom, internal atom bonded to it>
-typedef std::set<std::vector<OBAtom*> > ConnExtToInt;
-ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment);
-std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment);
-MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element);  // entirely deprecated, as well as collapseXX, if we don't have extraneous bonds in our network
-// these changes to XX will also greatly simplify Systre
 
-/* Define global parameters for MOF decomposition */
-// Atom type for connection sites.  Assigned to Te (52) for now.  Set to zero to disable.
-const int X_CONN = 52;
-
-/*
-// TODO: delete after implementing the code in topology.cpp
-class ElementGen
-{
-	protected:
-		std::map<std::string,int> _mapping;
-		std::queue<int> _elements;
-		static const int _default_element = 118;  // Oganesson
-		int _next() {
-			int next = _elements.front();
-			if (_elements.size() > 1) {
-				_elements.pop();
-			}
-			return next;
-		}
-	public:
-		ElementGen() {
-			_elements.push(_default_element);
-		}
-		ElementGen(bool node) {
-			if (node) {  // node defaults
-				_elements.push(40);
-				_elements.push(30);
-				_elements.push(31);
-				_elements.push(118);
-				_elements.push(117);
-			} else {  // linker defaults
-				_elements.push(8);
-				_elements.push(7);
-				_elements.push(6);
-				_elements.push(5);
-			}
-		}
-		int key(std::string smiles) {
-			if (_mapping.find(smiles) == _mapping.end()) {
-				int new_key = _next();
-				_mapping[smiles] = new_key;
-				return new_key;
-			}
-			return _mapping[smiles];
-		}
-		std::map<std::string,int> get_map() {
-			return _mapping;
-		}
-		std::vector<int> used_elements() {
-			std::vector<int> elements;
-			for (std::map<std::string,int>::iterator it = _mapping.begin(); it != _mapping.end(); ++it) {
-				elements.push_back(it->second);
-			}
-			return elements;
-		}
-		int remove_key(std::string smiles) {
-			if (_mapping.find(smiles) == _mapping.end()) {
-				return 0;
-			}
-			int old_element = _mapping[smiles];
-			_mapping.erase(smiles);
-			return old_element;
-		}
-};
-*/
 
 int main(int argc, char* argv[])
 {
@@ -237,8 +161,7 @@ std::string analyzeMOF(std::string filename) {
 			simplified.SetRoleToAtoms( "node", fragment_pa);
 		} else if (all_oxygens) {
 			nonmetalMsg << "Found an oxygen species " << mol_smiles;
-			simplified.SetRoleToAtoms("node", fragment_pa);
-			// do we condense these yet?  probably later
+			simplified.SetRoleToAtoms("node", fragment_pa);  // consolidate neighboring metals in a later step
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
 			PseudoAtom collapsed = simplified.CollapseFragment(fragment_pa);
@@ -473,42 +396,6 @@ int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen
 }
 }  // extern "C"
 
-void writeFragmentKeys(std::map<std::string,int> nodes, std::map<std::string,int> linkers, std::map<std::string,int> removed, int connector, std::string filepath) {
-	// Save fragment identities for condensed_linkers.cif
-	std::string equal_line = "================";
-	std::ofstream out_file;
-	out_file.open(filepath.c_str());
-	out_file << "Fragment identities for condensed_linkers.cif" << std::endl << std::endl;
-
-	out_file << "Nodes" << std::endl << equal_line << std::endl;
-	for (std::map<std::string,int>::iterator it=nodes.begin(); it!=nodes.end(); ++it) {
-		out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
-	}
-	out_file << std::endl << std::endl;
-
-	out_file << "Linkers" << std::endl << equal_line << std::endl;
-	for (std::map<std::string,int>::iterator it=linkers.begin(); it!=linkers.end(); ++it) {
-		out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
-	}
-	out_file << std::endl << std::endl;
-
-	if (X_CONN) {
-		out_file << "Connection atom (\"X\")" << std::endl << equal_line << std::endl;
-		out_file << OBElements::GetSymbol(X_CONN) << ": " << "<X connector>" << std::endl;
-		out_file << std::endl << std::endl;
-	}
-
-	if (removed.size()) {
-		out_file << "Unused pseudo atom types (see test_partial.cif)" << std::endl << equal_line << std::endl;
-		for (std::map<std::string,int>::iterator it=removed.begin(); it!=removed.end(); ++it) {
-			out_file << OBElements::GetSymbol(it->second) << ": " << it->first;
-		}
-		out_file << std::endl << std::endl;
-	}
-
-	out_file.close();
-}
-
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
 	// Write a list of unique SMILES for a set of fragments
 	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
@@ -530,158 +417,5 @@ std::string getSMILES(OBMol fragment, OBConversion obconv) {
 	resetBonds(&canon);
 	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
-}
-
-ConnExtToInt getLinksToExt(OBMol *mol, OBMol *fragment) {
-	// What are the external connections to atoms of a fragment?
-	std::vector<OBAtom*> orig_sbu;
-	FOR_ATOMS_OF_MOL(a, *fragment) {
-		OBAtom* orig_atom = atomInOtherMol(&*a, mol);
-		if (!orig_atom) {
-			obErrorLog.ThrowError(__FUNCTION__, "Tried to access fragment not present in molecule", obError);
-		} else {
-			orig_sbu.push_back(orig_atom);
-		}
-	}
-
-	ConnExtToInt connections;  // <External atom, internal atom bonded to it>
-	for (std::vector<OBAtom*>::iterator it = orig_sbu.begin(); it != orig_sbu.end(); ++it) {
-		FOR_NBORS_OF_ATOM(np, *it) {
-			if (!inVector<OBAtom*>(&*np, orig_sbu)) {  // External atom: not in fragment
-				std::vector<OBAtom*> new_connection;
-				new_connection.push_back(&*np);
-				new_connection.push_back(*it);
-				connections.insert(new_connection);  // only push a connection once, as guaranteed by a set
-			}
-		}
-	}
-	return connections;
-}
-
-std::vector<OBAtom*> uniqueExtAtoms(OBMol *mol, OBMol *fragment) {
-	// Which unique external atoms does the fragment bind to?
-	// Note: this is not necessarily the total number of external connections for a fragment,
-	// because it could bind to multiple images of an external atom (e.g. hMOF-0/MOF-5)
-	ConnExtToInt connections = getLinksToExt(mol, fragment);
-	std::vector<OBAtom*> ext_atoms;
-	for (ConnExtToInt::iterator it = connections.begin(); it != connections.end(); ++it) {
-		OBAtom* ext = (*it)[0];
-		if (!inVector<OBAtom*>(ext, ext_atoms)) {
-			ext_atoms.push_back(ext);
-		}
-	}
-	return ext_atoms;
-}
-
-MapOfAtomVecs neighborsOverConn(OBAtom *loc, int skip_element) {
-	// Gets the nearest neighbors to *loc, skipping over neighbors with an
-	// atomic number of skip_element, corresponding to connection site pseudo-atoms
-	std::set<OBAtom*> nbors;
-	std::set<OBAtom*> skipped;
-	std::queue<OBAtom*> to_visit;
-	std::set<OBAtom*> visited;
-
-	to_visit.push(loc);
-	visited.insert(loc);
-
-	while (!to_visit.empty()) {
-		OBAtom* current = to_visit.front();
-		to_visit.pop();
-		if (current->GetAtomicNum() == skip_element || current == loc) {
-			FOR_NBORS_OF_ATOM(n, *current) {
-				if (visited.find(&*n) == visited.end()) {
-					to_visit.push(&*n);
-					visited.insert(&*n);
-				}
-			}
-			if (current->GetAtomicNum() == skip_element) {
-				skipped.insert(current);
-			}
-		} else {
-			nbors.insert(current);
-		}
-	}
-
-	MapOfAtomVecs results;
-	results["nbors"] = nbors;
-	results["skipped"] = skipped;
-	return results;
-}
-
-int collapseTwoConn(OBMol *net, int ignore_element) {
-	// Collapses two-connected nodes into edges to simplify the topology
-	// Returns the number of nodes deleted from the network
-
-	net->BeginModify();
-	std::vector<OBAtom*> to_delete;
-	FOR_ATOMS_OF_MOL(a, *net) {
-		if (a->GetValence() == 2 && a->GetAtomicNum() != ignore_element) {
-			to_delete.push_back(&*a);
-		}
-	}
-
-	for (std::vector<OBAtom*>::iterator it = to_delete.begin(); it != to_delete.end(); ++it) {
-		std::vector<OBAtom*> nbors;
-		FOR_NBORS_OF_ATOM(n, **it) {
-			nbors.push_back(&*n);
-		}
-
-		if (X_CONN) {  // Transform two-connected node/linker into a connection site
-			OBAtom* connector = formAtom(net, (*it)->GetVector(), X_CONN);
-			formBond(net, connector, nbors[0]);
-			formBond(net, connector, nbors[1]);
-		} else {  // Just collapse the node into an edge
-			formBond(net, nbors[0], nbors[1]);
-		}
-
-		net->DeleteAtom(*it);
-	}
-	net->EndModify();
-
-	return to_delete.size();
-}
-
-std::vector<OBMol> removeOneConn(OBMol *net, std::map<OBAtom*, OBMol*> pseudo_to_real, std::vector<int> allowed_elements, int connector) {
-	// Remove ligands one-connected to a node.
-	// Currently classify these as bound solvents, but they could represent
-	// post-synthetic modification or organic parts of the node.
-	// Assumes that MOF nodes are always metal oxides.
-	// Inputs are the simplified net, a conversion from net pseudo atoms to molecules of real atoms,
-	// the elements allowed for removal, and the connector atom type.
-	// Returns the vector of OBMol's deleted from the simplified net, and cleans up pseudo_to_real map.
-
-	std::vector<OBMol> fragments_removed;
-	std::vector<OBAtom*> pseudo_deletions;
-	net->BeginModify();
-
-	FOR_ATOMS_OF_MOL(a, *net) {
-		if (a->GetValence() == 1) {
-			int point_type = a->GetAtomicNum();
-			if (inVector<int>(point_type, allowed_elements) || allowed_elements.size() == 0) {  // ignore check if not specified
-				if (X_CONN) { // Remove adjacent connection points, simplifying the problem to the base case
-					std::set<OBAtom*> a_nbors = neighborsOverConn(&*a, X_CONN)["nbors"];
-					std::set<OBAtom*> a_conns = neighborsOverConn(&*a, X_CONN)["skipped"];
-					for (std::set<OBAtom*>::iterator it=a_conns.begin(); it!=a_conns.end(); ++it) {
-						pseudo_deletions.push_back(*it);  // Delete the relevant connector atoms at the end
-					}
-					formBond(net, *(a_nbors.begin()), &*a);
-				}
-
-				// Save the bound ligand.  At the end, we'll delete the one-connected "nodes"
-				fragments_removed.push_back(*(pseudo_to_real[&*a]));
-				pseudo_deletions.push_back(&*a);
-				pseudo_to_real.erase(&*a);  // Map entry will be invalid after pseudo atom is deleted
-			} else {
-				obErrorLog.ThrowError(__FUNCTION__, "Unexpected one-connected component after net simplifications.", obWarning);
-			}
-		}
-	}
-
-	for (std::vector<OBAtom*>::iterator it=pseudo_deletions.begin(); it!=pseudo_deletions.end(); ++it) {
-		net->DeleteAtom(*it);
-	}
-	net->EndModify();
-
-	return fragments_removed;
 }
 
