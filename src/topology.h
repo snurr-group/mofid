@@ -21,20 +21,6 @@ namespace OpenBabel
 class OBMol;
 class OBAtom;
 
-class AtomRoles {
-// Roles of pseudoatoms in the MOF simplified net
-// Could potentially be re-implemented later as a bit vector.
-// Example roles: SBU, organic, nodes, linkers, free_solvent, bound_solvent, solvent
-private:
-	std::set<std::string> _roles;
-public:
-	std::set<std::string> GetRoles() { return _roles; }
-	bool HasRole(const std::string &test_role);
-	void ClearRoles();
-	void AddRole(const std::string &possibly_new_role);
-	bool RemoveRole(const std::string &role);
-};
-
 
 class ConnectionTable {
 private:
@@ -76,7 +62,7 @@ private:
 	ConnectionTable conns;
 	VirtualMol deleted_atoms;
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
-	std::map<OBAtom*, AtomRoles> pa_roles;  // roles of the simplified pseudoatoms
+	std::map<OBAtom*, std::string> pa_roles;  // roles of the simplified pseudoatoms
 	std::map<OBAtom*, PseudoAtom> act_to_pa;  // where did the orig_mol atoms end up in the simplified net?
 public:
 	//Topology() = delete;
@@ -86,8 +72,9 @@ public:
 	VirtualMol GetAtoms(bool include_conn=true);
 	VirtualMol GetConnectors();
 	bool AtomHasRole(PseudoAtom atom, const std::string &role);
-	void SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val=true);
-	void SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val=true);
+	void SetRoleToAtom(const std::string &role, PseudoAtom atom);
+	void SetRoleToAtoms(const std::string &role, VirtualMol atoms);
+	std::string GetRoleFromAtom(PseudoAtom atom);
 	int RemoveOrigAtoms(VirtualMol atoms);
 	VirtualMol OrigToPseudo(VirtualMol orig_atoms);
 	VirtualMol PseudoToOrig(VirtualMol pa_atoms);

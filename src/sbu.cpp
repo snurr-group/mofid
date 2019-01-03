@@ -292,7 +292,6 @@ std::string analyzeMOF(std::string filename) {
 			for (AtomSet::iterator br_it=bridging_atoms.begin(); br_it!=bridging_atoms.end(); ++br_it) {
 				fragment_mol.RemoveAtom(*br_it);
 				simplified.SetRoleToAtom("node bridge", *br_it);
-				simplified.SetRoleToAtom("node", *br_it, false);
 			}
 			fragment_mol = simplified.FragmentWithoutConns(fragment_mol);
 

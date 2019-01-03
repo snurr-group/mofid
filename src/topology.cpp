@@ -24,27 +24,6 @@
 namespace OpenBabel
 {
 
-bool AtomRoles::HasRole(const std::string &test_role) {
-	return (_roles.find(test_role) != _roles.end());
-}
-
-void AtomRoles::ClearRoles() {
-	_roles.clear();
-}
-
-void AtomRoles::AddRole(const std::string &possibly_new_role) {
-	_roles.insert(possibly_new_role);
-}
-
-bool AtomRoles::RemoveRole(const std::string &role) {
-	bool deleted = false;
-	if (HasRole(role)) {
-		_roles.erase(role);
-	}
-	return deleted;
-}
-
-
 ConnectionTable::ConnectionTable(OBMol* parent) {
 	parent_net = parent;
 }
@@ -154,7 +133,7 @@ Topology::Topology(OBMol *parent_mol) {
 	conns = ConnectionTable(&simplified_net);
 	deleted_atoms = VirtualMol(orig_molp);
 	pa_to_act = PseudoAtomMap(&simplified_net, orig_molp);
-	pa_roles = std::map<OBAtom*, AtomRoles>();    // initialize to empty.  Automatically will add elements
+	pa_roles = std::map<OBAtom*, std::string>();    // initialize to empty.  Automatically will add elements
 
 	// Initialize simplified_net via copying orig_mol and creating the 1:1 mapping
 	FOR_ATOMS_OF_MOL(orig_atom, *orig_molp) {
@@ -162,6 +141,7 @@ Topology::Topology(OBMol *parent_mol) {
 		new_atom = formAtom(&simplified_net, orig_atom->GetVector(), DEFAULT_ELEMENT);
 		pa_to_act[new_atom] = VirtualMol(&*orig_atom);
 		act_to_pa[&*orig_atom] = new_atom;
+		pa_roles[new_atom] = "Original copy";
 	}
 	// Bonds in the simplified net are handled specially with a shadow ConnectionTable object
 	FOR_BONDS_OF_MOL(orig_bond, *orig_molp) {
@@ -177,8 +157,8 @@ bool Topology::IsConnection(PseudoAtom a) {
 
 VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
 	VirtualMol match(&simplified_net);
-	for (std::map<OBAtom*, AtomRoles>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
-		if (it->second.HasRole(role)) {
+	for (std::map<OBAtom*, std::string>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
+		if (it->second == role) {
 			match.AddAtom(it->first);
 		}
 	}
@@ -206,22 +186,14 @@ VirtualMol Topology::GetConnectors() {
 }
 
 bool Topology::AtomHasRole(PseudoAtom atom, const std::string &role) {
-	if (pa_roles.find(atom) == pa_roles.end()) {
-		obErrorLog.ThrowError(__FUNCTION__, "Could not find pseudoatom in pa_roles mapping", obWarning);
-		return false;
-	}
-	return pa_roles[atom].HasRole(role);
+	return (GetRoleFromAtom(atom) == role);
 }
 
-void Topology::SetRoleToAtom(const std::string &role, PseudoAtom atom, bool val) {
-	if (val) {
-		pa_roles[atom].AddRole(role);
-	} else {
-		pa_roles[atom].RemoveRole(role);
-	}
+void Topology::SetRoleToAtom(const std::string &role, PseudoAtom atom) {
+	pa_roles[atom] = role;
 }
 
-void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool val) {
+void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms) {
 	// Adds/removes the role from a list of PseudoAtoms in the simplified net
 	if (atoms.GetParent() != &simplified_net) {
 		obErrorLog.ThrowError(__FUNCTION__, "VirtualMol needs to contain PseudoAtoms of the simplified net.", obError);
@@ -229,8 +201,16 @@ void Topology::SetRoleToAtoms(const std::string &role, VirtualMol atoms, bool va
 	}
 	std::set<OBAtom*> atom_list = atoms.GetAtoms();
 	for (std::set<OBAtom*>::iterator it=atom_list.begin(); it!=atom_list.end(); ++it) {
-		SetRoleToAtom(role, *it, val);
+		SetRoleToAtom(role, *it);
 	}
+}
+
+std::string Topology::GetRoleFromAtom(PseudoAtom atom) {
+	if (pa_roles.find(atom) == pa_roles.end()) {
+		obErrorLog.ThrowError(__FUNCTION__, "Unknown atom identity", obWarning);
+		return "";
+	}
+	return pa_roles[atom];
 }
 
 int Topology::RemoveOrigAtoms(VirtualMol atoms) {
@@ -309,7 +289,7 @@ PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos
 	formBond(&simplified_net, begin, new_conn, 1);
 	formBond(&simplified_net, end, new_conn, 1);
 	conns.AddConn(new_conn, begin, end);
-	pa_roles[new_conn].AddRole("connection");
+	pa_roles[new_conn] = "connection";
 	pa_to_act[new_conn] = VirtualMol(orig_molp);
 
 	return new_conn;
@@ -468,13 +448,13 @@ OBMol Topology::ToOBMol() {
 
 	// For the interim, let's try coloring the atoms as a test.
 	// This will not likely be the implementation for the final version of the code, but it's worth trying now
-	for (std::map<OBAtom*, AtomRoles>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
+	for (std::map<OBAtom*, std::string>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
 		PseudoAtom a = act_to_pa[it->first];
-		if (it->second.HasRole("node")) {
+		if (it->second == "node") {
 			changeAtomElement(it->first, 40);  // Zr (teal)
-		} else if (it->second.HasRole("linker")) {
+		} else if (it->second == "linker") {
 			changeAtomElement(it->first, 7);  // N (blue)
-		} else if (it->second.HasRole("connection")) {
+		} else if (it->second == "connection") {
 			changeAtomElement(it->first, 8);  // O (red)
 		}
 	}
