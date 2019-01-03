@@ -161,6 +161,12 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 	return mol;
 }
 
+void VirtualMol::ToCIF(const std::string &filename, bool write_bonds) {
+	// Writes a CIF file from ToOBMol at the specified file path
+	OBMol mol_for_export = ToOBMol(write_bonds);
+	writeCIF(&mol_for_export, filename, write_bonds);
+}
+
 std::vector<VirtualMol> VirtualMol::Separate() {
 	std::vector<VirtualMol> fragments;  // return value
 

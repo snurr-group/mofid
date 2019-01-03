@@ -479,6 +479,13 @@ OBMol Topology::ToOBMol() {
 	return simplified_net;
 }
 
+void Topology::ToSimplifiedCIF(const std::string &filename) {
+	// Writes a CIF file from ToOBMol at the specified file path
+	OBMol mol_for_export = ToOBMol();
+	writeCIF(&mol_for_export, filename);
+}
+
+
 void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool simplify_two_conn) {
 	// Write the simplified molecule to Systre for topological determination.
 	// By default, this routine will account for two-connected vertices in the graph.

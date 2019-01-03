@@ -94,8 +94,7 @@ std::string analyzeMOF(std::string filename) {
 	}
 
 	Topology simplified(&orig_mol);
-	OBMol testing_output_mol = simplified.ToOBMol();
-	writeCIF(&testing_output_mol, "Test/simplified_test_orig.cif");
+	simplified.ToSimplifiedCIF("Test/simplified_test_orig.cif");
 
 	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of importCIF)
 	writeCIF(&orig_mol, "Test/orig_mol.cif");
@@ -169,8 +168,7 @@ std::string analyzeMOF(std::string filename) {
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
-	OBMol test_partial = simplified.ToOBMol();
-	writeCIF(&test_partial, "Test/test_partial.cif");
+	simplified.ToSimplifiedCIF("Test/test_partial.cif");
 
 	// Simplify all the node SBUs into single points.
 	bool mil_type_mof = false;
@@ -229,8 +227,7 @@ std::string analyzeMOF(std::string filename) {
 		}
 	}
 
-	OBMol test_nodes = simplified.ToOBMol();
-	writeCIF(&test_nodes, "Test/test_with_simplified_nodes.cif");
+	simplified.ToSimplifiedCIF("Test/test_with_simplified_nodes.cif");
 
 	// Simplify the topological net
 	int simplifications = 0;
@@ -330,22 +327,18 @@ std::string analyzeMOF(std::string filename) {
 	writeCIF(&node_bridge_mol, "Test/node_bridges.cif");
 
 	// Write out detected solvents
-	OBMol free_solvent = simplified.GetDeletedOrigAtoms("free solvent").ToOBMol();
-	writeCIF(&free_solvent, "Test/free_solvent.cif");
-	OBMol bound_solvent = simplified.GetDeletedOrigAtoms("bound solvent").ToOBMol();
-	writeCIF(&bound_solvent, "Test/bound_solvent.cif");
+	simplified.GetDeletedOrigAtoms("free solvent").ToCIF("Test/free_solvent.cif");
+	simplified.GetDeletedOrigAtoms("bound solvent").ToCIF("Test/bound_solvent.cif");
 
 	// Also write out the original MOF, desolvated into -FSR and -ASR versions
-	OBMol mof_asr = simplified.PseudoToOrig(simplified.GetAtoms(false)).ToOBMol();
-	writeCIF(&mof_asr, "Test/mof_asr.cif");
-	VirtualMol mof_fsr_vmol = simplified.PseudoToOrig(simplified.GetAtoms(false));
-	mof_fsr_vmol.AddVirtualMol(simplified.GetDeletedOrigAtoms("bound solvent"));
-	OBMol mof_fsr = mof_fsr_vmol.ToOBMol();
-	writeCIF(&mof_fsr, "Test/mof_fsr.cif");
+	simplified.PseudoToOrig(simplified.GetAtoms(false)).ToCIF("Test/mof_asr.cif");
+	VirtualMol mof_fsr = simplified.PseudoToOrig(simplified.GetAtoms(false));
+	mof_fsr.AddVirtualMol(simplified.GetDeletedOrigAtoms("bound solvent"));
+	OBMol mof_fsr_mol = mof_fsr.ToOBMol();
+	writeCIF(&mof_fsr_mol, "Test/mof_fsr.cif");
 
 	// Export the simplified net
-	OBMol removed_two_conn_for_topology = simplified.ToOBMol();
-	writeCIF(&removed_two_conn_for_topology, "Test/removed_two_conn_for_topology.cif");
+	simplified.ToSimplifiedCIF("Test/removed_two_conn_for_topology.cif");
 	simplified.WriteSystre("Test/topology.cgd");
 
 	return(analysis.str());

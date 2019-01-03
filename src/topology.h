@@ -91,6 +91,7 @@ public:
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
 	OBMol ToOBMol();
+	void ToSimplifiedCIF(const std::string &filename);
 	void WriteSystre(const std::string &filepath, bool write_centers=true, bool simplify_two_conn=true);
 
 	VirtualMol FragmentWithoutConns(VirtualMol fragment);

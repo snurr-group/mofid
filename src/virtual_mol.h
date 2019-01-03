@@ -44,6 +44,7 @@ public:
 	int ImportCopiedFragment(OBMol *fragment);
 	ConnIntToExt GetExternalBondsOrConns();  // map of external connections in the parent molecule
 	OBMol ToOBMol(bool export_bonds = true, bool copy_bonds = true);
+	void ToCIF(const std::string &filename, bool write_bonds = true);
 	// TODO: consider implementing SMILES in a parent class due to OBConv
 	// std::string ToSmiles();}
 	std::vector<VirtualMol> Separate();
