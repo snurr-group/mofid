@@ -68,6 +68,12 @@ private:
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
 	std::map<OBAtom*, std::string> pa_roles;  // roles of the simplified pseudoatoms
 	std::map<OBAtom*, PseudoAtom> act_to_pa;  // where did the orig_mol atoms end up in the simplified net?
+
+	// The complicated constructor makes a copy constructor nontrivial (and it's not currently being used).
+	// Besides Wikipedia, here's another good overview: https://en.cppreference.com/w/cpp/language/rule_of_three
+	Topology(const Topology& other);  // delete the copy constructor unless we need it and define it explicitly
+	Topology& operator=(const Topology&);  // also copy assignment
+
 public:
 	//Topology() = delete;
 	Topology(OBMol *parent_mol = NULL);

@@ -26,6 +26,7 @@ set(tools
 set(linked_tools sbu)
 set(mofid_includes
         obdetails.cpp
+        deconstructor.cpp
         framework.cpp
         periodic.cpp
         pseudo_atom.cpp

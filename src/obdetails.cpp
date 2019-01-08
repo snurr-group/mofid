@@ -61,11 +61,14 @@ OBAtom* formAtom(OBMol *mol, vector3 loc, int element) {
 
 void changeAtomElement(OBAtom* atom, int element) {
 	// Changes an atom's atomic number
+	if (atom == NULL) { obErrorLog.ThrowError(__FUNCTION__, "Skipping invalid atom", obWarning); }
 	atom->SetAtomicNum(element);
 	atom->SetType(OBElements::GetName(element));
 }
 
 int deleteBonds(OBMol *mol, bool only_metals) {
+	// TODO: consider refactoring another method as std::vector< std::pair<OBAtom*,OBAtom*> >,
+	// and use deletebonds(...).size() to get the int version
 	// Deletes bonds in a molecule, optionally only deleting bonds to metal atoms.
 	// Returns the number of bond deletions.
 	std::vector<OBMol> fragments;

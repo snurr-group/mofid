@@ -126,6 +126,10 @@ bool ConnectionTable::CheckConsistency() {
 
 Topology::Topology(OBMol *parent_mol) {
 	orig_molp = parent_mol;
+	if (parent_mol == NULL) {  // default constructor for Topology, e.g. a data member in another class
+		simplified_net = OBMol();
+		return;  // skip initialization with default empty data
+	}
 	simplified_net = initMOFwithUC(parent_mol);
 
 	// Remember not to declare the object types in the constructor.
@@ -464,7 +468,6 @@ OBMol Topology::ToOBMol() {
 	// For the interim, let's try coloring the atoms as a test.
 	// This will not likely be the implementation for the final version of the code, but it's worth trying now
 	for (std::map<OBAtom*, std::string>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
-		PseudoAtom a = act_to_pa[it->first];
 		if (it->second == "node") {
 			changeAtomElement(it->first, 40);  // Zr (teal)
 		} else if (it->second == "linker") {
