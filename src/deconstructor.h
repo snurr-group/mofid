@@ -19,7 +19,8 @@ namespace OpenBabel
 class OBMol;
 
 
-const std::string DEFAULT_OUTPUT_PATH = "Test/";
+// Default directory for CIF/Systre outputs.  Also used in Python/extract_moffles.py and
+const std::string DEFAULT_OUTPUT_PATH = "Output/";
 
 
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
@@ -67,7 +68,7 @@ public:
 
 class MOFidDeconstructor : public Deconstructor {
 protected:
-	virtual void PostSimplification() override;
+	virtual void PostSimplification();
 
 public:
 	MOFidDeconstructor(OBMol* orig_mof = NULL);

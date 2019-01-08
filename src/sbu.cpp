@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <string>
+#include <sys/stat.h>
 
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
@@ -40,7 +41,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 
 
 // Function prototypes
-std::string analyzeMOF(std::string filename);
+std::string analyzeMOF(std::string filename, const std::string &output_dir=DEFAULT_OUTPUT_PATH);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
 
@@ -48,8 +49,23 @@ extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned
 int main(int argc, char* argv[])
 {
 	obErrorLog.SetOutputLevel(obWarning);  // See also http://openbabel.org/wiki/Errors
+
+	// Parse args and set up the output directory
+	// TODO: consider adding an arg to switch which algorithm is called (MOFid, InChIKey, all-node, etc.)
 	char* filename;
-	filename = argv[1];  // TODO: Check usage later
+	if (argc != 2 && argc != 3) {  // The program name (bin/sbu) also counts as an arg
+		std::cerr << "Incorrect number of arguments.  Need to specify the CIF and optionally an output directory." << std::endl;
+		return(2);
+	}
+	filename = argv[1];
+	std::string output_dir = DEFAULT_OUTPUT_PATH;
+	if (argc >= 3) {
+		output_dir = std::string(argv[2]);
+	}
+	int created_new_dir = mkdir(output_dir.c_str(), 0755);  // may need _mkdir for Windows
+	if (mkdir == 0) {
+		std::cerr << "Created a new output directory: " << output_dir << std::endl;
+	}
 
 	// Set up the babel data directory to use a local copy customized for MOFs
 	// (instead of system-wide Open Babel data)
@@ -68,7 +84,7 @@ int main(int argc, char* argv[])
 #endif  // vscode error workaround
 #endif
 
-	std::string mof_results = analyzeMOF(std::string(filename));
+	std::string mof_results = analyzeMOF(std::string(filename), output_dir);
 	if (mof_results == "") {  // No MOFs found
 		return(1);
 	} else {
@@ -77,9 +93,9 @@ int main(int argc, char* argv[])
 	}
 }
 
-std::string analyzeMOF(std::string filename) {
+std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	// Extract components of the MOFid
-	// Reports nodes/linkers, number of nets found, and writes CIFs to Test/ directory
+	// Reports nodes/linkers, number of nets found, and writes CIFs to the DEFAULT_OUTPUT_PATH folder
 
 	OBMol orig_mol;
 	// Massively improving performance by skipping kekulization of the full MOF
@@ -88,17 +104,17 @@ std::string analyzeMOF(std::string filename) {
 		return "";
 	}
 
-	// TODO: Write out the original mol like this (near instantly) for debugging (maybe as part of importCIF)
-	writeCIF(&orig_mol, "Test/orig_mol.cif");
+	// Save a copy of the original mol for debugging
+	writeCIF(&orig_mol, output_dir + "/orig_mol.cif");
 	std::ofstream file_info;
-	file_info.open("Test/mol_name.txt", std::ios::out | std::ios::trunc);
+	file_info.open(output_dir + "/mol_name.txt", std::ios::out | std::ios::trunc);
 	if (file_info.is_open()) {
 		file_info << filename << std::endl;
 		file_info.close();
 	}
 
 	MOFidDeconstructor simplifier(&orig_mol);
-	simplifier.SetOutputDir("Test/");
+	simplifier.SetOutputDir(output_dir);
 	simplifier.SimplifyMOF();
 	simplifier.WriteCIFs();
 

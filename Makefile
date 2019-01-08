@@ -66,13 +66,12 @@ init:
 	make -j2 || exit 2; \
 	make install; \
 	cd ../../; \
-	mkdir Test/; \
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
 	make
 	# Sets up all the cmake details, so that usage is as simple as
-	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
+	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
 
 eclipse:
 	cd bin; \

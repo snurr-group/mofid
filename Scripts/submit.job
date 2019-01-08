@@ -9,5 +9,7 @@
 cd $PBS_O_WORKDIR
 echo $PBS_JOBID > jobid
 
-bash Scripts/extract_folder.sh Resources/TestCIFs/
+OUTPUT_DIR="Output/"
+mkdir -p "$OUTPUT_DIR"
+bash Scripts/extract_folder.sh Resources/TestCIFs/ "$OUTPUT_DIR"
 

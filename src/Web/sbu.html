@@ -1282,7 +1282,7 @@
         handleDownload = function() {
           var download_input = document.getElementById("cifdownload");
           var filename = download_input.options[download_input.selectedIndex].value;
-          var filepath = "Test/" + filename;
+          var filepath = "Output/" + filename;  // Set in deconstructor.h:DEFAULT_OUTPUT_PATH
 
           var contents = FS.readFile(filepath, {'encoding': 'utf8'});
           var download_contents = "data:text/plain;base64," + btoa(contents);

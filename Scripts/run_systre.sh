@@ -2,7 +2,7 @@
 # Run Systre analysis on a specified file (or the default)
 # Cannot call this successfully from Anaconda, so maintain paths separately
 
-DEFAULT_CGD_PATH="Test/topology.cgd"
+DEFAULT_CGD_PATH="Output/topology.cgd"
 
 kernel=$(uname -s)
 if [[ $kernel == *NT* ]]
@@ -13,9 +13,9 @@ then
 	GAVROG_LOC="C:/Users/Benjamin/Software/Gavrog-0.6.0/Systre.jar"
 elif [[ $kernel == *Linux* || $kernel == *linux* ]]
 then
-	SBU_BIN="/home/bbucior/Git/mofid/bin/sbu"
+	SBU_BIN="~/Git/mofid/bin/sbu"
 	JAVA_LOC="java"
-	GAVROG_LOC="/home/bbucior/Software/Gavrog-0.6.0/Systre.jar"
+	GAVROG_LOC="~/Git/mofid/Resources/External/Systre-1.2.0-beta2.jar"
 else
 	echo "Error: Unknown platform.  Please specify file paths in Scripts/run_systre.sh" 1>&2
 	exit 1

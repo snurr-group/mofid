@@ -305,8 +305,8 @@ void Deconstructor::WriteCIFs() {
 	WriteAtomsOfRole("node bridge", "node_bridges.cif");
 
 	// Write out detected solvents
-	simplified_net.GetDeletedOrigAtoms("free solvent").ToCIF("Test/free_solvent.cif");
-	simplified_net.GetDeletedOrigAtoms("bound solvent").ToCIF("Test/bound_solvent.cif");
+	simplified_net.GetDeletedOrigAtoms("free solvent").ToCIF(GetOutputPath("free_solvent.cif"));
+	simplified_net.GetDeletedOrigAtoms("bound solvent").ToCIF(GetOutputPath("bound_solvent.cif"));
 
 	// Also write out the original MOF, desolvated into -FSR and -ASR versions
 	simplified_net.PseudoToOrig(simplified_net.GetAtoms(false)).ToCIF(GetOutputPath("mof_asr.cif"));
@@ -315,8 +315,8 @@ void Deconstructor::WriteCIFs() {
 	mof_fsr.ToCIF(GetOutputPath("mof_fsr.cif"));
 
 	// Export the simplified net
-	simplified_net.ToSimplifiedCIF("Test/removed_two_conn_for_topology.cif");
-	simplified_net.WriteSystre("Test/topology.cgd");
+	simplified_net.ToSimplifiedCIF(GetOutputPath("removed_two_conn_for_topology.cif"));
+	simplified_net.WriteSystre(GetOutputPath("topology.cgd"));
 }
 
 
