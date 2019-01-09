@@ -107,7 +107,8 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	// Save a copy of the original mol for debugging
 	writeCIF(&orig_mol, output_dir + "/orig_mol.cif");
 	std::ofstream file_info;
-	file_info.open(output_dir + "/mol_name.txt", std::ios::out | std::ios::trunc);
+	std::string mol_name_path = output_dir + "/mol_name.txt";
+	file_info.open(mol_name_path.c_str(), std::ios::out | std::ios::trunc);
 	if (file_info.is_open()) {
 		file_info << filename << std::endl;
 		file_info.close();
