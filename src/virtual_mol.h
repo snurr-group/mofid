@@ -50,6 +50,16 @@ public:
 	std::vector<VirtualMol> Separate();
 };
 
+
+// Set up an iterator in the style of openbabel's obiter.h
+// Unlike OBMol's, these atoms can be added/deleted, because they're
+// virtual members of a set, not an actual OBMol iterator.
+// Warning: these loops probably cannot be nested!
+#define FOR_RW_ATOMS_OF_VMOL(a,v) \
+	AtomSet __vset = v.GetAtoms(); \
+	for (AtomSet::iterator a = __vset.begin(); a != __vset.end(); ++a)
+
+
 } // end namespace OpenBabel
 #endif // VIRTUAL_MOL_H
 

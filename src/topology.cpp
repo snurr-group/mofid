@@ -391,6 +391,8 @@ PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	}
 	AtomSet orig_pa_set = pa_without_conn.GetAtoms();
 	for (AtomSet::iterator it=orig_pa_set.begin(); it!=orig_pa_set.end(); ++it) {
+	// alternatively tested using the macro instead of the previous two lines:
+	// FOR_RW_ATOMS_OF_VMOL(it, pa_without_conn) {
 		pa_to_act.RemoveAtom(*it);
 		DeleteAtomAndConns(*it);
 	}
