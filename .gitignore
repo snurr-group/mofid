@@ -2,6 +2,7 @@
 Data/
 !README.md
 Test/
+Output/
 !openbabel/test
 .RData
 .Rhistory

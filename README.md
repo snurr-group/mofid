@@ -13,11 +13,25 @@ A system for rapid identification and analysis of metal-organic frameworks
 * The Python test suite requires the `easyprocess` package to call executables like MOFid or Systre.  Depending on your environment, this can be installed using a command like `pip install --user easyprocess`
 * Systre is required for topology detection (check that the path is correct in Python/extract_moffles.py).  `jq` is a useful utility to parse json files but is not strictly necessary.  Both of these can be automatically set up using `make download`
 * The Python code directly calls a C++ executable in most cases instead of directly using the `openbabel` Python library.  If `openbabel` or `pybel` is needed but raise an error, you may need to modify the library path, e.g. `export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH`
-* To get started, run `make init` the first time to compile Open Babel and set up the cmake environment.  Modifications to `sbu.cpp` or other code can be quickly compiled using `make bin/sbu` and tested using `make test`.
+* To get started, run `make init` the first time to compile Open Babel and set up the cmake environment.  Modifications to `sbu.cpp` or other code can be quickly compiled using `make exe` and tested using `make test`.
+
+## Code overview
+* Build instructions are in this README and the Makefile
+* openbabel/ contains a modified version of the upstream openbabel library (development version)
+* src/ is the MOFid source code.
+	* sbu.cpp is the main MOFid deconstruction.  By default, it writes relevant CIFs and a Systre topology.cgd file to an Output/ directory
+	* sobgrep.cpp does SMARTS substructure searches on a single bonded version of the MOF
+	* searchdb.cpp is a utility to search through a SMILES database file
+	* tsfm_smiles.cpp applies Open Babel's version of reaction transformations to a target SMILES molecule.  It was developed primarily to remove the openbabel.py dependency for the Python source code and avoid incompatibility issues between different Open Babel versions (particularly for atoms with nonstandard valence, like the oxygen in the MOF-5 node)
+	* Other files are helpful classes so that sbu.cpp is no longer ~2k lines of code
+* Python scripts are commonly used for validation and chaining together sbu and systre outputs
+* Bash scripts are misc. utilities, including analyzing databases on high-throughput supercomputers
+* The R code is currently unused but may be revisited when writing the manuscript.
+
 
 ## TODO
-* Add an intro to the project structure and tutorial on basic usage.
 * Include a link to the paper for additional documentation.
+* Later: will include notes on how to compile the web version and host it on Github.  Will be revisited after finishing more urgent analysis and code.
 
 
 ## Misc. notes

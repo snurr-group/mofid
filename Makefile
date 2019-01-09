@@ -1,4 +1,4 @@
-.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html
+.PHONY: all backup test diff download ob_changes.patch init eclipse web init-web html one exe btc
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -15,6 +15,17 @@ bin/searchdb: src/searchdb.cpp openbabel/build/lib/cifformat.so
 	cd bin && make searchdb
 bin/tsfm_smiles: src/tsfm_smiles.cpp openbabel/build/lib/cifformat.so
 	cd bin && make tsfm_smiles
+
+exe:
+	cd bin && make
+
+one:
+	cd bin && make; \
+	cd ..; \
+	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
+
+btc:
+	bin/sbu Resources/TestCIFs/P1-Cu-BTC.cif
 
 # Be careful: multi-line, nonescaped commands in Make run in separate shells
 # Generic rules for compiling relevant (modified by me) formats
@@ -55,13 +66,12 @@ init:
 	make -j2 || exit 2; \
 	make install; \
 	cd ../../; \
-	mkdir Test/; \
 	mkdir bin; \
 	cd bin; \
 	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
 	make
 	# Sets up all the cmake details, so that usage is as simple as
-	# `bin/sbu MOF.cif` and re-compilation is as easy as `make bin/sbu`
+	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
 
 eclipse:
 	cd bin; \

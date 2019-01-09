@@ -24,7 +24,6 @@ def path_to_resource(resource):
 
 # Some default settings for my computer.  Adjust these based on your configuration:
 SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
-SBU_SYSTRE_PATH = "Test/topology.cgd"
 GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
 if sys.platform == "win32":
@@ -34,10 +33,15 @@ elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
 else:
 	raise ValueError("Unknown platform.  Please specify file paths in Python/extract_moffles.py")
 
+# The default path is set in deconstructor.h:DEFAULT_OUTPUT_PATH.
+# Update it here if the directory changes.
+DEFAULT_OUTPUT_PATH = "Output/"
+DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "topology.cgd")
 
-def extract_linkers(mof_path):
+
+def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_run = EasyProcess([SBU_BIN, mof_path]).call()
+	cpp_run = EasyProcess([SBU_BIN, mof_path, output_file_path]).call()
 	cpp_output = cpp_run.stdout
 	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
 	if cpp_run.return_code:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
@@ -149,23 +153,27 @@ def parse_moffles(moffles):
 		name = mof_name
 	)
 
-def cif2moffles(cif_path):
+def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFFLES code from all of its pieces
-	linkers, cat = extract_linkers(cif_path)
+	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
 	if cat is not None:
-		topology = extract_topology(SBU_SYSTRE_PATH)
+		topology = extract_topology(os.path.join(intermediate_output_path, "topology.cgd"))
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
 	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 
 def usage():
-	raise SyntaxError("Run this code with a single parameter: path to the CIF file")
+	raise SyntaxError("Usage: python extract_moffles.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
-	if len(args) != 1:
+	if len(args) not in [1, 2]:
 		usage()
 	cif_file = args[0]
 	
-	print cif2moffles(cif_file)
+	output_systre_and_cif_path = DEFAULT_OUTPUT_PATH
+	if len(args) == 2:
+		output_systre_and_cif_path = args[1]
+	
+	print cif2moffles(cif_file, output_systre_and_cif_path)
