@@ -224,8 +224,12 @@ void Deconstructor::SimplifyTopology() {
 				PseudoAtom nbor_of_1c = it_and_conn.GetExternalBondsOrConns().begin()->second;
 
 				if (simplified_net.AtomHasRole(*it, "node")) {
-					simplified_net.MergeAtomToAnother(*it, nbor_of_1c);
-					++simplifications;
+					if (nbor_of_1c->GetValence() == 1) {
+						obErrorLog.ThrowError(__FUNCTION__, "Not collapsing 1-c node into a 1-c linker", obWarning);
+					} else {
+						simplified_net.MergeAtomToAnother(*it, nbor_of_1c);
+						++simplifications;
+					}
 				} else if (simplified_net.AtomHasRole(*it, "node bridge")) {
 					// probably not uncommon due to PBC and unique OBAtoms
 					continue;
