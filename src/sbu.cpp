@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 		output_dir = std::string(argv[2]);
 	}
 	int created_new_dir = mkdir(output_dir.c_str(), 0755);  // may need _mkdir for Windows
-	if (mkdir == 0) {
+	if (created_new_dir == 0) {
 		std::cerr << "Created a new output directory: " << output_dir << std::endl;
 	}
 
