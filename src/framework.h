@@ -16,6 +16,7 @@ namespace OpenBabel
 class OBMol;
 
 struct MinimalAtom {
+// Contains the critial information about OBAtom's, to avoid accidentally copying perceived properties, etc.
 	vector3 loc;
 	int element;
 	bool is_paddlewheel;

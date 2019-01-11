@@ -156,10 +156,12 @@ Topology::Topology(OBMol *parent_mol) {
 }
 
 bool Topology::IsConnection(PseudoAtom a) {
+	// Is a member of the simplified net a connection or pseudoatom?
 	return conns.IsConn(a);
 }
 
 VirtualMol Topology::GetDeletedOrigAtoms(const std::string &deletion_reason) {
+	// Get atoms that were in the original parent molecule but no longer in the simplified net
 	if (deletion_reason != ALL_DELETED_ORIG_ATOMS) {
 		if (deleted_atoms.find(deletion_reason) == deleted_atoms.end()) {
 			obErrorLog.ThrowError(__FUNCTION__, "No deleted atoms of type: " + deletion_reason, obInfo);
@@ -177,6 +179,7 @@ VirtualMol Topology::GetDeletedOrigAtoms(const std::string &deletion_reason) {
 }
 
 VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
+	// Pseudoatoms of a given role
 	VirtualMol match(&simplified_net);
 	for (std::map<OBAtom*, std::string>::iterator it=pa_roles.begin(); it!=pa_roles.end(); ++it) {
 		if (it->second == role) {
@@ -187,6 +190,7 @@ VirtualMol Topology::GetAtomsOfRole(const std::string &role) {
 }
 
 VirtualMol Topology::GetAtoms(bool include_conn) {
+	// Returns all atoms in the simplified net, optionally discarding connections
 	VirtualMol atoms(&simplified_net);
 	FOR_ATOMS_OF_MOL(a, simplified_net) {
 		if (include_conn || !IsConnection(&*a)) {
@@ -266,8 +270,8 @@ VirtualMol Topology::PseudoToOrig(VirtualMol pa_atoms) {
 }
 
 PseudoAtom Topology::ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos) {
-	// Form the pseudo atom
-	// It's not a problem if they're already connected.
+	// Form a bond between two PseudoAtom's, taking care of all of the accounting for connections.
+	// It's not a problem if they're already connected. (it could be different directions)
 	// In fact it's the whole point for structures like MOF-5, and the ConnectionTable is built to handle it.
 	// As such, the valence of a pseudoatom will be it's OBAtom valence or size of ConnectionTable::GetAtomConns
 	vector3 conn_pos;
@@ -434,7 +438,7 @@ void Topology::MergeAtomToAnother(PseudoAtom from, PseudoAtom to) {
 }
 
 OBMol Topology::FragmentToOBMolNoConn(VirtualMol pa_fragment) {
-	// Based on VirtualMol::ToOBMol
+	// Based on VirtualMol::ToOBMol, but a subset of pseudoatoms
 	OBMol mol = initMOFwithUC(&simplified_net);
 	std::map<OBAtom*, OBAtom*> virtual_to_mol;
 	AtomSet fragment_atoms = pa_fragment.GetAtoms();
@@ -592,7 +596,7 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 }
 
 VirtualMol Topology::FragmentWithoutConns(VirtualMol fragment) {
-	// remove connection pseudoatoms from a VirtualMol
+	// Remove connection pseudoatoms from a VirtualMol
 	VirtualMol cleaned(fragment.GetParent());
 	AtomSet all_atoms = fragment.GetAtoms();
 	for (AtomSet::iterator it=all_atoms.begin(); it!=all_atoms.end(); ++it) {
@@ -604,6 +608,7 @@ VirtualMol Topology::FragmentWithoutConns(VirtualMol fragment) {
 }
 
 VirtualMol Topology::FragmentWithIntConns(VirtualMol fragment) {
+	// Adds explicit connection PseudoAtoms back to the selected subset of the simplified net
 	VirtualMol pa_and_conns = fragment;
 	pa_and_conns.AddVirtualMol(conns.GetInternalConns(fragment));
 	return pa_and_conns;

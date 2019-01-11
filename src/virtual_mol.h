@@ -24,6 +24,10 @@ typedef std::set<OBAtom*> AtomSet;  // TODO consider using this alias throughout
 class VirtualMol;
 
 class VirtualMol {
+// A collection of OBAtom*'s in a parent molecule.
+// The alternative of copying OBMol's is more complicated, because that generates new OBAtom
+// instances and it's more difficult to compare two OBAtom's if they intrinsically have different raw pointers.
+// (Formerly, the code instead relied on searching for identical atomic number, position, etc.)
 private:
 	std::set<OBAtom*> _atoms;
 	OBMol *_parent_mol;

@@ -27,6 +27,7 @@ const std::string ALL_DELETED_ORIG_ATOMS = "get all atoms";  // role for trying 
 
 
 class ConnectionTable {
+// Handles accounting for connection pseudoatoms and their endpoints
 private:
 	OBMol *parent_net;
 	std::map< PseudoAtom, std::pair<PseudoAtom, PseudoAtom> > conn2endpts;
@@ -53,6 +54,12 @@ public:
 
 
 class Topology {
+// A simplified net, including explicit connections, of pseudoatoms which are initially copied
+// from and mapped back to an original parent OBMol (the original MOF).
+
+// Unlike an OBMol, PseudoAtoms are connected by an explicit connector OBAtom*, which allows for
+// connecting the same two pseudoatoms in different directions (different UC's).
+
 private:
 	static const int DEFAULT_ELEMENT = 6;
 	static const int CONNECTION_ELEMENT = 118;  // Og for now
@@ -63,6 +70,7 @@ private:
 	OBMol simplified_net;  // warning: see notes below about OBBonds
 	// I'm wondering if simplified_net and related utilities should actually be a new class,
 	// which would prevent inadvertently deleting bonds, etc.
+
 	ConnectionTable conns;
 	std::map<std::string, VirtualMol> deleted_atoms;  // atoms "deleted" from orig_molp in the simplified net
 	PseudoAtomMap pa_to_act;  // map simplified PA to VirtualMol of orig atoms
@@ -78,36 +86,43 @@ public:
 	//Topology() = delete;
 	Topology(OBMol *parent_mol = NULL);
 	OBMol* GetOrigMol() { return orig_molp; };
-	VirtualMol GetDeletedOrigAtoms(const std::string &deletion_reason=ALL_DELETED_ORIG_ATOMS);
-	VirtualMol GetAtomsOfRole(const std::string &role);
-	VirtualMol GetAtoms(bool include_conn=true);
-	VirtualMol GetConnectors();
+
+	// Manipulating/querying the roles of pseudoatoms
 	bool AtomHasRole(PseudoAtom atom, const std::string &role);
+	VirtualMol GetAtomsOfRole(const std::string &role);
 	void SetRoleToAtom(const std::string &role, PseudoAtom atom);
 	void SetRoleToAtoms(const std::string &role, VirtualMol atoms);
 	std::string GetRoleFromAtom(PseudoAtom atom);
+
+	// Exporting atoms and connections
+	VirtualMol GetAtoms(bool include_conn=true);
+	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
+	VirtualMol GetDeletedOrigAtoms(const std::string &deletion_reason=ALL_DELETED_ORIG_ATOMS);
+	VirtualMol GetConnectors();
+	bool IsConnection(PseudoAtom a);
+
+	// Conversions between the original and simplified nets
 	VirtualMol OrigToPseudo(VirtualMol orig_atoms);
 	VirtualMol PseudoToOrig(VirtualMol pa_atoms);
-	// Modify bonds using a custom connection-based routine rather than standard OBBonds:
-	// Form a bond between two PseudoAtom's, taking care of all of the Connection accounting
-	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
-	void DeleteConnection(PseudoAtom conn);
-	void DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR);
-	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
-	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
-	OBMol FragmentToOBMolNoConn(VirtualMol pa_fragment);
-	OBMol ToOBMol();
-	void ToSimplifiedCIF(const std::string &filename);
-	void WriteSystre(const std::string &filepath, bool write_centers=true, bool simplify_two_conn=true);
-
+	// or removing/adding the explicit connection pseudoatoms
 	VirtualMol FragmentWithoutConns(VirtualMol fragment);
 	VirtualMol FragmentWithIntConns(VirtualMol fragment);
 
-	// Is a member of the simplified net a pseudo atom or connection?
-	bool IsConnection(PseudoAtom a);
-	//std::vector<VirtualMol> SeparatePeriodicRodIntoFragments(VirtualMol fragment);
+	// Manipulate connections (replaces direct manipulation of OBBond's)
+	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
+	void DeleteConnection(PseudoAtom conn);
+	void DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR);
+
+	// Network manipulation and simplification
+	PseudoAtom CollapseFragment(VirtualMol pa_fragment);
+	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	int SimplifyAxB();
 	int SplitFourVertexIntoTwoThree(PseudoAtom site);
+
+	// Export the Topology class to other formats
+	OBMol ToOBMol();
+	void ToSimplifiedCIF(const std::string &filename);
+	void WriteSystre(const std::string &filepath, bool write_centers=true, bool simplify_two_conn=true);
 };
 
 

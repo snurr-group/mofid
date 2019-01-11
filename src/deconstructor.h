@@ -28,6 +28,8 @@ std::string getSMILES(OBMol fragment, OBConversion obconv);
 
 
 class Deconstructor {
+// Base class for MOF deconstruction algorithms, to go from an OBMol of original atoms
+// to a simplified net, its topology, and the mapping of net pseudoatoms back to the MOF.
 private:  // hidden from derived classes, too
 	std::string output_dir;
 
@@ -67,6 +69,8 @@ public:
 
 
 class MOFidDeconstructor : public Deconstructor {
+// The original MOFid algorithm and implementation of Deconstructor (originally in sbu.cpp).
+// Converts 4-c linkers in MIL-47, etc., to 2 x 3-c.
 protected:
 	virtual void PostSimplification();
 

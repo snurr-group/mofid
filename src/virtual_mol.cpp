@@ -78,6 +78,8 @@ bool VirtualMol::AddVirtualMol(VirtualMol addition) {
 }
 
 int VirtualMol::ImportCopiedFragment(OBMol *fragment) {
+	// Adds an OBMol based on the former methodology of searching for atoms with the same
+	// element, position, etc.
 	std::vector<OBAtom*> atoms_to_add;
 	atoms_to_add.reserve(fragment->NumAtoms());
 	FOR_ATOMS_OF_MOL(a, *fragment) {
@@ -96,8 +98,9 @@ int VirtualMol::ImportCopiedFragment(OBMol *fragment) {
 }
 
 ConnIntToExt VirtualMol::GetExternalBondsOrConns() {
-	// replaces getLinksToExt from sbu.cpp
-	// Warning: if this function is run on a simplified_net, it will consider connection sites as
+	// Provides the mapping of VirtualMol atoms bonded to nearest-neighbor external atoms in the parent molecule.
+	// This function replaces getLinksToExt from sbu.cpp.
+	// WARNING: if this function is run on a simplified_net, it will consider connection sites as
 	// external unless they're part of the VirtualMol
 	ConnIntToExt connections;
 	for (std::set<OBAtom*>::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
@@ -112,8 +115,8 @@ ConnIntToExt VirtualMol::GetExternalBondsOrConns() {
 }
 
 OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
-	// Adapts VirtualMol to an OpenBabel::OBMol
-	// Warning: the copy_bonds=false path is untested
+	// Copies VirtualMol to an OpenBabel::OBMol
+	// WARNING: the copy_bonds=false path is untested
 
 	OBMol mol = initMOFwithUC(_parent_mol);
 	typedef std::map<OBAtom*, OBAtom*> amap_t;
@@ -168,6 +171,7 @@ void VirtualMol::ToCIF(const std::string &filename, bool write_bonds) {
 }
 
 std::vector<VirtualMol> VirtualMol::Separate() {
+	// Functions like OBMol::Separate, giving a vector of distinct, unconnected molecular fragments
 	std::vector<VirtualMol> fragments;  // return value
 
 	// Initalize visited: none visited at the beginning

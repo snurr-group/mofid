@@ -19,6 +19,7 @@ class OBUnitCell;
 
 
 class int3 {
+// Simplified, int equivalent to vector3
 public:
 	int x;
 	int y;
@@ -54,6 +55,7 @@ public:
 };
 
 
+// Mapping of an atom to its relative unit cell/image, for an unwrapped molecule
 typedef std::map<OBAtom*, int3> UCMap;
 
 OBUnitCell* getPeriodicLattice(OBMol *mol);

@@ -74,6 +74,7 @@ void Deconstructor::InitOutputFormat() {
 
 
 std::string Deconstructor::GetBasicSMILES(OBMol fragment) {
+	// Get a standard, canonical SMILEs from an OBMol, e.g. to check for common fragments
 	OBConversion basic_conv;
 	basic_conv.SetOutFormat("can");  // Open Babel canonical SMILES
 	basic_conv.AddOption("i");  // Ignore SMILES chirality for now
@@ -201,7 +202,7 @@ bool Deconstructor::CollapseNodes() {
 
 
 void Deconstructor::SimplifyTopology() {
-	// Simplify the topological net (AxB, 1-c, etc.)
+	// Simplify the topological net (series of steps including AxB, 1-c, etc.)
 
 	int simplifications = 0;
 	do {
@@ -276,6 +277,7 @@ int Deconstructor::CheckCatenation() {
 
 
 std::string Deconstructor::GetCatenationInfo(int num_nets) {
+	// Get formatted string about catenation
 	std::stringstream cat;
 	cat << "Found " << num_nets << " simplified net(s)";
 	return cat.str();
