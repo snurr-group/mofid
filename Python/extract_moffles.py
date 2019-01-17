@@ -10,7 +10,7 @@ together.
 @author: Ben Bucior
 """
 
-from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
+import subprocess32  # Install with pip or from https://github.com/google/python-subprocess32
 import glob
 import json
 # import re
@@ -21,6 +21,13 @@ def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
+
+def runcmd(cmd_list, timeout=None):
+	if timeout is None:
+		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE)
+	else:
+		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE, timeout=timeout)
+
 
 # Some default settings for my computer.  Adjust these based on your configuration:
 SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
@@ -41,10 +48,10 @@ DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "topology.cgd")
 
 def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
-	cpp_run = EasyProcess([SBU_BIN, mof_path, output_file_path]).call()
+	cpp_run = runcmd([SBU_BIN, mof_path, output_file_path])
 	cpp_output = cpp_run.stdout
 	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
-	if cpp_run.return_code:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
+	if cpp_run.returncode:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
 		fragments = ["*"]  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
 	else:
 		fragments = cpp_output.strip().split("\n")
@@ -61,10 +68,11 @@ def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
-	java_run = EasyProcess([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path]).call(timeout=SYSTRE_TIMEOUT)
-	java_output = java_run.stdout
-	if java_run.timeout_happened:
+	try:
+		java_run = runcmd([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path], timeout=SYSTRE_TIMEOUT)
+	except subprocess32.TimeoutExpired:
 		return "TIMEOUT"
+	java_output = java_run.stdout
 
 	topologies = []  # What net(s) are found in the simplified framework(s)?
 	current_component = 0

@@ -11,7 +11,7 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 # Calling an external obabel binary is more expensive than using the built-in Python
 # libraries but ensures that all Open Babel calls are consistent.
 
-from easyprocess import EasyProcess  # Install with pip or from https://github.com/ponty/EasyProcess
+import subprocess32  # Install with pip or from https://github.com/google/python-subprocess32
 import sys, os
 import re
 
@@ -21,6 +21,12 @@ def path_to_resource(resource):
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
 
+def runcmd(cmd_list, timeout=None):
+	if timeout is None:
+		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE)
+	else:
+		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE, timeout=timeout)
+
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
 os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/data")  # directory with native EOL
@@ -28,8 +34,12 @@ TSFM_BIN = path_to_resource("../bin/tsfm_smiles")
 OBABEL_BIN = path_to_resource("../openbabel/build/bin/obabel")
 
 def quote(smiles_str):
-	# Wraps SMILES strings for Open Babel within single (non-parseable) quotes
-	return "'" + smiles_str + "'"
+	# Prepares SMILES strings for Open Babel command line calls.
+	# Formerly wrapped strings within single (non-parseable) quotes, which is necessary in Bash to
+	# avoid globbing/expansion but apparently not for Python's subprocess calls.  The quotes were
+	# being literally passed as part of the SMILES in Linux, resulting in parsing failures.
+	#return "'" + smiles_str + "'"
+	return smiles_str
 
 def in_smiles(smiles_str):
 	# Adds necessary quotes and Open Babel input notation for SMILES strings
@@ -37,9 +47,9 @@ def in_smiles(smiles_str):
 
 def ob_normalize(smiles):
 	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	cpp_run = EasyProcess([OBABEL_BIN, in_smiles(smiles), "-xi", "-ocan"]).call()
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(smiles), "-xi", "-ocan"])
 	cpp_output = cpp_run.stdout
-	if (cpp_run.stderr != "1 molecule converted"):
+	if (cpp_run.stderr != "1 molecule converted\n"):
 		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
 	return cpp_output.rstrip()
 
@@ -48,18 +58,18 @@ def openbabel_replace(mol_smiles, query, replacement):
 	# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
 	# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
 	# and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
-	cpp_run = EasyProcess([TSFM_BIN, quote(mol_smiles), quote(query), quote(replacement)]).call()
+	cpp_run = runcmd([TSFM_BIN, quote(mol_smiles), quote(query), quote(replacement)])
 	cpp_output = cpp_run.stdout
 	sys.stderr.write(cpp_run.stderr)  # Re-fowarding C++ errors
 	return ob_normalize(cpp_output.rstrip())
 
 def openbabel_contains(mol_smiles, query):
 	# Checks if a molecule (including multi-fragment contains a SMARTS match
-	cpp_run = EasyProcess([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query), "-xi", "-ocan"]).call()
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query), "-xi", "-ocan"])
 	cpp_output = cpp_run.stdout
-	if (cpp_run.stderr == "1 molecule converted"):
+	if (cpp_run.stderr == "1 molecule converted\n"):
 		return True
-	elif (cpp_run.stderr == "0 molecules converted"):
+	elif (cpp_run.stderr == "0 molecules converted\n"):
 		return False
 	else:
 		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
@@ -69,9 +79,9 @@ def openbabel_formula(mol_smiles):
 	# Extracts a molecular formula without relying on the pybel module
 	# The .txt format prints the title: https://openbabel.org/docs/dev/FileFormats/Title_format.html
 	# Note: it looks like the various --append options are in descriptors/filters.cpp, etc.
-	cpp_run = EasyProcess([OBABEL_BIN, in_smiles(mol_smiles), "--append", "FORMULA", "-otxt"]).call()
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "--append", "FORMULA", "-otxt"])
 	cpp_output = cpp_run.stdout
-	if (cpp_run.stderr != "1 molecule converted"):
+	if (cpp_run.stderr != "1 molecule converted\n"):
 		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
 	return cpp_output.rstrip()
 
