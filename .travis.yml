@@ -13,7 +13,7 @@ before_install:
 
 install:
   - sudo apt-get install -qq swig libeigen3-dev default-jre
-  - pip install --user easyprocess
+  - pip install --user subprocess32
   - make download
 
 before_script:
