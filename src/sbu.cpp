@@ -44,6 +44,7 @@ using namespace OpenBabel;  // See http://openbabel.org/dev-api/namespaceOpenBab
 std::string analyzeMOF(std::string filename, const std::string &output_dir=DEFAULT_OUTPUT_PATH);
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
+void try_mkdir(const std::string &path);
 
 
 int main(int argc, char* argv[])
@@ -62,10 +63,9 @@ int main(int argc, char* argv[])
 	if (argc >= 3) {
 		output_dir = std::string(argv[2]);
 	}
-	int created_new_dir = mkdir(output_dir.c_str(), 0755);  // may need _mkdir for Windows
-	if (created_new_dir == 0) {
-		std::cerr << "Created a new output directory: " << output_dir << std::endl;
-	}
+	try_mkdir(output_dir);
+	try_mkdir(output_dir + SINGLE_NODE_SUFFIX);
+	try_mkdir(output_dir + ALL_NODE_SUFFIX);
 
 	// Set up the babel data directory to use a local copy customized for MOFs
 	// (instead of system-wide Open Babel data)
@@ -119,6 +119,18 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	simplifier.SimplifyMOF();
 	simplifier.WriteCIFs();
 
+	SingleNodeDeconstructor sn_simplify(&orig_mol);
+	sn_simplify.SetOutputDir(output_dir + SINGLE_NODE_SUFFIX);
+	sn_simplify.SimplifyMOF();
+	sn_simplify.WriteCIFs();
+
+	/*
+	AllNodeDeconstructor an_simplify(&orig_mol);
+	an_simplify.SetOutputDir(output_dir + ALL_NODE_SUFFIX);
+	an_simplify.SimplifyMOF();
+	an_simplify.WriteCIFs();
+	*/
+
 	return simplifier.GetMOFInfo();
 }
 
@@ -166,4 +178,13 @@ int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen
 	return out.size();
 }
 }  // extern "C"
+
+
+void try_mkdir(const std::string &path) {
+	// Makes a new directory if it does not exist, raising a warning if it's new
+	int created_new_dir = mkdir(path.c_str(), 0755);  // may need _mkdir for Windows
+	if (created_new_dir == 0) {
+		std::cerr << "Created a new output directory: " << path << std::endl;
+	}
+}
 

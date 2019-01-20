@@ -6,9 +6,13 @@
 
 #include <string>
 #include <sstream>
+#include <queue>
+#include <stack>
+#include <set>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obiter.h>
 
@@ -398,7 +402,219 @@ void MOFidDeconstructor::PostSimplification() {
 			}
 		}
 	}
-	// TODO: this is where I could add other branch point detection, such as phenyl rings
+}
+
+
+VirtualMol SingleNodeDeconstructor::GetNonmetalRingSubstituent(OBAtom* src) {
+	// Traverses through neighbors (and their neighbors) using a BFS to get the
+	// full set of atoms connected to src excluding rings and metals.
+	VirtualMol branch(src);
+	int failed_branches = 0;  // number of branches with rings and/or metals
+	std::queue<OBAtom*> to_visit;
+	to_visit.push(src);
+
+	while(!to_visit.empty()) {
+		OBAtom* curr_atom = to_visit.front();
+		to_visit.pop();
+
+		FOR_NBORS_OF_ATOM(n, *curr_atom) {
+			if (!branch.HasAtom(&*n) && !isMetal(&*n)) {
+				if (n->IsInRing()) {
+					++failed_branches;
+				} else {
+					to_visit.push(&*n);
+				}
+			}
+		}
+		branch.AddAtom(curr_atom);
+	}
+
+	if (failed_branches > 2) {  // allow the connections to the 2 primary ring atoms
+		return VirtualMol(src);  // neighbor with specified composition does not exist
+	}
+
+	return branch;
+}
+
+
+VirtualMol SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) {
+	// Gets the nonmetal ring containing neighboring PA's a and b,
+	// plus attached hydrogens and any non-ring substituents
+	// (e.g. it won't grab a phenyl group or a fused ring).
+	// Returns an empty molecule if a and b are not in the same ring.
+
+	// Verify that a and b are neighbors
+	bool found_b_nbor = false;
+	FOR_NBORS_OF_ATOM(n, *a) {
+		if (&*n == b) {
+			found_b_nbor = true;
+		}
+	}
+	if (!found_b_nbor) {
+		obErrorLog.ThrowError(__FUNCTION__, "OBAtom's a and b must be neighbors.", obError);
+		return VirtualMol(b->GetParent());  // empty molecule
+	}
+
+	// First run a DFS to get find the ring from a to b and get the neighbors
+	const int max_ring_size = 6;
+	std::stack<OBAtom*> to_visit;
+	std::map<OBAtom*, OBAtom*> seen;  // <current atom, previous node>
+	std::map<OBAtom*, int> seen_count;  // <current atom, size of ring>
+	to_visit.push(a);
+	seen[a] = NULL;
+	seen_count[a] = 1;
+
+	while (!to_visit.empty()) {
+		OBAtom* curr_atom = to_visit.top();
+		to_visit.pop();
+
+		if (curr_atom == b) {
+			break;  // done finding the primary a/b ring
+		} else if (seen_count[curr_atom] >= max_ring_size) {
+			continue;  // don't continue down nonproductive paths
+		}
+
+		FOR_NBORS_OF_ATOM(n, *curr_atom) {
+			if (!isMetal(&*n) && (seen.find(&*n) == seen.end())) {
+				if (curr_atom == a && &*n == b) {
+					continue;  // must traverse the ring
+				}
+				seen[&*n] = curr_atom;
+				seen_count[&*n] = seen_count[curr_atom] + 1;
+				to_visit.push(&*n);
+			}
+		}
+	}
+
+	if (seen.find(b) == seen.end()) {
+		obErrorLog.ThrowError(__FUNCTION__, "Could not find a ring containing both atoms", obError);
+		return VirtualMol(b->GetParent());
+	}
+
+	// number of ring atoms with nbors that are part of rings, excluding a and b
+	int num_ring_attachments = 0;
+
+	// Traverse back through the ring, filling in the side substituents
+	VirtualMol ring(b);
+	OBAtom* curr_ring_atom = seen[b];
+	while (curr_ring_atom != a) {
+		ring.AddAtom(curr_ring_atom);
+		if (curr_ring_atom->GetValence() > 2) {  // has non-ring coordination
+			VirtualMol substituents = GetNonmetalRingSubstituent(curr_ring_atom);
+			if (substituents.NumAtoms() == 0) {
+				++num_ring_attachments;  // empty if the atoms are the wrong type
+			} else {
+				ring.AddVirtualMol(substituents);
+			}
+		}
+		curr_ring_atom = seen[curr_ring_atom];
+	}
+	std::cerr << "RINGS: " << num_ring_attachments << std::endl;
+	if (num_ring_attachments > 1) {  // allow one to connect to an organic nodular BB, etc.
+		obErrorLog.ThrowError(__FUNCTION__, "Possibly found a fused ring.  Skipped attachments to other rings", obWarning);
+	}
+
+	return ring;
+}
+
+
+void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
+	// Identify metal-containing SBU's in the MOF
+	// Build up metal SBU's based on the metals + surrounding neighbors, then assign linkers to the rest.
+
+	// An alternative algorithm would possibly be iterating over bonds.
+	// Delete nonmetal-nonmetal bonds unless it's the first M-O valence shell, has a hydrogen, etc.
+	// But that process of collapsing the linkers, etc., is considerably more convoluted, so
+	// go with the stepwise addition of the first coordination shell and related atoms.
+
+	// Start node identification by detecting metals
+	VirtualMol nodes(parent_molp);
+	FOR_ATOMS_OF_MOL(a, *parent_molp) {
+		if (isMetal(&*a)) {
+			nodes.AddAtom(&*a);
+		}
+	}
+
+	// Add shell of nearest neighbor atoms
+	AtomSet node_metals = nodes.GetAtoms();
+	for (AtomSet::iterator metal=node_metals.begin(); metal!=node_metals.end(); ++metal) {
+		FOR_NBORS_OF_ATOM(a, **metal) {
+			nodes.AddAtom(&*a);
+		}
+	}
+
+	// Process oxygen and nitrogen NN more thoroughly to determine if they should be part of the
+	// node SBU or the organic linker.  Find points of extension, like the carboxylate carbon.
+	AtomSet temp_node = nodes.GetAtoms();
+	VirtualMol visited_bridges(parent_molp);  // avoids counting N bridges or carboxylates twice
+	for (AtomSet::iterator it=temp_node.begin(); it!=temp_node.end(); ++it) {
+		PseudoAtom nn = *it;
+		if (visited_bridges.HasAtom(nn)) {
+			continue;  // don't visit an atom bridge twice
+		}
+
+		if (nn->GetAtomicNum() == 8) {  // oxygen
+			// FIXME: implement
+			// TODO: test out the nitrogen code first on a ToBaCCo MOF, then come back for oxygen
+
+			// Oxygens -- add carbons if carboxylate, remove oxygen if binding end-on.
+			// Get bound H's, which share the same fate/assignment as their oxygen atom
+
+			// Add NN shell of oxygens, and their neighbors if part of a carboxylate
+			// For catechols, consider that carboxylates can bind end-on, too. Also it'll just get lumped in with the metal, so it's okay
+			// Detecting end-on carboxylate binding will alleviate the same problem (and also avoid false positives on solvent, etc.)
+
+		} else if (nn->GetAtomicNum() == 7) {  // nitrogen
+			// Check for M-N-N-M (if the nitrogen a neighbor that's a NN to a metal)
+			OBAtom* bridge_bw_metals = NULL;
+			FOR_NBORS_OF_ATOM(n, *nn) {
+				if (n->GetAtomicNum() == 7 && nodes.HasAtom(&*n)) {
+					if (bridge_bw_metals) {  // already defined
+						obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found N-N-N species in node.", obWarning);
+					}
+					bridge_bw_metals = &*n;
+				}
+			}
+			if (!bridge_bw_metals) {  // Binding end-on, e.g. pillared MOFs, porphyrins, and probably amines
+				nodes.RemoveAtom(nn);  // not part of an SBU cluster
+			} else {  // If there is a bridge, grab the whole ring
+				nodes.AddVirtualMol(CalculateNonmetalRing(nn, bridge_bw_metals));
+				visited_bridges.AddAtom(bridge_bw_metals);
+			}
+		}
+	}
+
+	// Assign node PA's
+	// TODO: consider adding a CollapseLinkers step to SimplifyMOF(), which separates the PA's and collapses
+	VirtualMol node_pa = simplified_net.OrigToPseudo(nodes);
+	simplified_net.SetRoleToAtoms("node", node_pa);
+
+	// The remainder of the atoms are either organic SBUs or 2-c linkers by definition
+	VirtualMol orig_linkers(parent_molp);
+	FOR_ATOMS_OF_MOL(a, *parent_molp) {
+		if (!nodes.HasAtom(&*a)) {
+			orig_linkers.AddAtom(&*a);
+		}
+	}
+	// Separate the linkers before conversion to PA, since PA's have complex connection PA's, too
+	std::vector<VirtualMol> orig_linker_frags = orig_linkers.Separate();
+	for (std::vector<VirtualMol>::iterator it=orig_linker_frags.begin(); it!=orig_linker_frags.end(); ++it) {
+		VirtualMol pa_frag = simplified_net.OrigToPseudo(*it);
+		PseudoAtom collapsed = simplified_net.CollapseFragment(pa_frag);
+		simplified_net.SetRoleToAtom("linker", collapsed);
+	}
+
+	// TODO: consider rewriting the base MOFid separation algorithm to be simpler/additive like this one
+
+	// FIXME: handle free solvent molecules  NOT YET IMPLEMENTED FOR THIS CLASS! - rather, just check the connectivity before collapsing.  If zero, then it's a free solvent
+	// TODO: refactor the free solvent removal to occur at the same time as bound solvent removal
+	// That will make more conceptual sense, anyway, for the simplification.  Just looking at vertices with zero external neighbors
+}
+
+
+void AllNodeDeconstructor::PostSimplification() {
+	// Detect branch points in the linkers
+	// TODO FIXME IMPLEMENT
 }
 
 

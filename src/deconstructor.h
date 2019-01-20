@@ -10,6 +10,8 @@ deconstructor.h - Deconstruct a MOF into its building blocks and simplified net
 #include <openbabel/babelconfig.h>
 #include <openbabel/generic.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
 
 #include "topology.h"
 
@@ -21,6 +23,8 @@ class OBMol;
 
 // Default directory for CIF/Systre outputs.  Also used in Python/extract_moffles.py and
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
+const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
+const std::string ALL_NODE_SUFFIX = "/AllNode";
 
 
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
@@ -32,6 +36,9 @@ class Deconstructor {
 // to a simplified net, its topology, and the mapping of net pseudoatoms back to the MOF.
 private:  // hidden from derived classes, too
 	std::string output_dir;
+
+	Deconstructor(const Deconstructor& other);  // again, remove copy capabilities to avoid implementing them
+	Deconstructor& operator=(const Deconstructor&);
 
 protected:
 	OBMol *parent_molp;
@@ -80,10 +87,37 @@ public:
 };
 
 
-//typedef Deconstructor MOFidDeconstructor;  // if it was implemented as an alias
-// Not yet implemented:
-//class AllNodeDeconstructor : public MOFidDeconstructor {};
-//class SingleNodeDeconstructor : public MOFidDeconstructor {};
+class SingleNodeDeconstructor : public Deconstructor {
+// The single-node MOF deconstruction algorithm specified in 10.1021/acs.cgd.8b00126.
+// Unlike the original deconstructor for MOFid building blocks, this algorithm detects the points
+// of extension for the SBUs, which is more natural for tri-metallic clusters, etc., and always
+// considers linkers as a single SBU (never any branch points).
+protected:
+	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
+	virtual void PostSimplification() {};  // do not run a MOFid 4-to-2x3 step for MIL-type MOFs
+	static VirtualMol CalculateNonmetalRing(OBAtom* a, OBAtom* b);
+	static VirtualMol GetNonmetalRingSubstituent(OBAtom* src);
+
+public:
+	SingleNodeDeconstructor(OBMol* orig_mof = NULL) : Deconstructor(orig_mof) {};
+	virtual ~SingleNodeDeconstructor() {};
+};
+
+
+class AllNodeDeconstructor : public SingleNodeDeconstructor {
+// The all-node MOF deconstruction algorithm specified in 10.1021/acs.cgd.8b00126.
+// This algorithm is equivalent to the single node case, except for detecting branch points
+// within linkers.
+protected:
+	virtual void PostSimplification();  // Detect branch points in the linkers
+
+public:
+	AllNodeDeconstructor(OBMol* orig_mof = NULL) : SingleNodeDeconstructor(orig_mof) {};
+	virtual ~AllNodeDeconstructor() {};
+};
+
+
+// Not implementing the ToposPro "standard representation" explicitly
 
 
 } // end namespace OpenBabel
