@@ -3,6 +3,12 @@ Data/
 !README.md
 Test/
 Output/
+Output_*/
+err_*.txt
+pbs_out_*.txt
+out_*.smi
+jobid_*
+Summary/
 !openbabel/test
 .RData
 .Rhistory
