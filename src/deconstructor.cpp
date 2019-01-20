@@ -509,7 +509,6 @@ VirtualMol SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) 
 		}
 		curr_ring_atom = seen[curr_ring_atom];
 	}
-	std::cerr << "RINGS: " << num_ring_attachments << std::endl;
 	if (num_ring_attachments > 1) {  // allow one to connect to an organic nodular BB, etc.
 		obErrorLog.ThrowError(__FUNCTION__, "Possibly found a fused ring.  Skipped attachments to other rings", obWarning);
 	}
@@ -554,15 +553,65 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 		}
 
 		if (nn->GetAtomicNum() == 8) {  // oxygen
-			// FIXME: implement
-			// TODO: test out the nitrogen code first on a ToBaCCo MOF, then come back for oxygen
+			// Check coordination environment to classify as part of the metal oxide or "other"
+			VirtualMol attached_hydrogens(nn->GetParent());
+			OBAtom* attached_nonmetal = NULL;
+			FOR_NBORS_OF_ATOM(n, *nn) {
+				if (!nodes.HasAtom(&*n)) {  // metals and other bound oxygens
+					if (n->GetAtomicNum() == 1) {
+						attached_hydrogens.AddAtom(&*n);
+					} else if (n->GetAtomicNum() == 8) {
+						obErrorLog.ThrowError(__FUNCTION__, "Found a loosely bound peroxide, which will be handled by 1-c solvent codes.", obWarning);
+					} else {
+						if (attached_nonmetal) {  // O is already bound to a different nonmetal!
+							obErrorLog.ThrowError(__FUNCTION__, "Found a metal-bound oxygen with multiple nonmetal neighbors!  Results may have inconsistencies.", obError);
+						}
+						attached_nonmetal = &*n;
+					}
+				}
+			}
 
-			// Oxygens -- add carbons if carboxylate, remove oxygen if binding end-on.
-			// Get bound H's, which share the same fate/assignment as their oxygen atom
-
-			// Add NN shell of oxygens, and their neighbors if part of a carboxylate
-			// For catechols, consider that carboxylates can bind end-on, too. Also it'll just get lumped in with the metal, so it's okay
-			// Detecting end-on carboxylate binding will alleviate the same problem (and also avoid false positives on solvent, etc.)
+			if (!attached_nonmetal) {
+				// Keep the oxygen and its bound H's
+				nodes.AddVirtualMol(attached_hydrogens);
+			} else {
+				// Test the oxygen binding mode to classify it as part of node vs. linker
+				OBAtom* oxygen_bridge = NULL;
+				FOR_NBORS_OF_ATOM(n, *attached_nonmetal) {
+					if ((temp_node.find(&*n) != temp_node.end()) && (nn != &*n)) {
+						// Use temp_node because it's the original list of metals and NN's, not added carbons, rings, etc.
+						// Avoids a bug when handling self-connected paddlewheels, e.g. hMOF-22242.
+						// Note: the carboxylates will become "node bridges" in this instance to avoid a self-connected, periodic node.
+						if (n->GetAtomicNum() != 8) {
+							obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found an M-O-NM-NM-M bridge.  Excepted a second oxygen.", obError);
+						} else {
+							if (oxygen_bridge) {  // already defined
+								obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found multiple O2's for M-O1-NM-O2-M.", obWarning);
+							}
+							oxygen_bridge = &*n;
+						}
+					}
+				}
+				if (!oxygen_bridge) {
+					// Binding end-on, e.g. carboxylates with a single oxygen binding or catechols.
+					// TODO: think about cases where an oxygen binds to multiple metal atoms.
+					// Should the oxygen in that case be part of the node or linker?
+					nodes.RemoveAtom(nn);  // not part of an SBU cluster
+				} else {
+					// If there is a bridge, include the carboxylate carbon as part of the SBU
+					nodes.AddAtom(attached_nonmetal);
+					visited_bridges.AddAtom(nn);
+					visited_bridges.AddAtom(oxygen_bridge);
+					// Get hydrogens attached to the second oxygen atom
+					FOR_NBORS_OF_ATOM(b_h, *oxygen_bridge) {
+						if (b_h->GetAtomicNum() == 1) {
+							attached_hydrogens.AddAtom(&*b_h);
+						}
+					}
+					// Bound H's share the same fate/assignment as their oxygen atoms
+					nodes.AddVirtualMol(attached_hydrogens);
+				}
+			}
 
 		} else if (nn->GetAtomicNum() == 7) {  // nitrogen
 			// Check for M-N-N-M (if the nitrogen a neighbor that's a NN to a metal)
@@ -579,6 +628,7 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 				nodes.RemoveAtom(nn);  // not part of an SBU cluster
 			} else {  // If there is a bridge, grab the whole ring
 				nodes.AddVirtualMol(CalculateNonmetalRing(nn, bridge_bw_metals));
+				visited_bridges.AddAtom(nn);
 				visited_bridges.AddAtom(bridge_bw_metals);
 			}
 		}
