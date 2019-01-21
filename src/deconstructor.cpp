@@ -120,14 +120,7 @@ void Deconstructor::DetectInitialNodesAndLinkers() {
 			}
 		}
 
-		if (fragment_act_atoms.GetExternalBondsOrConns().size() == 0) {
-			// Assume free solvents are organic (or lone metals), so they'd be isolated without any external connections
-			nonmetalMsg << "Deleting free solvent " << mol_smiles;
-			AtomSet free_set = fragment_pa.GetAtoms();
-			for (AtomSet::iterator free_it=free_set.begin(); free_it!=free_set.end(); ++free_it) {
-				simplified_net.DeleteAtomAndConns(*free_it, "free solvent");
-			}
-		} else if (it->NumAtoms() == 1) {
+		if (it->NumAtoms() == 1) {
 			nonmetalMsg << "Found a solitary atom with atomic number " << it->GetFirstAtom()->GetAtomicNum() << std::endl;
 			simplified_net.SetRoleToAtoms( "node", fragment_pa);
 		} else if (all_oxygens) {
@@ -244,7 +237,7 @@ void Deconstructor::SimplifyTopology() {
 
 				if (simplified_net.AtomHasRole(*it, "node")) {
 					if (nbor_of_1c->GetValence() == 1) {
-						obErrorLog.ThrowError(__FUNCTION__, "Not collapsing 1-c node into a 1-c linker", obWarning);
+						obErrorLog.ThrowError(__FUNCTION__, "Not collapsing 1-c node into a 1-c linker", obInfo);
 					} else {
 						simplified_net.MergeAtomToAnother(*it, nbor_of_1c);
 						++simplifications;
@@ -260,6 +253,10 @@ void Deconstructor::SimplifyTopology() {
 				} else {
 					obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
 				}
+			} else if ((*it)->GetValence() == 0) {
+				// Free solvents are isolated without any external connections
+				simplified_net.DeleteAtomAndConns(*it, "free solvent");
+				++simplifications;
 			}
 		}
 	} while(simplifications);  // repeat until self-consistent
@@ -675,11 +672,7 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 	VirtualMol pa_linkers = simplified_net.OrigToPseudo(orig_linkers);
 	simplified_net.SetRoleToAtoms("linker", pa_linkers);
 
-	// TODO: consider rewriting the base MOFid separation algorithm to be simpler/additive like this one
-
-	// FIXME: handle free solvent molecules  NOT YET IMPLEMENTED FOR THIS CLASS! - rather, just check the connectivity before collapsing.  If zero, then it's a free solvent
-	// TODO: refactor the free solvent removal to occur at the same time as bound solvent removal
-	// That will make more conceptual sense, anyway, for the simplification.  Just looking at vertices with zero external neighbors
+	// TODO: consider rewriting the base MOFid separation algorithm to be additive like this one
 }
 
 
