@@ -112,7 +112,6 @@ public:
 	PseudoAtom ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3 *pos = NULL);
 	void DeleteConnection(PseudoAtom conn);
 	void DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR);
-	void DeleteAtomKeepConns(PseudoAtom atom, const std::string &role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR);
 
 	// Network manipulation and simplification
 	PseudoAtom CollapseFragment(VirtualMol pa_fragment);

@@ -95,6 +95,7 @@ class SingleNodeDeconstructor : public Deconstructor {
 // considers linkers as a single SBU (never any branch points).
 protected:
 	const int POE_EXTERNAL_ATOM_NUM = 118;  // Og
+	VirtualMol points_of_extension;  // track SBU points of extension separately from atom roles
 
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
 	virtual void PostSimplification() {};  // do not inherit the MOFid 4-to-2x3 step
@@ -103,7 +104,7 @@ protected:
 	static VirtualMol GetNonmetalRingSubstituent(OBAtom* src);
 
 public:
-	SingleNodeDeconstructor(OBMol* orig_mof = NULL) : Deconstructor(orig_mof) {};
+	SingleNodeDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~SingleNodeDeconstructor() {};
 	virtual void WriteCIFs(bool external_bond_pa = true);
 };

@@ -350,38 +350,6 @@ void Topology::DeleteAtomAndConns(PseudoAtom atom, const std::string &role_for_o
 	pa_roles.erase(atom);
 }
 
-void Topology::DeleteAtomKeepConns(PseudoAtom atom, const std::string &role_for_orig_atoms) {
-	// Similar to DeleteAtomAndConns, but keeps the product of all connected atoms
-	// connected to one another in the simplified net.
-	if (IsConnection(atom)) {
-		obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly trying to delete a connection site.  Skipping deletion.", obWarning);
-		return;
-	}
-
-	AtomSet nbors;
-	FOR_NBORS_OF_ATOM(nbor, *atom) {
-		if (!IsConnection(&*nbor)) {
-			obErrorLog.ThrowError(__FUNCTION__, "Undefined behavior: Found atoms directly bonded to each other (instead of an intermediate connection site).", obError);
-			return;
-		}
-		nbors.insert(&*nbor);
-	}
-
-	// This time form new connections between atom's neighbors
-	// WARNING: this process will cause multiple connections to share the same coordinates
-	vector3 atom_loc = atom->GetVector();
-	for (AtomSet::iterator it1=nbors.begin(); it1!=nbors.end(); ++it1) {
-		PseudoAtom nbor1 = conns.GetOtherEndpoint(*it1, atom);
-		for (AtomSet::iterator it2=it1; it2!=nbors.end(); ++it2) {
-			if (it1 == it2) { continue; }  // skip the first iteration
-			PseudoAtom nbor2 = conns.GetOtherEndpoint(*it2, atom);
-			ConnectAtoms(nbor1, nbor2, &atom_loc);
-		}
-	}
-
-	DeleteAtomAndConns(atom, role_for_orig_atoms);  // automatically handles the original connections, too
-}
-
 PseudoAtom Topology::CollapseFragment(VirtualMol pa_fragment) {
 	// Simplifies the net by combining pa_fragment PseudoAtoms into a single point,
 	// maintaining existing connections.  Returns a pointer to the generated PseudoAtom.
