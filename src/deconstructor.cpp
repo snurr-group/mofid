@@ -14,6 +14,7 @@
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
+#include <openbabel/generic.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obiter.h>
 
@@ -673,22 +674,23 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 }
 
 
-void SingleNodeDeconstructor::WriteCIFs(bool external_bond_pa) {
+void SingleNodeDeconstructor::WriteCIFs() {
 	// Call base class exporter, plus the new outputs
-	// If external_bond_pa is true, also write out pseudoatoms corresponding to the next atom
-	// connected to the point of extension.
 	Deconstructor::WriteCIFs();
 	points_of_extension.ToCIF(GetOutputPath("points_of_extension.cif"));
-	WriteSBUs("node_sbus.cif", external_bond_pa);
+	WriteSBUs("node_sbus_no_ext_conns.cif", false);
+	WriteSBUs("node_sbus_with_ext_conns.cif", true);
 }
 
 
 void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa) {
-	// Write out the combined SBU's, including points of extension
-	// See SingleNodeDeconstructor::WriteCIFs for purpose of external_bond_pa (external connection PA's)
+	// Write out the combined SBU's, including points of extension.
+	// If external_bond_pa is true, also write out pseudoatoms corresponding to the next
+	// external atom connected to the point of extension.
 
 	// Combine SBU's from nodes and PoE's (assigned as linkers for topological convenience)
-	VirtualMol sbus = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
+	VirtualMol nodes = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
+	VirtualMol sbus = nodes;
 	sbus.AddVirtualMol(points_of_extension);
 	OBMol sbu_mol = sbus.ToOBMol();  // Copy POE's as new atoms
 
@@ -710,10 +712,27 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 		}
 	}
 
-	// if external_bond_pa, define the new bonds TODO FIXME
-	// POE_EXTERNAL_ATOM_NUM  // probably need to do 1/3 of the way, because sometimes two POEs are next to each other in the MOF (e.g. POXHER_clean.cif)
+	if (external_bond_pa) {
+		OBUnitCell* uc = getPeriodicLattice(parent_molp);
+		for (AtomSet::iterator it=poe_set.begin(); it!=poe_set.end(); ++it) {
+			OBAtom* poe_orig_atom = *it;  // PoE in the original MOF OBMol
+			FOR_NBORS_OF_ATOM(nbor, *poe_orig_atom) {
+				if (!nodes.HasAtom(&*nbor)) {  // external
+					// Calculate a distance 1/3 of the way from the PoE to the external atom to avoid overlapping atoms
+					// when two POEs are next to each other in the MOF (e.g. POXHER_clean.cif)
+					vector3 poe_pos = poe_orig_atom->GetVector();
+					vector3 external_pos = uc->UnwrapCartesianNear(nbor->GetVector(), poe_pos);
+					vector3 conn_pos = uc->WrapCartesianCoordinate((2.0*poe_pos + external_pos) / 3.0);
 
-	writeCIF(&sbu_mol, GetOutputPath("node_sbus.cif"));
+					PseudoAtom new_conn_atom = formAtom(&sbu_mol, conn_pos, POE_EXTERNAL_ELEMENT);
+					OBAtom* poe_mol_atom = v_to_mol_poe[poe_orig_atom];
+					formBond(&sbu_mol, poe_mol_atom, new_conn_atom, 1);
+				}
+			}
+		}
+	}
+
+	writeCIF(&sbu_mol, GetOutputPath(base_filename));
 }
 
 

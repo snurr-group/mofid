@@ -94,7 +94,7 @@ class SingleNodeDeconstructor : public Deconstructor {
 // of extension for the SBUs, which is more natural for tri-metallic clusters, etc., and always
 // considers linkers as a single SBU (never any branch points).
 protected:
-	const int POE_EXTERNAL_ATOM_NUM = 118;  // Og
+	const int POE_EXTERNAL_ELEMENT = 118;  // Og
 	VirtualMol points_of_extension;  // track SBU points of extension separately from atom roles
 
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
@@ -106,7 +106,7 @@ protected:
 public:
 	SingleNodeDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~SingleNodeDeconstructor() {};
-	virtual void WriteCIFs(bool external_bond_pa = true);
+	virtual void WriteCIFs();
 };
 
 
