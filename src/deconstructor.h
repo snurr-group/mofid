@@ -52,6 +52,7 @@ protected:
 
 	// Network simplification steps
 	virtual void DetectInitialNodesAndLinkers();
+	virtual void CollapseLinkers();
 	virtual bool CollapseNodes();
 	virtual void SimplifyTopology();
 	virtual void PostSimplification() {};
@@ -112,10 +113,10 @@ public:
 
 class AllNodeDeconstructor : public SingleNodeDeconstructor {
 // The all-node MOF deconstruction algorithm specified in 10.1021/acs.cgd.8b00126.
-// This algorithm is equivalent to the single node case, except for detecting branch points
-// within linkers.
+// This algorithm is equivalent to the single node case, except for
+// detecting branch points within linkers.
 protected:
-	virtual void PostSimplification();  // Detect branch points in the linkers
+	virtual void CollapseLinkers();  // Detect branch points in the linkers
 
 public:
 	AllNodeDeconstructor(OBMol* orig_mof = NULL) : SingleNodeDeconstructor(orig_mof) {};

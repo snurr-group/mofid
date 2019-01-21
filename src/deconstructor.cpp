@@ -135,11 +135,23 @@ void Deconstructor::DetectInitialNodesAndLinkers() {
 			simplified_net.SetRoleToAtoms("node", fragment_pa);  // consolidate neighboring metals in a later step
 		} else {
 			nonmetalMsg << "Deleting linker " << mol_smiles;
-			PseudoAtom collapsed = simplified_net.CollapseFragment(fragment_pa);
-			simplified_net.SetRoleToAtom("linker", collapsed);
+			simplified_net.SetRoleToAtoms("linker", fragment_pa);  // simplified later in CollapseLinkers()
 		}
 	}
 	obErrorLog.ThrowError(__FUNCTION__, nonmetalMsg.str(), obDebug);
+}
+
+
+void Deconstructor::CollapseLinkers() {
+	// Simplify the linker BB's into single points
+	// (similar to CollapseNodes, but simpler without periodic chains)
+	VirtualMol linker_pa = simplified_net.GetAtomsOfRole("linker");
+	linker_pa = simplified_net.FragmentWithIntConns(linker_pa);
+	std::vector<VirtualMol> linker_frags = linker_pa.Separate();
+	for (std::vector<VirtualMol>::iterator it=linker_frags.begin(); it!=linker_frags.end(); ++it) {
+		PseudoAtom collapsed = simplified_net.CollapseFragment(*it);
+		simplified_net.SetRoleToAtom("linker", collapsed);
+	}
 }
 
 
@@ -295,6 +307,7 @@ void Deconstructor::SimplifyMOF(bool write_intermediate_cifs) {
 
 	if (write_intermediate_cifs) { WriteSimplifiedNet("simplified_test_orig.cif"); }
 	DetectInitialNodesAndLinkers();
+	CollapseLinkers();
 	if (write_intermediate_cifs) { WriteSimplifiedNet("test_partial.cif"); }
 	infinite_node_detected = CollapseNodes();
 	if (write_intermediate_cifs) { WriteSimplifiedNet("test_with_simplified_nodes.cif"); }
@@ -649,6 +662,7 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 	VirtualMol node_pa = simplified_net.OrigToPseudo(nodes);
 	simplified_net.SetRoleToAtoms("node", node_pa);
 
+	// Assign linker type to PA's
 	// The remainder of the atoms are either organic SBUs or 2-c linkers by definition.
 	// Keep points of extension as part of the linkers to avoid issues with PoE-PoE bonds.
 	// Incorporating them as linkers will automatically take care of details like 2-c sites.
@@ -658,13 +672,8 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 			orig_linkers.AddAtom(&*a);
 		}
 	}
-	// Separate the linkers before conversion to PA, since PA's have complex connection PA's, too
-	std::vector<VirtualMol> orig_linker_frags = orig_linkers.Separate();
-	for (std::vector<VirtualMol>::iterator it=orig_linker_frags.begin(); it!=orig_linker_frags.end(); ++it) {
-		VirtualMol pa_frag = simplified_net.OrigToPseudo(*it);
-		PseudoAtom collapsed = simplified_net.CollapseFragment(pa_frag);
-		simplified_net.SetRoleToAtom("linker", collapsed);
-	}
+	VirtualMol pa_linkers = simplified_net.OrigToPseudo(orig_linkers);
+	simplified_net.SetRoleToAtoms("linker", pa_linkers);
 
 	// TODO: consider rewriting the base MOFid separation algorithm to be simpler/additive like this one
 
@@ -737,11 +746,10 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 
 
 
-void AllNodeDeconstructor::PostSimplification() {
+void AllNodeDeconstructor::CollapseLinkers() {
 	// Detect branch points in the linkers
+	SingleNodeDeconstructor::CollapseLinkers();  // TODO: do not call the single node version once implemented.  It will need to be custom
 	// TODO FIXME IMPLEMENT
-	SingleNodeDeconstructor::PostSimplification();
-	// And then some more
 }
 
 
