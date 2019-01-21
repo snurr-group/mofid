@@ -9,6 +9,7 @@
 #include <queue>
 #include <stack>
 #include <set>
+#include <utility>  // std::pair
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
@@ -325,7 +326,7 @@ void Deconstructor::WriteCIFs() {
 	mof_fsr.ToCIF(GetOutputPath("mof_fsr.cif"));
 
 	// Export the simplified net
-	simplified_net.ToSimplifiedCIF(GetOutputPath("removed_two_conn_for_topology.cif"));
+	simplified_net.ToSimplifiedCIF(GetOutputPath("simplified_topology_with_two_conn.cif"));
 	simplified_net.WriteSystre(GetOutputPath("topology.cgd"));
 }
 
@@ -405,9 +406,11 @@ void MOFidDeconstructor::PostSimplification() {
 }
 
 
+
 VirtualMol SingleNodeDeconstructor::GetNonmetalRingSubstituent(OBAtom* src) {
 	// Traverses through neighbors (and their neighbors) using a BFS to get the
 	// full set of atoms connected to src excluding rings and metals.
+	// Returns a VirtualMol including src, even if neighbors are not found
 	VirtualMol branch(src);
 	int failed_branches = 0;  // number of branches with rings and/or metals
 	std::queue<OBAtom*> to_visit;
@@ -437,11 +440,14 @@ VirtualMol SingleNodeDeconstructor::GetNonmetalRingSubstituent(OBAtom* src) {
 }
 
 
-VirtualMol SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) {
+std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) {
 	// Gets the nonmetal ring containing neighboring PA's a and b,
 	// plus attached hydrogens and any non-ring substituents
 	// (e.g. it won't grab a phenyl group or a fused ring).
 	// Returns an empty molecule if a and b are not in the same ring.
+
+	// The second VirtualMol has point(s) of extension.  The first VirtualMol is the ring minus those points.
+	// (could use a custom struct later if we need more fields)
 
 	// Verify that a and b are neighbors
 	bool found_b_nbor = false;
@@ -450,9 +456,11 @@ VirtualMol SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) 
 			found_b_nbor = true;
 		}
 	}
+	OBMol* parent_mol = b->GetParent();
 	if (!found_b_nbor) {
 		obErrorLog.ThrowError(__FUNCTION__, "OBAtom's a and b must be neighbors.", obError);
-		return VirtualMol(b->GetParent());  // empty molecule
+		// return empty molecules
+		return std::pair<VirtualMol,VirtualMol>(VirtualMol(parent_mol), VirtualMol(parent_mol));
 	}
 
 	// First run a DFS to get find the ring from a to b and get the neighbors
@@ -488,32 +496,31 @@ VirtualMol SingleNodeDeconstructor::CalculateNonmetalRing(OBAtom* a, OBAtom* b) 
 
 	if (seen.find(b) == seen.end()) {
 		obErrorLog.ThrowError(__FUNCTION__, "Could not find a ring containing both atoms", obError);
-		return VirtualMol(b->GetParent());
+		return std::pair<VirtualMol,VirtualMol>(VirtualMol(parent_mol), VirtualMol(parent_mol));
 	}
-
-	// number of ring atoms with nbors that are part of rings, excluding a and b
-	int num_ring_attachments = 0;
 
 	// Traverse back through the ring, filling in the side substituents
 	VirtualMol ring(b);
+	VirtualMol points_of_extension(b->GetParent());  // ring atoms with nbors that are part of rings, excluding a and b
 	OBAtom* curr_ring_atom = seen[b];
 	while (curr_ring_atom != a) {
 		ring.AddAtom(curr_ring_atom);
 		if (curr_ring_atom->GetValence() > 2) {  // has non-ring coordination
 			VirtualMol substituents = GetNonmetalRingSubstituent(curr_ring_atom);
-			if (substituents.NumAtoms() == 0) {
-				++num_ring_attachments;  // empty if the atoms are the wrong type
+			if (substituents.NumAtoms() == 1) {  // single curr_ring_atom if connection has rings, metals, etc.
+				points_of_extension.AddAtom(curr_ring_atom);
+				ring.RemoveAtom(curr_ring_atom);
 			} else {
 				ring.AddVirtualMol(substituents);
 			}
 		}
 		curr_ring_atom = seen[curr_ring_atom];
 	}
-	if (num_ring_attachments > 1) {  // allow one to connect to an organic nodular BB, etc.
+	if (points_of_extension.NumAtoms() > 1) {  // allow one to connect to an organic nodular BB, etc.
 		obErrorLog.ThrowError(__FUNCTION__, "Possibly found a fused ring.  Skipped attachments to other rings", obWarning);
 	}
 
-	return ring;
+	return std::pair<VirtualMol,VirtualMol>(ring, points_of_extension);
 }
 
 
@@ -528,6 +535,7 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 
 	// Start node identification by detecting metals
 	VirtualMol nodes(parent_molp);
+	VirtualMol points_of_extension(parent_molp);
 	FOR_ATOMS_OF_MOL(a, *parent_molp) {
 		if (isMetal(&*a)) {
 			nodes.AddAtom(&*a);
@@ -599,7 +607,7 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 					nodes.RemoveAtom(nn);  // not part of an SBU cluster
 				} else {
 					// If there is a bridge, include the carboxylate carbon as part of the SBU
-					nodes.AddAtom(attached_nonmetal);
+					points_of_extension.AddAtom(attached_nonmetal);
 					visited_bridges.AddAtom(nn);
 					visited_bridges.AddAtom(oxygen_bridge);
 					// Get hydrogens attached to the second oxygen atom
@@ -627,7 +635,9 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 			if (!bridge_bw_metals) {  // Binding end-on, e.g. pillared MOFs, porphyrins, and probably amines
 				nodes.RemoveAtom(nn);  // not part of an SBU cluster
 			} else {  // If there is a bridge, grab the whole ring
-				nodes.AddVirtualMol(CalculateNonmetalRing(nn, bridge_bw_metals));
+				std::pair<VirtualMol,VirtualMol> ring_info = CalculateNonmetalRing(nn, bridge_bw_metals);
+				nodes.AddVirtualMol(ring_info.first);
+				points_of_extension.AddVirtualMol(ring_info.second);
 				visited_bridges.AddAtom(nn);
 				visited_bridges.AddAtom(bridge_bw_metals);
 			}
@@ -639,10 +649,25 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 	VirtualMol node_pa = simplified_net.OrigToPseudo(nodes);
 	simplified_net.SetRoleToAtoms("node", node_pa);
 
+	// Delete points of extension to sidestep issues with 2-c PA's.
+	// By iterating through all the points, this should also take care of two POE's bonded directly to one another.
+	// Originally I thought about doing this in post-simplification, but that timing might be incompatible with other steps.
+	AtomSet poe_to_simplify = simplified_net.OrigToPseudo(points_of_extension).GetAtoms();
+	for (AtomSet::iterator it=poe_to_simplify.begin(); it!=poe_to_simplify.end(); ++it) {
+		PseudoAtom poe_pa = *it;
+		// Originally had a test simplified_net.GetAtoms().HasAtom(poe_pa), but I don't think it's necessary
+		// TODO: think more about POE-POE bonds, especially like POXHER
+		// Maybe the solution is to keep the points of extension as a Deconstructor variable but otherwise assign them to the linkers
+		// and possibly have special code to remove them from the linker CIF export.
+		// In that case, I think the 2-c linker code would automatically handle these points without needing to worry about
+		// having neighboring 2-c sites.  I could always put something in PostSimplify, worst case.
+		simplified_net.DeleteAtomKeepConns(poe_pa, "point of extension");
+	}
+
 	// The remainder of the atoms are either organic SBUs or 2-c linkers by definition
 	VirtualMol orig_linkers(parent_molp);
 	FOR_ATOMS_OF_MOL(a, *parent_molp) {
-		if (!nodes.HasAtom(&*a)) {
+		if (!nodes.HasAtom(&*a) && !points_of_extension.HasAtom(&*a)) {
 			orig_linkers.AddAtom(&*a);
 		}
 	}
@@ -662,9 +687,72 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 }
 
 
+void SingleNodeDeconstructor::WriteCIFs(bool external_bond_pa) {
+	// Call base class exporter, plus the new outputs
+	// If external_bond_pa is true, also write out pseudoatoms corresponding to the next atom
+	// connected to the point of extension.
+	Deconstructor::WriteCIFs();
+	simplified_net.GetDeletedOrigAtoms("point of extension").ToCIF(GetOutputPath("points_of_extension.cif"));
+	WriteSBUs("node_sbus.cif", external_bond_pa);
+}
+
+
+void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa) {
+	// Write out the combined SBU's, including points of extension
+	// See SingleNodeDeconstructor::WriteCIFs for purpose of external_bond_pa (external connection PA's)
+
+	VirtualMol nodes = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
+	AtomSet poe = simplified_net.GetDeletedOrigAtoms("point of extension").GetAtoms();
+
+	// Get mapping of bonds to restore between the node and point of extension
+	typedef std::map< OBAtom*, std::pair<OBAtom*, int> > node_to_poe_bond;  // < node_atom, <POE, BO> >
+	node_to_poe_bond bond_mapping;
+	for (AtomSet::iterator pt=poe.begin(); pt!=poe.end(); ++pt) {
+		OBAtom* point_of_extension = *pt;
+		FOR_NBORS_OF_ATOM(nbor, *point_of_extension) {
+			if (nodes.HasAtom(&*nbor)) {
+				int bond_order = nbor->GetBond(point_of_extension)->GetBondOrder();
+				if (bond_mapping.find(&*nbor) != bond_mapping.end()) {
+					obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found a node atom bonded to multiple points of extension.", obWarning);
+				}
+				bond_mapping[&*nbor] = std::pair<OBAtom*,int>(point_of_extension, bond_order);
+			}
+		}
+	}  // TODO ABOVE: incrementally add the POE's plus the [Lr] atom optionally?
+
+	// Copy POE's as new atoms
+	OBMol exported_sbus = nodes.ToOBMol();
+	std::map<OBAtom*, OBAtom*> v_to_mol_poe;
+	for (AtomSet::iterator it = poe.begin(); it != poe.end(); ++it) {
+		OBAtom* mol_poe_atom = formAtom(&exported_sbus, (*it)->GetVector(), POE_EXTERNAL_ATOM_NUM);
+		v_to_mol_poe[*it] = mol_poe_atom;
+	}
+
+	// Form bonds with points of extension
+	for (node_to_poe_bond::iterator it=bond_mapping.begin(); it!=bond_mapping.end(); ++it) {
+		OBAtom* node_mol_atom = atomInOtherMol(it->first, &exported_sbus);
+		if (!node_mol_atom) {
+			obErrorLog.ThrowError(__FUNCTION__, "Could not match node atoms between old and new mols!  Unexpected accounting error!", obError);
+			continue;
+		}
+		OBAtom* poe_mol_atom = v_to_mol_poe[it->second.first];
+		int poe_bo = it->second.second;
+		formBond(&exported_sbus, node_mol_atom, poe_mol_atom, poe_bo);
+	}
+
+	// FIXME HERE: implementing the external_bond_pa flag
+	// POE_EXTERNAL_ATOM_NUM  // probably need to do 1/3 of the way, because sometimes two POEs are next to each other in the MOF (e.g. POXHER_clean.cif)
+
+	writeCIF(&exported_sbus, GetOutputPath("node_sbus.cif"));
+}
+
+
+
 void AllNodeDeconstructor::PostSimplification() {
 	// Detect branch points in the linkers
 	// TODO FIXME IMPLEMENT
+	SingleNodeDeconstructor::PostSimplification();
+	// And then some more
 }
 
 

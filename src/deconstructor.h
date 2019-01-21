@@ -6,6 +6,7 @@ deconstructor.h - Deconstruct a MOF into its building blocks and simplified net
 #define DECONSTRUCTOR_H
 
 #include <string>
+#include <utility>  // std::pair
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/generic.h>
@@ -93,14 +94,18 @@ class SingleNodeDeconstructor : public Deconstructor {
 // of extension for the SBUs, which is more natural for tri-metallic clusters, etc., and always
 // considers linkers as a single SBU (never any branch points).
 protected:
+	const int POE_EXTERNAL_ATOM_NUM = 118;  // Og
+
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
-	virtual void PostSimplification() {};  // do not run a MOFid 4-to-2x3 step for MIL-type MOFs
-	static VirtualMol CalculateNonmetalRing(OBAtom* a, OBAtom* b);
+	virtual void PostSimplification() {};  // do not inherit the MOFid 4-to-2x3 step
+	void WriteSBUs(const std::string &base_filename, bool external_bond_pa);
+	static std::pair<VirtualMol,VirtualMol> CalculateNonmetalRing(OBAtom* a, OBAtom* b);
 	static VirtualMol GetNonmetalRingSubstituent(OBAtom* src);
 
 public:
 	SingleNodeDeconstructor(OBMol* orig_mof = NULL) : Deconstructor(orig_mof) {};
 	virtual ~SingleNodeDeconstructor() {};
+	virtual void WriteCIFs(bool external_bond_pa = true);
 };
 
 
