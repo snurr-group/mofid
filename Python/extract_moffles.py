@@ -11,8 +11,6 @@ together.
 """
 
 import subprocess32  # Install with pip or from https://github.com/google/python-subprocess32
-import glob
-import json
 # import re
 # import openbabel  # for visualization only, since my changes aren't backported to the python library
 import sys, os
@@ -136,7 +134,7 @@ def parse_moffles(moffles):
 			raise ValueError("MOF metadata required")
 	smiles = components[0]
 	if len(components) > 2:
-		print "Bad MOFFLES:", moffles
+		print("Bad MOFFLES:", moffles)
 		raise ValueError("FIXME: parse_moffles currently does not support spaces in common names")
 	metadata = components[1]
 	metadata = metadata.split('.')
@@ -184,4 +182,4 @@ if __name__ == "__main__":
 	if len(args) == 2:
 		output_systre_and_cif_path = args[1]
 	
-	print cif2moffles(cif_file, output_systre_and_cif_path)
+	print(cif2moffles(cif_file, output_systre_and_cif_path))

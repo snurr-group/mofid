@@ -15,11 +15,11 @@ import glob
 import json
 import time
 import copy  # copy.deepcopy(x)
-import warnings
+#import warnings
 # import re
 
 from cpp_cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
+from extract_moffles import cif2moffles, assemble_moffles, parse_moffles
 from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
@@ -366,7 +366,7 @@ class HypoMOFs(MOFCompare):
 			sbu_codes = ['i', 'j', 'k']
 			for part in sbu_codes:
 				smiles = self.mof_db[code_key[part]][codes[part]]
-				# print "SMILES:", smiles
+				# print("SMILES:", smiles)
 				if smiles not in sbus:
 					sbus.append(smiles)
 			sbus.sort()

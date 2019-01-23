@@ -66,7 +66,6 @@ def openbabel_replace(mol_smiles, query, replacement):
 def openbabel_contains(mol_smiles, query):
 	# Checks if a molecule (including multi-fragment contains a SMARTS match
 	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query), "-xi", "-ocan"])
-	cpp_output = cpp_run.stdout
 	if (cpp_run.stderr == "1 molecule converted\n"):
 		return True
 	elif (cpp_run.stderr == "0 molecules converted\n"):

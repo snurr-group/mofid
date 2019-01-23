@@ -12,7 +12,8 @@ should also find the MOF topology as a user-friendly classification tool.
 """
 
 import pybel
-import openbabel
+import os
+#import openbabel
 
 def get_unique_smiles(filename):
     # Return a list of unique canonical SMILES representations of a molecule
@@ -21,9 +22,9 @@ def get_unique_smiles(filename):
     separate_mols = mol_class.Separate()
     unique_smiles = []
     for molecule in separate_mols:
-        #print molecule.AddHydrogens()
+        #print(molecule.AddHydrogens())
         #for atom in openbabel.OBMolAtomIter(molecule):
-            #print atom.GetAtomicNum(), atom.GetSpinMultiplicity()
+            #print(atom.GetAtomicNum(), atom.GetSpinMultiplicity())
             #atom.ForceImplH()
         mol_smiles = pybel.Molecule(molecule).write("can").split("\t")[0]
         if mol_smiles not in unique_smiles:
@@ -31,10 +32,9 @@ def get_unique_smiles(filename):
     return unique_smiles
 
 
-import os
-print os.getcwd()
+print(os.getcwd())
 CIF_PATH = "../../Resources/TestCIFs/"
-print "HKUST-1", get_unique_smiles(os.path.join(CIF_PATH, "DOTSOV_clean.cif"))
-print "IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "P1-IRMOF-1.cif"))
-print "IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "VUSKEA_clean.cif"))
-print "Pillar (noncatenated EDOMAM)", get_unique_smiles(os.path.join(CIF_PATH, "hypotheticalMOF_5071180_i_2_j_25_k_1_m_0.cif"))
+print("HKUST-1", get_unique_smiles(os.path.join(CIF_PATH, "DOTSOV_clean.cif")))
+print("IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "P1-IRMOF-1.cif")))
+print("IRMOF-1", get_unique_smiles(os.path.join(CIF_PATH, "VUSKEA_clean.cif")))
+print("Pillar (noncatenated EDOMAM)", get_unique_smiles(os.path.join(CIF_PATH, "hypotheticalMOF_5071180_i_2_j_25_k_1_m_0.cif")))

@@ -15,7 +15,7 @@ import os, sys
 import extract_metals
 
 def usage():
-	print "Usage: python remove_metals.py smiles_part.tsv > smiles_nonmetals.tsv"
+	print("Usage: python remove_metals.py smiles_part.tsv > smiles_nonmetals.tsv")
 	exit()
 
 def contains_metal(smiles):

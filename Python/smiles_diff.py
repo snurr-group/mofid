@@ -8,7 +8,7 @@ Report common classes of errors in the calculated MOFid.
 @author: Ben Bucior
 """
 
-import sys, os
+import sys
 import re
 
 from cpp_cheminformatics import ob_normalize, openbabel_replace, openbabel_formula, openbabel_GetSpacedFormula
@@ -172,4 +172,4 @@ if __name__ == "__main__":
 	if len(args) != 2:
 		usage()
 
-	print multi_smiles_diff(args[0], args[1])
+	print(multi_smiles_diff(args[0], args[1]))

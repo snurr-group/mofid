@@ -16,13 +16,13 @@ MOFs for generating linker SMILES, for now.
 @author: Ben Bucior
 """
 
-import os, sys
+import sys
 
 from check_mof_linkers import TobaccoMOFs
 from extract_moffles import assemble_moffles
 
 def usage():
-	print "Usage: python list_to_moffles.py FILENAME_LIST.txt > MOFFLES.smi"
+	print("Usage: python list_to_moffles.py FILENAME_LIST.txt > MOFFLES.smi")
 	exit()
 
 if __name__ == "__main__":
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 	for line in file_names:
 		expectation = compiler.expected_moffles(line)
 		if expectation is None:
-			print assemble_moffles("*", "NA", mof_name=compiler.parse_filename(line)['name'])
+			print(assemble_moffles("*", "NA", mof_name=compiler.parse_filename(line)['name']))
 		else:
-			print compiler.expected_moffles(line)['default']
+			print(compiler.expected_moffles(line)['default'])
 	

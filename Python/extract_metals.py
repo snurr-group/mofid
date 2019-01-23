@@ -8,12 +8,12 @@ Based on remove_metals.py, but with the purpose of saving the metal compositions
 @author: Ben Bucior
 """
 
-import os, sys
+import sys
 
 import old_cheminformatics
 
 def usage():
-	print "Usage: python extract_metals.py smiles.tsv > smiles_metals.tsv"
+	print("Usage: python extract_metals.py smiles.tsv > smiles_metals.tsv")
 	exit()
 
 # Establish a list of nonmetals based on sbu.cpp
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 	
 	tsv_header = False
 	if tsv_header:
-		print tsv_data.pop(0)
+		print(tsv_data.pop(0))
 	
 	for line in tsv_data:
 		[refcode, smiles] = line.split("\t")
@@ -54,5 +54,5 @@ if __name__ == "__main__":
 		if len(metals) == 0:
 			metals = ['NA']
 		for metal in metals:
-			print "\t".join([refcode, str(metal)])
+			print("\t".join([refcode, str(metal)]))
 	
