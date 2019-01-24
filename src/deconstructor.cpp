@@ -1025,10 +1025,10 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		}
 	}
 	for (std::vector<VirtualMol>::iterator conn_set=conns_to_combine.begin(); conn_set!=conns_to_combine.end(); ++conn_set) {
-		// Make a new PA randomly at one of the existing connection sites
-		// TODO: make a nicer looking centroid
-		// The proper way of doing it would probably calculating the centroid from the origin atoms, for a future commit.
-		PseudoAtom new_conn = formAtom(frag_molp, (*(conn_set->GetAtoms().begin()))->GetVector(), TREE_BRANCH_POINT);
+		// Make a new PA at the centroid of the existing connection sites
+		OBMol conn_mol = conn_set->ToOBMol();
+		vector3 conn_centroid = getCentroid(&conn_mol, false);
+		PseudoAtom new_conn = formAtom(frag_molp, conn_centroid, TREE_BRANCH_POINT);
 		VirtualMol new_origin_map = VirtualMol(frag_map->origin_molp);
 
 		// Keep bonds, remove original connection atoms, and update MappedMol accounting
@@ -1077,10 +1077,10 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		}
 	}
 	for (std::vector<VirtualMol>::iterator branch_set=branches_to_combine.begin(); branch_set!=branches_to_combine.end(); ++branch_set) {
-		// Make a new PA randomly at one of the existing branch sites
-		// TODO: make a nicer looking centroid
-		// The proper way of doing it would probably calculating the centroid from the origin atoms, for a future commit.
-		PseudoAtom new_branch = formAtom(frag_molp, (*(branch_set->GetAtoms().begin()))->GetVector(), TREE_INT_BRANCH);
+		// Make a new PA at the centroid of the branch sites
+		OBMol branch_mol = branch_set->ToOBMol();
+		vector3 branch_centroid = getCentroid(&branch_mol, false);
+		PseudoAtom new_branch = formAtom(frag_molp, branch_centroid, TREE_INT_BRANCH);
 		VirtualMol new_origin_map = VirtualMol(frag_map->origin_molp);
 
 		// Keep bonds, remove original branch PA's, and update MappedMol accounting
@@ -1182,11 +1182,11 @@ void AllNodeDeconstructor::CollapseRings(MappedMol *fragment_to_simplify, bool f
 	for (std::vector<VirtualMol>::iterator r=rings_to_simplify.begin(); r!=rings_to_simplify.end(); ++r) {
 		AtomSet r_nbors;
 		AtomSet r_atoms = r->GetAtoms();
-		VirtualMol r_origin_atoms(fragment_to_simplify->origin_molp);
 
-		// Use a random atom as the reference anchor for periodicity
-		vector3 ref_loc = (*(r_atoms.begin()))->GetVector();
-		vector3 ring_loc(0.0, 0.0, 0.0);
+		OBMol r_mol = r->ToOBMol();
+		vector3 r_loc = getCentroid(&r_mol, false);
+
+		VirtualMol r_origin_atoms(fragment_to_simplify->origin_molp);
 
 		for (AtomSet::iterator it=r_atoms.begin(); it!=r_atoms.end(); ++it) {
 			FOR_NBORS_OF_ATOM(nbor, **it) {
@@ -1198,13 +1198,11 @@ void AllNodeDeconstructor::CollapseRings(MappedMol *fragment_to_simplify, bool f
 			r_origin_atoms.AddVirtualMol(fragment_to_simplify->copy_pa_to_multiple[*it]);
 			fragment_to_simplify->copy_pa_to_multiple.erase(*it);
 
-			ring_loc += uc->UnwrapCartesianNear((*it)->GetVector(), ref_loc);
 			frag_molp->DeleteAtom(*it);
 		}
-		ring_loc = uc->WrapCartesianCoordinate(ring_loc / r->NumAtoms());
 
 		// Replace the ring atoms with PA connected to the old neighbors
-		PseudoAtom new_ring_pa = formAtom(frag_molp, ring_loc, TREE_PA_ELEMENT);
+		PseudoAtom new_ring_pa = formAtom(frag_molp, r_loc, TREE_PA_ELEMENT);
 		fragment_to_simplify->copy_pa_to_multiple[new_ring_pa] = r_origin_atoms;
 		for (AtomSet::iterator nbor_to_bond=r_nbors.begin(); nbor_to_bond!=r_nbors.end(); ++nbor_to_bond) {
 			formBond(frag_molp, new_ring_pa, *nbor_to_bond, 1);
