@@ -133,7 +133,7 @@ protected:
 public:
 	AllNodeDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~AllNodeDeconstructor() {};
-	// virtual void WriteCIFs();  // TODO: also write branch info
+	virtual void WriteCIFs();
 };
 
 

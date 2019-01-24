@@ -767,48 +767,65 @@ void AllNodeDeconstructor::CollapseLinkers() {
 		TreeDecomposition(&frag_all_node, int_conns);
 
 		// Collapse linkers by applying the changes indicated from frag_all_node.
-		// Branch points are kept, and branches (internal/connectors) define the bonds
+		// Branch points are kept, and branches (internal/connectors) can are simplified into bonds.
+		// Recall that collapseSBU will automatically handle external bonds to the rest of the simplified net.
+		// If there are issues from simplification, one potential place to look is handling the connection PA's more explicitly.
 
-		// TODO:
-		// Local variables for "Branch" and "branch point"?  If a point is 2-c, keep it locally as a branch, o/w a "branch point" in the simplified net
-		// delete the branches from the simplified net
+		// Collapse branch points, keeping track of the new PA's for branch simplification later
+		std::map<PseudoAtom, PseudoAtom> mapped_to_net;
+		std::map<PseudoAtom, PseudoAtom> net_to_mapped;
 		FOR_ATOMS_OF_MOL(pa, frag_all_node.mol_copy) {
-			// TODO: ACTUALLY IMPLEMENT THE CHANGES TO THE NET
-			// In the meantime, WriteSystre will raise many warnings about 2-c nodes because the linkers aren't actually being modified
+			if (pa->GetAtomicNum() == TREE_BRANCH_POINT) {
+				VirtualMol pa_network = frag_all_node.copy_pa_to_multiple[&*pa];
+				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
+				simplified_net.SetRoleToAtom("linker", collapsed);
+				branch_points.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));  // TODO: also consider the simplified atoms instead of original
 
-
-			// Some notes/ideas for implementation are saved below:
-
-
-			// Should we keep a mapping from the new simplified topology back to the mapped mol simplification, before this loop?
-
-			// First raise an error if not one of branch, branch point, connector of atom type.
-
-			// Then, in this same loop, collapse branches and connections, keeping track of the new PA's to potentially delete later (and keep track of their nbors in the VirtualMol)
-			// -- collapseSBU will implicitly handle bonds to other parts of the simplified net.
-			// -- Remember, the objective of the MappedMol is to identify PA's as branches/BP's, not to manually run simplifications.
-
-			// Then a new loop over FOR_ATOMS_OF_MOL, this time generating branch points
-			// Then merge branch/connections to one of their BP neighbors
-			// -- Detail to check: does the MergeAtomToAnother keep track of these other bonds?  If not, re-form the other external connections
-
+				mapped_to_net[&*pa] = collapsed;
+				net_to_mapped[collapsed] = &*pa;
+			} else if (pa->GetAtomicNum() != TREE_EXT_CONN && pa->GetAtomicNum() != TREE_INT_BRANCH) {
+				obErrorLog.ThrowError(__FUNCTION__, "Found unexpected pseudoatom type in MappedMol", obError);
+			}
 		}
-
-// NEED MORE TESTS TO DEMONSTRATE THE TREE DECONSTRUCTION
-// If I run into issues during simplification, I may need to think about the connection PA's more explicitly
-
 /*
-		// Some old code from the base case of CollapseLinkers
-		PseudoAtom collapsed = simplified_net.CollapseFragment(*it);
-		simplified_net.SetRoleToAtom("linker", collapsed);
+// Currently having problems with branch simplification: I suspect it's the handling of connection pseudoatoms, which should probably be stripped from the frag before
+// copying to TreeDecomposition and running anything with a MappedMol, since they aren't really real pseudoatoms corresponding to real MOF atoms
+		// Collapse branches as bonds
+		FOR_ATOMS_OF_MOL(pa, frag_all_node.mol_copy) {
+			if (pa->GetAtomicNum() == TREE_EXT_CONN || pa->GetAtomicNum() == TREE_INT_BRANCH) {
+				// Check expected valencies
+				if (pa->GetAtomicNum() == TREE_EXT_CONN) {
+					if (pa->GetValence() != 1) {
+						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_EXT_CONN with an unexpected implicit valence", obError);
+						continue;
+					}
+				} else if (pa->GetAtomicNum() == TREE_INT_BRANCH) {
+					if (pa->GetValence() != 2) {
+						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_INT_BRANCH with an unexpected implicit valence", obError);
+						continue;
+					}
+				}
+
+				std::vector<PseudoAtom> map_nbors;
+				FOR_NBORS_OF_ATOM(nbor, *pa) {
+					// CHECK COMPOSITION OF NBORS OR RAISE AN ISSUE -- must all be BP's
+					map_nbors.push_back(&*nbor);
+				}
+
+				VirtualMol pa_network = frag_all_node.copy_pa_to_multiple[&*pa];
+				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
+				simplified_net.SetRoleToAtom("linker", collapsed);
+
+
+
+				// GET OTHER NBORS IN THE SIMPLIFIED NET THEN DELETE THOSE CONNECTIONS
+				// MergeAtomToAnother
+				// Re-form external bonds
+
+			}
+		}
 */
-
-		// Recall that points of extension are part of the linkers, so they're the internal part of a ConnIntToExt
-
 	}
-
-	// TODO FIXME FINISH THIS CODE
-
 }
 
 
@@ -1190,6 +1207,14 @@ void AllNodeDeconstructor::CollapseRings(MappedMol *fragment_to_simplify, bool f
 			formBond(frag_molp, new_ring_pa, *nbor_to_bond, 1);
 		}
 	}
+}
+
+
+void AllNodeDeconstructor::WriteCIFs() {
+	// Call base class exporter, plus new outputs for branch info
+	SingleNodeDeconstructor::WriteCIFs();
+	branch_points.ToCIF(GetOutputPath("branch_points.cif"));
+	branches.ToCIF(GetOutputPath("branches.cif"));
 }
 
 
