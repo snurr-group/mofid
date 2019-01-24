@@ -116,11 +116,24 @@ class AllNodeDeconstructor : public SingleNodeDeconstructor {
 // This algorithm is equivalent to the single node case, except for
 // detecting branch points within linkers.
 protected:
-	virtual void CollapseLinkers();  // Detect branch points in the linkers
+	// Atom type codes used by the MappedMol in TreeDecomposition()
+	const int TREE_PA_ELEMENT = 118;  // Og
+	const int TREE_INT_BRANCH = 117;  // Ts
+	const int TREE_BRANCH_POINT = 116;  // Lv
+	const int TREE_EXT_CONN = 115;  // Mc
+
+	VirtualMol branches;
+	VirtualMol branch_points;
+
+	virtual void CollapseLinkers();  // Detect branch points in the linker
+
+	void TreeDecomposition(MappedMol *fragment_to_simplify, VirtualMol connection_points);
+	void CollapseRings(MappedMol *fragment_to_simplify, bool fuse_bridged_rings = true);
 
 public:
-	AllNodeDeconstructor(OBMol* orig_mof = NULL) : SingleNodeDeconstructor(orig_mof) {};
+	AllNodeDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~AllNodeDeconstructor() {};
+	// virtual void WriteCIFs();  // TODO: also write branch info
 };
 
 

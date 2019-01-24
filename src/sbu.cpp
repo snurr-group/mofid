@@ -124,12 +124,10 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	sn_simplify.SimplifyMOF();
 	sn_simplify.WriteCIFs();
 
-	/*
 	AllNodeDeconstructor an_simplify(&orig_mol);
 	an_simplify.SetOutputDir(output_dir + ALL_NODE_SUFFIX);
 	an_simplify.SimplifyMOF();
 	an_simplify.WriteCIFs();
-	*/
 
 	return simplifier.GetMOFInfo();
 }

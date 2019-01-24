@@ -655,7 +655,6 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 	}
 
 	// Assign node PA's
-	// TODO: consider adding a CollapseLinkers step to SimplifyMOF(), which separates the PA's and collapses
 	VirtualMol node_pa = simplified_net.OrigToPseudo(nodes);
 	simplified_net.SetRoleToAtoms("node", node_pa);
 
@@ -739,10 +738,478 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 
 
 
+AllNodeDeconstructor::AllNodeDeconstructor(OBMol* orig_mof) : SingleNodeDeconstructor(orig_mof) {
+	branches = VirtualMol(orig_mof);
+	branch_points = VirtualMol(orig_mof);
+}
+
 void AllNodeDeconstructor::CollapseLinkers() {
-	// Detect branch points in the linkers
-	SingleNodeDeconstructor::CollapseLinkers();  // TODO: do not call the single node version once implemented.  It will need to be custom
-	// TODO FIXME IMPLEMENT
+	// Detect branch points in the linkers, then collapse into PA's
+	// Overrides a base class version, e.g. SingleNodeDeconstructor::CollapseLinkers() or inherited
+
+	// Start with a description from the single-node decomposition
+	VirtualMol linker_pa = simplified_net.GetAtomsOfRole("linker");
+	linker_pa = simplified_net.FragmentWithIntConns(linker_pa);
+	std::vector<VirtualMol> single_node_frags = linker_pa.Separate();
+
+	for (std::vector<VirtualMol>::iterator frag=single_node_frags.begin(); frag!=single_node_frags.end(); ++frag) {
+		MappedMol frag_all_node;  // simplified all-node fragment
+		frag->CopyToMappedMol(&frag_all_node);
+
+		// Get connection sites from fragment to external PA's
+		ConnIntToExt pa_int_to_ext = frag->GetExternalBondsOrConns();  // already has IntConns from linker_pa assignment
+		VirtualMol int_conns(frag->GetParent());
+		for (ConnIntToExt::iterator it=pa_int_to_ext.begin(); it!=pa_int_to_ext.end(); ++it) {
+			int_conns.AddAtom(it->first);
+		}
+
+		// Identify branches and branch points
+		TreeDecomposition(&frag_all_node, int_conns);
+
+		// Collapse linkers by applying the changes indicated from frag_all_node.
+		// Branch points are kept, and branches (internal/connectors) define the bonds
+		FOR_ATOMS_OF_MOL(pa, frag_all_node.mol_copy) {
+			// TODO: ACTUALLY IMPLEMENT THE CHANGES TO THE NET
+			// In the meantime, WriteSystre will raise many warnings about 2-c nodes because the linkers aren't actually being modified
+
+
+			// Some notes/ideas for implementation are saved below:
+
+
+			// Should we keep a mapping from the new simplified topology back to the mapped mol simplification, before this loop?
+
+			// First raise an error if not one of branch, branch point, connector of atom type.
+			// Then, in this same loop, collapse branch points.
+			// If there's int_conns, consider connecting to the external atoms via pa_int_to_ext (???)
+			// -> Consider that the BP will probably implicitly handle these details via the nature of collapseSBU
+
+			// Then a new loop over FOR_ATOMS_OF_MOL
+			// This time, check for internal branches and external connector branches
+			// If internal, delete the atoms and connect the new versions of the neighboring two MappedMol atoms.
+			// -- better yet, for these we have MergeAtomToAnother
+			// If external, do a hybrid where I connect all the connected BP's to the external ones (should be 2-c, so only one)
+			// Should probably raise a warning if there's more than one BP per connector
+
+
+			// When I do this, recall that we should track branches and branch points, but try to keep them in linker
+			// roles instead of deleting them from the net, which would mess up the export of linkers.cif.
+			// (probably just lump it with one of the two BP's at random?)
+
+			// BE CAREFUL IF A BRANCH POINT CONTAINS ZERO ACTUAL ATOMS (COULD HAPPEN IF IT'S ENTIRELY COMPOSED OF CONNECTIONS)
+			//--that's verifiable by counting the number of connection sites, or rather that it's only connected to connectors (and possibly something about number of atoms in ring--maybe a warning if not 5-6?)
+			// Maintain a list of 0-c atoms, then at the end after merging atoms, raise a warning if they're still 0-c sites
+		}
+
+// Local variables for "Branch" and "branch point"?  If a point is 2-c, keep it locally as a branch, o/w a "branch point" in the simplified net
+// delete the branches from the simplified net
+
+// NEED MORE TESTS TO DEMONSTRATE THE TREE DECONSTRUCTION
+// If I run into issues during simplification, I may need to think about the connection PA's more explicitly
+
+/*
+		// Some old code from the base case of CollapseLinkers
+		PseudoAtom collapsed = simplified_net.CollapseFragment(*it);
+		simplified_net.SetRoleToAtom("linker", collapsed);
+*/
+
+		// Recall that points of extension are part of the linkers, so they're the internal part of a ConnIntToExt
+
+	}
+
+	// TODO FIXME FINISH THIS CODE
+
+}
+
+
+void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, VirtualMol connection_points) {
+	// Collapse an abstract, organic fragment molecule into its "all-node" representation.
+	// Inspired by Algorithm 2 of arXiv:1802.04364v2, except instead of calculating the minimum
+	// spanning tree, our goal is to fully simplify the graph and account for endpoint connectors.
+
+	// Keeps connection_points from fragment_to_simplify->origin_molp (the simplified topology OBMol)
+	// as branches instead of collapsing them into branch points.  In the end, there will be 3 atom types:
+	// 1. TREE_BRANCH_POINT: internal branch point, i.e. the key difference between the all-node and single-node algorithms
+	// 2. TREE_EXT_CONN: branch referencing connection_points, which link externally to the rest of the framework
+	// 3. TREE_INT_BRANCH: internal branches connecting two branch points
+
+	// My apologies for the long function:
+
+	// Option to write out the intermediate results as CIFs for debugging or demonstrating the algorithm.
+	// Note: TreeDecomposition is usually called many times per MOF, so only the last set of CIFs will be kept
+	const bool DEBUG_WITH_CIFS = false;
+
+	// Aliases
+	MappedMol* frag_map = fragment_to_simplify;
+	OBMol* frag_molp = &(frag_map->mol_copy);
+
+	// Invalidate 1:1 mappings since we will be collapsing PA's
+	frag_map->origin_to_copy.clear();
+	frag_map->copy_to_origin.clear();
+
+	// If there are no external connection points (e.g. free solvent), simplify to a single point
+	if (connection_points.NumAtoms() == 0) {
+		vector3 centroid = getCentroid(frag_molp, false);
+		VirtualMol frag_atoms(frag_molp);
+		FOR_ATOMS_OF_MOL(a, *frag_molp) {
+			frag_atoms.AddAtom(&*a);
+		}
+		AtomSet frag_atoms_set = frag_atoms.GetAtoms();
+
+		PseudoAtom single_point = formAtom(frag_molp, centroid, TREE_BRANCH_POINT);
+		VirtualMol all_origins(frag_map->origin_molp);
+		for (AtomSet::iterator it=frag_atoms_set.begin(); it!=frag_atoms_set.end(); ++it) {
+			all_origins.AddVirtualMol(frag_map->copy_pa_to_multiple[*it]);
+			frag_map->copy_pa_to_multiple.erase(*it);
+			frag_molp->DeleteAtom(*it);
+		}
+		frag_map->copy_pa_to_multiple[single_point] = all_origins;
+
+		if (frag_map->copy_pa_to_multiple.size() != 1) {
+			obErrorLog.ThrowError(__FUNCTION__, "Assertion: incorrect number of entries in MappedMol.copy_pa_to_multiple", obError);
+		}
+		return;
+	}
+
+	// Rings to collapsed pseudo atoms
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_1_initial.cif")); }
+	CollapseRings(frag_map);
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_2_collapsed_rings.cif")); }
+
+	// Label connections to external atoms, and break connections out of the rings (e.g. bispyridine)
+	ConnIntToExt ring_to_conn;
+	FOR_ATOMS_OF_MOL(pa, *frag_molp) {
+		VirtualMol orig_from_pa = frag_map->copy_pa_to_multiple[&*pa];
+
+		if (orig_from_pa.NumAtoms() == 1) {
+			if (connection_points.HasAtom(*(orig_from_pa.GetAtoms().begin()))) {
+				pa->SetAtomicNum(TREE_EXT_CONN);
+			}
+		} else if (orig_from_pa.NumAtoms() == 0) {
+			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found a PA without origin atoms during connection labeling", obError);
+		} else {  // a ring with multiple atoms
+			if (pa->GetAtomicNum() != TREE_PA_ELEMENT) {
+				obErrorLog.ThrowError(__FUNCTION__, "Mismatch between PA ring element and number of origin atoms", obError);
+			}
+			AtomSet orig_set = orig_from_pa.GetAtoms();
+			for (AtomSet::iterator it=orig_set.begin(); it!=orig_set.end(); ++it) {
+				if (connection_points.HasAtom(*it)) {
+					ring_to_conn.insert(AtomPair(&*pa, *it));
+				}
+			}
+		}
+	}
+	for (ConnIntToExt::iterator it=ring_to_conn.begin(); it!=ring_to_conn.end(); ++it) {
+		PseudoAtom ring_atom = it->first;
+		OBAtom* orig_conn = it->second;
+
+		VirtualMol ring_mapping = frag_map->copy_pa_to_multiple[ring_atom];
+		ring_mapping.RemoveAtom(orig_conn);
+		frag_map->copy_pa_to_multiple[ring_atom] = ring_mapping;
+
+		PseudoAtom restored_conn_pa = formAtom(frag_molp, orig_conn->GetVector(), TREE_EXT_CONN);
+		frag_map->copy_pa_to_multiple[restored_conn_pa] = VirtualMol(orig_conn);
+		formBond(frag_molp, ring_atom, restored_conn_pa);
+	}
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_3_separate_conns.cif")); }
+
+	// Start simplifying the fragment
+	// First, iteratively collapse 1-c until self-consistent
+	int simplifications = 0;
+	do {
+		simplifications = 0;
+		ConnIntToExt pa_to_1c;
+		FOR_ATOMS_OF_MOL(a, *frag_molp) {
+			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN) {
+				FOR_NBORS_OF_ATOM(nbor, *a) {  // get the 1 neighbor (inner to fragment)
+					pa_to_1c.insert(AtomPair(&*nbor, &*a));
+				}
+			}
+		}
+
+		// Apply changes to the fragment
+		for (ConnIntToExt::iterator it=pa_to_1c.begin(); it!=pa_to_1c.end(); ++it) {
+			PseudoAtom pa_kept = it->first;
+			PseudoAtom pa_1c = it->second;
+
+			VirtualMol kept_vmol = frag_map->copy_pa_to_multiple[pa_kept];
+			kept_vmol.AddVirtualMol(frag_map->copy_pa_to_multiple[pa_1c]);
+			frag_map->copy_pa_to_multiple[pa_kept] = kept_vmol;
+			frag_map->copy_pa_to_multiple.erase(pa_1c);
+
+			frag_molp->DeleteAtom(pa_1c);
+			++simplifications;
+		}
+	} while (simplifications);
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_4_simplify_1c.cif")); }
+
+	// Collapse external branches into the connector pseudoatoms
+	// TODO: consider refactoring this loop and the previous one into a more general subroutine?
+	// WARNING: this loop simplifies in the opposite order of the previous loop: PA collapses into the connector
+	do {
+		simplifications = 0;
+		ConnIntToExt pa_to_conn;
+		FOR_ATOMS_OF_MOL(a, *frag_molp) {
+			if (a->GetAtomicNum() == TREE_EXT_CONN) {
+				FOR_NBORS_OF_ATOM(nbor, *a) {
+					// nbor should only connects to TREE_EXT_CONN and (optionally) one other site,
+					// otherwise it's a branch point.
+					// Handle the conn-conn case separately as another step
+					if (nbor->GetValence() < 3 && nbor->GetAtomicNum() != TREE_EXT_CONN) {
+						// Only allow one connector to claim the nbor.  Otherwise, you could have
+						// two connectors competing to simplify conn-2c-conn.
+						bool new_pa_simplification = true;
+						for (ConnIntToExt::iterator it=pa_to_conn.begin(); it!=pa_to_conn.end(); ++it) {
+							if (it->first == &*nbor) {
+								new_pa_simplification = false;
+							}
+						}
+						if (new_pa_simplification) {
+							pa_to_conn.insert(AtomPair(&*nbor, &*a));
+						}
+					}
+				}
+			}
+		}
+
+		// Apply changes to the fragment
+		for (ConnIntToExt::iterator it=pa_to_conn.begin(); it!=pa_to_conn.end(); ++it) {
+			PseudoAtom pa_simplified = it->first;
+			PseudoAtom pa_conn = it->second;
+
+			VirtualMol conn_vmol = frag_map->copy_pa_to_multiple[pa_conn];
+			conn_vmol.AddVirtualMol(frag_map->copy_pa_to_multiple[pa_simplified]);
+			frag_map->copy_pa_to_multiple[pa_conn] = conn_vmol;
+			frag_map->copy_pa_to_multiple.erase(pa_simplified);
+
+			FOR_NBORS_OF_ATOM(nbor, pa_simplified) {
+				if (&*nbor != pa_conn) {
+					formBond(frag_molp, pa_conn, &*nbor, 1);
+				}
+			}
+
+			frag_molp->DeleteAtom(pa_simplified);
+			++simplifications;
+		}
+	} while (simplifications);
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_5_collapse_conns.cif")); }
+
+	// Combine adjacent connection sites, e.g. the two carboxylates of BDC in MOF-5, as branch points
+	std::vector<VirtualMol> conns_to_combine;
+	VirtualMol visited_conns(frag_molp);
+	FOR_ATOMS_OF_MOL(a, frag_molp) {
+		if (a->GetAtomicNum() == TREE_EXT_CONN && !visited_conns.HasAtom(&*a)) {
+			// Use a BFS to get all adjacent connection sites
+			VirtualMol a_nbors(frag_molp);
+			std::queue<PseudoAtom> to_visit;
+			to_visit.push(&*a);
+
+			while (!to_visit.empty()) {
+				PseudoAtom curr_bfs = to_visit.front();
+				to_visit.pop();
+				visited_conns.AddAtom(curr_bfs);
+				a_nbors.AddAtom(curr_bfs);
+
+				FOR_NBORS_OF_ATOM(nbor, curr_bfs) {
+					if (nbor->GetAtomicNum() == TREE_EXT_CONN && !visited_conns.HasAtom(&*nbor)) {
+						to_visit.push(&*nbor);
+					}
+				}
+			}
+
+			if (a_nbors.NumAtoms() > 1) {  // there were adjacent neighbors
+				conns_to_combine.push_back(a_nbors);
+				if (a_nbors.NumAtoms() > 2) {
+					obErrorLog.ThrowError(__FUNCTION__, "Untested - Found more than three connection sites linked together.  Check the output to make sure it's reasonable.", obWarning);
+				}
+			}
+		}
+	}
+	for (std::vector<VirtualMol>::iterator conn_set=conns_to_combine.begin(); conn_set!=conns_to_combine.end(); ++conn_set) {
+		// Make a new PA randomly at one of the existing connection sites
+		// TODO: make a nicer looking centroid
+		// The proper way of doing it would probably calculating the centroid from the origin atoms, for a future commit.
+		PseudoAtom new_conn = formAtom(frag_molp, (*(conn_set->GetAtoms().begin()))->GetVector(), TREE_BRANCH_POINT);
+		VirtualMol new_origin_map = VirtualMol(frag_map->origin_molp);
+
+		// Keep bonds, remove original connection atoms, and update MappedMol accounting
+		VirtualMol visited_nbors(frag_molp);
+		AtomSet set_atoms = conn_set->GetAtoms();
+		for (AtomSet::iterator it=set_atoms.begin(); it!=set_atoms.end(); ++it) {
+			FOR_NBORS_OF_ATOM(n, *it) {
+				if (!conn_set->HasAtom(&*n) && !visited_nbors.HasAtom(&*n)) {
+					visited_nbors.AddAtom(&*n);
+					formBond(frag_molp, new_conn, &*n, 1);
+				}
+			}
+			frag_molp->DeleteAtom(*it);
+			new_origin_map.AddVirtualMol(frag_map->copy_pa_to_multiple[*it]);
+			frag_map->copy_pa_to_multiple.erase(*it);
+		}
+		frag_map->copy_pa_to_multiple[new_conn] = new_origin_map;
+	}
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_6_adjacent_conns.cif")); }
+
+	// Simplify remaining 2-c sites, which are internal branches (e.g. alkyne spacers)
+	// WARNING: copy-pasted with some modifications from previous block
+	std::vector<VirtualMol> branches_to_combine;
+	VirtualMol visited_branches(frag_molp);
+	FOR_ATOMS_OF_MOL(a, frag_molp) {
+		if (a->GetValence() == 2 && a->GetAtomicNum() != TREE_EXT_CONN && !visited_branches.HasAtom(&*a)) {
+			// Use a BFS to get all adjacent 2-c sites
+			VirtualMol a_nbors(frag_molp);
+			std::queue<PseudoAtom> to_visit;
+			to_visit.push(&*a);
+
+			while (!to_visit.empty()) {
+				PseudoAtom curr_bfs = to_visit.front();
+				to_visit.pop();
+				visited_conns.AddAtom(curr_bfs);
+				a_nbors.AddAtom(curr_bfs);
+
+				FOR_NBORS_OF_ATOM(nbor, curr_bfs) {
+					if (nbor->GetValence() == 2 && nbor->GetAtomicNum() != TREE_EXT_CONN && !visited_conns.HasAtom(&*nbor)) {
+						to_visit.push(&*nbor);
+					}
+				}
+			}
+
+			branches_to_combine.push_back(a_nbors);
+		}
+	}
+	for (std::vector<VirtualMol>::iterator branch_set=branches_to_combine.begin(); branch_set!=branches_to_combine.end(); ++branch_set) {
+		// Make a new PA randomly at one of the existing branch sites
+		// TODO: make a nicer looking centroid
+		// The proper way of doing it would probably calculating the centroid from the origin atoms, for a future commit.
+		PseudoAtom new_branch = formAtom(frag_molp, (*(branch_set->GetAtoms().begin()))->GetVector(), TREE_INT_BRANCH);
+		VirtualMol new_origin_map = VirtualMol(frag_map->origin_molp);
+
+		// Keep bonds, remove original branch PA's, and update MappedMol accounting
+		VirtualMol visited_nbors(frag_molp);
+		AtomSet set_atoms = branch_set->GetAtoms();
+		for (AtomSet::iterator it=set_atoms.begin(); it!=set_atoms.end(); ++it) {
+			FOR_NBORS_OF_ATOM(n, *it) {
+				if (!branch_set->HasAtom(&*n) && !visited_nbors.HasAtom(&*n)) {
+					visited_nbors.AddAtom(&*n);
+					formBond(frag_molp, new_branch, &*n, 1);
+				}
+			}
+			frag_molp->DeleteAtom(*it);
+			new_origin_map.AddVirtualMol(frag_map->copy_pa_to_multiple[*it]);
+			frag_map->copy_pa_to_multiple.erase(*it);
+		}
+		frag_map->copy_pa_to_multiple[new_branch] = new_origin_map;
+	}
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_7_internal_branches.cif")); }
+
+	// Assign everything else as a branch point
+	FOR_ATOMS_OF_MOL(a, frag_molp) {
+		if (a->GetAtomicNum() == TREE_BRANCH_POINT) {
+			// Assigned by combining adjacent connector sites, which means it will likely either be 0-c (BDC) or connected to multiple external atoms
+		} else if (a->GetAtomicNum() != TREE_INT_BRANCH && a->GetAtomicNum() != TREE_EXT_CONN) {
+			a->SetAtomicNum(TREE_BRANCH_POINT);
+			if (a->GetValence() < 3) {
+				obErrorLog.ThrowError(__FUNCTION__, "Found branch point with fewer than three connections.", obError);
+			}
+		}
+	}
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_8_branch_points.cif")); }
+}  // end of AllNodeDeconstructor::TreeDecomposition
+
+
+void AllNodeDeconstructor::CollapseRings(MappedMol *fragment_to_simplify, bool fuse_bridged_rings) {
+	// Collapse rings in the MappedMol to single PA's, optionally fusing bridged rings
+	// together instead of keeping them as two distinct entities
+
+	// Convenient aliases
+	OBMol* frag_molp = &(fragment_to_simplify->mol_copy);
+	OBUnitCell* uc = getPeriodicLattice(frag_molp);
+
+	// Get the list of rings to collapse
+	std::vector<VirtualMol> rings_to_simplify;
+	// FOR_RINGS_OF_MOL was causing weird segfaults in OBMol's without rings.
+	// Unclear if it's a bug in FOR_RINGS_OF_MOL or not explicitly running ring perception.
+	// At any rate, using the results of GetSSSR, instead, avoids these segfaults
+	std::vector<OBRing*> ring_vec = frag_molp->GetSSSR();
+	//FOR_RINGS_OF_MOL(r, *frag_molp) {
+	for (std::vector<OBRing*>::iterator r=ring_vec.begin(); r!=ring_vec.end(); ++r) {
+		// Get ring atoms
+		VirtualMol current_ring(frag_molp);
+		std::vector<int> r_atoms = (*r)->_path;
+		for (std::vector<int>::iterator r_a=r_atoms.begin(); r_a!=r_atoms.end(); ++r_a) {
+			current_ring.AddAtom(frag_molp->GetAtom(*r_a));
+		}
+		rings_to_simplify.push_back(current_ring);
+	}
+
+	// If the fuse_bridged_rings option is enabled, join together rings sharing at least two bridged atoms
+	// There is probably an algorithmically faster way to accomplish the same goal, e.g. something related
+	// to [heap queues](https://github.com/python/cpython/blob/3.6/Lib/heapq.py), but let's avoid making
+	// premature optimizations to the code.
+	if (fuse_bridged_rings) {
+		int fuse_simplifications = 0;
+		do {
+			fuse_simplifications = 0;
+			// Use integers instead of vector iterators to make the code easier to follow
+			int num_rings = rings_to_simplify.size();
+			for (int i = 0; i < num_rings; ++i) {
+				for (int j = i+1; j < num_rings; ++j) {
+					VirtualMol i_ring = rings_to_simplify[i];  // refresh in the inner loop in case it's been modified by a previous j iteration
+					VirtualMol j_ring = rings_to_simplify[j];
+					AtomSet j_set = j_ring.GetAtoms();
+					int ij_overlap = 0;
+					for (AtomSet::iterator j_it=j_set.begin(); j_it!=j_set.end(); ++j_it) {
+						if (i_ring.HasAtom(*j_it)) {
+							++ij_overlap;
+						}
+					}
+					if (ij_overlap >= 2) {
+						i_ring.AddVirtualMol(j_ring);
+						rings_to_simplify[i] = i_ring;
+						rings_to_simplify[j] = VirtualMol(frag_molp);  // erase the ring, which will avoid double counting
+					}
+				}
+			}
+			for (int k = num_rings-1; k >= 0; --k) {  // Traverse in reverse order to avoid invalidating the index
+				if (rings_to_simplify[k].NumAtoms() == 0) {
+					rings_to_simplify.erase(rings_to_simplify.begin() + k);
+					++fuse_simplifications;
+				}
+			}
+		} while (fuse_simplifications);
+	}
+
+	// Collapse the rings
+	for (std::vector<VirtualMol>::iterator r=rings_to_simplify.begin(); r!=rings_to_simplify.end(); ++r) {
+		AtomSet r_nbors;
+		AtomSet r_atoms = r->GetAtoms();
+		VirtualMol r_origin_atoms(fragment_to_simplify->origin_molp);
+
+		// Use a random atom as the reference anchor for periodicity
+		vector3 ref_loc = (*(r_atoms.begin()))->GetVector();
+		vector3 ring_loc(0.0, 0.0, 0.0);
+
+		for (AtomSet::iterator it=r_atoms.begin(); it!=r_atoms.end(); ++it) {
+			FOR_NBORS_OF_ATOM(nbor, **it) {
+				if (!r->HasAtom(&*nbor)) {  // If it's not part of the ring
+					r_nbors.insert(&*nbor);
+				}
+			}
+
+			r_origin_atoms.AddVirtualMol(fragment_to_simplify->copy_pa_to_multiple[*it]);
+			fragment_to_simplify->copy_pa_to_multiple.erase(*it);
+
+			ring_loc += uc->UnwrapCartesianNear((*it)->GetVector(), ref_loc);
+			frag_molp->DeleteAtom(*it);
+		}
+		ring_loc = uc->WrapCartesianCoordinate(ring_loc / r->NumAtoms());
+
+		// Replace the ring atoms with PA connected to the old neighbors
+		PseudoAtom new_ring_pa = formAtom(frag_molp, ring_loc, TREE_PA_ELEMENT);
+		fragment_to_simplify->copy_pa_to_multiple[new_ring_pa] = r_origin_atoms;
+		for (AtomSet::iterator nbor_to_bond=r_nbors.begin(); nbor_to_bond!=r_nbors.end(); ++nbor_to_bond) {
+			formBond(frag_molp, new_ring_pa, *nbor_to_bond, 1);
+		}
+	}
 }
 
 

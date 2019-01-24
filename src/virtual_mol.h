@@ -18,7 +18,8 @@ namespace OpenBabel
 {
 
 // Connections from interior of a fragment to external
-typedef std::set< std::pair<OBAtom*, OBAtom*> > ConnIntToExt;
+typedef std::pair<OBAtom*, OBAtom*> AtomPair;
+typedef std::set< AtomPair > ConnIntToExt;
 typedef std::set<OBAtom*> AtomSet;  // TODO consider using this alias throughout
 
 class VirtualMol;
@@ -84,6 +85,8 @@ public:
 	OBMol* origin_molp;
 	atom_map_t origin_to_copy;
 	atom_map_t copy_to_origin;
+	// If we simplify mol_copy, this will keep track of a PA to the origin OBAtom's
+	std::map<OBAtom*, VirtualMol> copy_pa_to_multiple;
 
 	MappedMol() { origin_molp = NULL; };
 	virtual ~MappedMol() {};

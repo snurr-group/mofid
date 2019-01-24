@@ -126,6 +126,7 @@ void VirtualMol::CopyToMappedMol(MappedMol *dest, bool export_bonds, bool copy_b
 	OBMol* pmol_copied = &(dest->mol_copy);  // for convenience
 	dest->origin_to_copy.clear();
 	dest->copy_to_origin.clear();
+	dest->copy_pa_to_multiple.clear();
 
 	// Copy atoms
 	for (std::set<OBAtom*>::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
@@ -133,6 +134,7 @@ void VirtualMol::CopyToMappedMol(MappedMol *dest, bool export_bonds, bool copy_b
 		OBAtom* mol_atom = formAtom(pmol_copied, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
 		dest->origin_to_copy[virtual_atom] = mol_atom;
 		dest->copy_to_origin[mol_atom] = virtual_atom;
+		dest->copy_pa_to_multiple[mol_atom] = VirtualMol(virtual_atom);
 
 		// Also copy paddlewheel detection.  Based on framework.cpp:resetBonds
 		bool is_paddlewheel = virtual_atom->HasData("Paddlewheel");
