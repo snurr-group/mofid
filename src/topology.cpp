@@ -534,7 +534,7 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 							obErrorLog.ThrowError(__FUNCTION__, "Unexpected double deletion of connector, not caused by a 2c-X-2c.  This code should not be reachable.", obError);
 						}
 						obErrorLog.ThrowError(__FUNCTION__, "Found two neighboring 2-c sites.  Flagging the cgd output to get an error instead of the incorrect topology.\nNote: Rerun ExportSystre() with simplify_two_conn=false if an unsimplified net is useful.", obError);
-						// One common cause of neighboring 2-c sites is if the topology is not simplified (e.g. neighboring phenyl carbons)
+						// One common cause of neighboring 2-c sites is if the linkers are not simplified (e.g. neighboring phenyl carbons).
 						// Instead of writing an errored file, we could alternatively delete the file using remove() from <cstdio>
 						ofs << "ERROR: improperly handled 2-coordinated sites." << std::endl;
 						ofs.close();

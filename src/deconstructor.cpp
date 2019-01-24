@@ -901,7 +901,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 			}
 		}
 	}
-	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_3_separate_conns.cif")); }
+	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_3_label_conns.cif")); }
 
 
 	// Start simplifying the fragment
