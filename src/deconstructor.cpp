@@ -1,4 +1,5 @@
 #include "deconstructor.h"
+#include "invector.h"
 #include "obdetails.h"
 #include "framework.h"
 #include "periodic.h"
@@ -769,7 +770,16 @@ void AllNodeDeconstructor::CollapseLinkers() {
 		// Collapse linkers by applying the changes indicated from frag_all_node.
 		// Branch points are kept, and branches (internal/connectors) can are simplified into bonds.
 		// Recall that collapseSBU will automatically handle external bonds to the rest of the simplified net.
-		// If there are issues from simplification, one potential place to look is handling the connection PA's more explicitly.
+
+		// One subtlety is that we needed the ConnectionTable PA's to keep everything glued together for TreeDecomposition.
+		// However, when we start modifying/simplifying the simplified net, the table of these connectors will change,
+		// causing inconsistencies in the copy_pa_to_multiple mapping (former connection links in copy_pa_to_multiple will
+		// reference PA's that no longer exist in the simplified net, as bonds are formed and broken).
+		// To avoid those issues, remove the connectors now.  CollapseFragment and related methods in the Topology class
+		// are smart enough to grab the correct, fully updated pointers for the ConnectionTable class.
+		for (std::map<PseudoAtom,VirtualMol>::iterator it=frag_all_node.copy_pa_to_multiple.begin(); it!=frag_all_node.copy_pa_to_multiple.end(); ++it) {
+			it->second = simplified_net.FragmentWithoutConns(it->second);
+		}
 
 		// Collapse branch points, keeping track of the new PA's for branch simplification later
 		std::map<PseudoAtom, PseudoAtom> mapped_to_net;
@@ -787,9 +797,7 @@ void AllNodeDeconstructor::CollapseLinkers() {
 				obErrorLog.ThrowError(__FUNCTION__, "Found unexpected pseudoatom type in MappedMol", obError);
 			}
 		}
-/*
-// Currently having problems with branch simplification: I suspect it's the handling of connection pseudoatoms, which should probably be stripped from the frag before
-// copying to TreeDecomposition and running anything with a MappedMol, since they aren't really real pseudoatoms corresponding to real MOF atoms
+
 		// Collapse branches as bonds
 		FOR_ATOMS_OF_MOL(pa, frag_all_node.mol_copy) {
 			if (pa->GetAtomicNum() == TREE_EXT_CONN || pa->GetAtomicNum() == TREE_INT_BRANCH) {
@@ -801,30 +809,71 @@ void AllNodeDeconstructor::CollapseLinkers() {
 					}
 				} else if (pa->GetAtomicNum() == TREE_INT_BRANCH) {
 					if (pa->GetValence() != 2) {
-						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_INT_BRANCH with an unexpected implicit valence", obError);
+						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_INT_BRANCH with an unexpected valence", obError);
 						continue;
 					}
 				}
 
-				std::vector<PseudoAtom> map_nbors;
+				std::vector<PseudoAtom> real_nbors_from_map;
 				FOR_NBORS_OF_ATOM(nbor, *pa) {
-					// CHECK COMPOSITION OF NBORS OR RAISE AN ISSUE -- must all be BP's
-					map_nbors.push_back(&*nbor);
+					if (nbor->GetAtomicNum() == TREE_BRANCH_POINT) {
+						real_nbors_from_map.push_back(mapped_to_net[&*nbor]);
+					} else {
+						obErrorLog.ThrowError(__FUNCTION__, "Found a branch with a non-branch-point neighbor.  Skipping branch simplification", obError);
+						continue;
+					}
 				}
 
 				VirtualMol pa_network = frag_all_node.copy_pa_to_multiple[&*pa];
 				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
 				simplified_net.SetRoleToAtom("linker", collapsed);
+				branches.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));
 
+				std::map<PseudoAtom, vector3> external_nbors_to_restore;  // <PA in simplified net, conn location>
+				VirtualMol external_conns_to_delete(frag->GetParent());
+				FOR_NBORS_OF_ATOM(nbor, *collapsed) {
+					PseudoAtom curr_conn = &*nbor;
+					PseudoAtom curr_nbor = simplified_net.GetOtherEndpoint(curr_conn, collapsed);
+					if (!inVector<PseudoAtom>(curr_nbor, real_nbors_from_map)) {
+						external_nbors_to_restore[curr_nbor] = curr_conn->GetVector();
+						external_conns_to_delete.AddAtom(curr_conn);
+					}
+				}
+				// If it's an internal branch, we're only merging to one of the two ends, so be sure to handle the second end
+				if (pa->GetAtomicNum() == TREE_INT_BRANCH) {
+					PseudoAtom other_end = real_nbors_from_map[1];
+					PseudoAtom other_conn = NULL;
 
+					FOR_NBORS_OF_ATOM(n_conn, *collapsed) {
+						if (simplified_net.GetOtherEndpoint(&*n_conn, collapsed) == other_end) {
+							if (other_conn) {
+								obErrorLog.ThrowError(__FUNCTION__, "Found multiple matching connections for real_nbors_from_map[1].", obWarning);
+							}
+							other_conn = &*n_conn;
+						}
+					}
+					if (!other_conn) {
+						obErrorLog.ThrowError(__FUNCTION__, "Could not find a matching connection for real_nbors_from_map[1].", obError);
+						continue;
+					}
+					external_nbors_to_restore[other_end] = other_conn->GetVector();
+					external_conns_to_delete.AddAtom(other_conn);
+				}
+				AtomSet external_conns_set = external_conns_to_delete.GetAtoms();
+				for (AtomSet::iterator it=external_conns_set.begin(); it!=external_conns_set.end(); ++it) {
+					simplified_net.DeleteConnection(*it);
+				}
+				// Make the connection to the only mapped nbor (TREE_EXT_CONN) or
+				// randomly one of the two mapped nbors (TREE_INT_BRANCH)
+				simplified_net.MergeAtomToAnother(collapsed, real_nbors_from_map[0]);
 
-				// GET OTHER NBORS IN THE SIMPLIFIED NET THEN DELETE THOSE CONNECTIONS
-				// MergeAtomToAnother
-				// Re-form external bonds
-
+				// Restore external bonds formerly attached to the branch
+				for (std::map<PseudoAtom,vector3>::iterator it=external_nbors_to_restore.begin(); it!=external_nbors_to_restore.end(); ++it) {
+					simplified_net.ConnectAtoms(real_nbors_from_map[0], it->first, &(it->second));
+				}
 			}
 		}
-*/
+
 	}
 }
 

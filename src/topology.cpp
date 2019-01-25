@@ -160,6 +160,11 @@ bool Topology::IsConnection(PseudoAtom a) {
 	return conns.IsConn(a);
 }
 
+PseudoAtom Topology::GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin) {
+	// Given a connection and one endpoint, what is the other endpoint?
+	return conns.GetOtherEndpoint(conn, begin);
+}
+
 VirtualMol Topology::GetDeletedOrigAtoms(const std::string &deletion_reason) {
 	// Get atoms that were in the original parent molecule but no longer in the simplified net
 	if (deletion_reason != ALL_DELETED_ORIG_ATOMS) {
