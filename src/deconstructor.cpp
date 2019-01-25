@@ -777,7 +777,11 @@ void AllNodeDeconstructor::CollapseLinkers() {
 		// reference PA's that no longer exist in the simplified net, as bonds are formed and broken).
 		// To avoid those issues, remove the connectors now.  CollapseFragment and related methods in the Topology class
 		// are smart enough to grab the correct, fully updated pointers for the ConnectionTable class.
+		// The case of a connector-only PA will be handled in the branch simplification code below.
 		for (std::map<PseudoAtom,VirtualMol>::iterator it=frag_all_node.copy_pa_to_multiple.begin(); it!=frag_all_node.copy_pa_to_multiple.end(); ++it) {
+			if (it->second.NumAtoms() == 0) {
+				obErrorLog.ThrowError(__FUNCTION__, "Found empty fragment before connection removal", obWarning);
+			}
 			it->second = simplified_net.FragmentWithoutConns(it->second);
 		}
 
@@ -824,7 +828,16 @@ void AllNodeDeconstructor::CollapseLinkers() {
 					}
 				}
 
+				// Collapse PA's in the simplified net (unless it's a ghost branch from a connector PA)
 				VirtualMol pa_network = frag_all_node.copy_pa_to_multiple[&*pa];
+				if (pa_network.NumAtoms() == 0) {
+					obErrorLog.ThrowError(__FUNCTION__, "Found empty branch (it was formerly a connector PA, unless this message is preceded by an empty fragment warning from above).", obInfo);
+					if (pa->GetAtomicNum() == TREE_EXT_CONN) {
+						obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found a TREE_EXT_CONN mapped to zero atoms", obError);
+					}
+					// No work is needed, since the simplified net already has a zero-atom connector PA between the two branch points (without intermediate real PA's)
+					continue;
+				}
 				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
 				simplified_net.SetRoleToAtom("linker", collapsed);
 				branches.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));
