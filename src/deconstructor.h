@@ -22,12 +22,24 @@ namespace OpenBabel
 class OBMol;
 
 
+// Constants:
 // Default directory for CIF/Systre outputs.  Also used in Python/extract_moffles.py and
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
+// PA's to describe points of extension
+const int POE_EXTERNAL_ELEMENT = 118;  // Og
+const int SBU_EXTERNAL_ELEMENT = 117;  // Ts
 
+// Atom type codes used by the MappedMol in AllNodeDeconstructor::TreeDecomposition()
+const int TREE_PA_ELEMENT = 118;  // Og
+const int TREE_INT_BRANCH = 117;  // Ts
+const int TREE_BRANCH_POINT = 116;  // Lv
+const int TREE_EXT_CONN = 115;  // Mc
+
+
+// Function prototypes
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 
@@ -95,12 +107,11 @@ class SingleNodeDeconstructor : public Deconstructor {
 // of extension for the SBUs, which is more natural for tri-metallic clusters, etc., and always
 // considers linkers as a single SBU (never any branch points).
 protected:
-	const int POE_EXTERNAL_ELEMENT = 118;  // Og
 	VirtualMol points_of_extension;  // track SBU points of extension separately from atom roles
 
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
 	virtual void PostSimplification() {};  // do not inherit the MOFid 4-to-2x3 step
-	void WriteSBUs(const std::string &base_filename, bool external_bond_pa);
+	void WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa);
 	static std::pair<VirtualMol,VirtualMol> CalculateNonmetalRing(OBAtom* a, OBAtom* b);
 	static VirtualMol GetNonmetalRingSubstituent(OBAtom* src);
 
@@ -116,12 +127,6 @@ class AllNodeDeconstructor : public SingleNodeDeconstructor {
 // This algorithm is equivalent to the single node case, except for
 // detecting branch points within linkers.
 protected:
-	// Atom type codes used by the MappedMol in TreeDecomposition()
-	const int TREE_PA_ELEMENT = 118;  // Og
-	const int TREE_INT_BRANCH = 117;  // Ts
-	const int TREE_BRANCH_POINT = 116;  // Lv
-	const int TREE_EXT_CONN = 115;  // Mc
-
 	VirtualMol branches;
 	VirtualMol branch_points;
 

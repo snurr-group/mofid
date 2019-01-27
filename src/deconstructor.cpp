@@ -680,15 +680,17 @@ void SingleNodeDeconstructor::WriteCIFs() {
 	// Call base class exporter, plus the new outputs
 	Deconstructor::WriteCIFs();
 	points_of_extension.ToCIF(GetOutputPath("points_of_extension.cif"));
-	WriteSBUs("node_sbus_no_ext_conns.cif", false);
-	WriteSBUs("node_sbus_with_ext_conns.cif", true);
+	WriteSBUs("node_sbus_no_ext_conns.cif", false, false);
+	WriteSBUs("node_sbus_with_ext_conns.cif", true, true);
 }
 
 
-void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa) {
+void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa) {
 	// Write out the combined SBU's, including points of extension.
 	// If external_bond_pa is true, also write out pseudoatoms corresponding to the next
 	// external atom connected to the point of extension.
+	// If external_conn_pa is also true, also write out psuedoatoms for other connections
+	// from the SBU, not just the point of extension.
 
 	// Combine SBU's from nodes and PoE's (assigned as linkers for topological convenience)
 	VirtualMol nodes = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
@@ -696,11 +698,12 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 	sbus.AddVirtualMol(points_of_extension);
 	OBMol sbu_mol = sbus.ToOBMol();  // Copy POE's as new atoms
 
-	// Map PoE's from the original MOF to sbu_mol
-	std::map<OBAtom*, OBAtom*> v_to_mol_poe;
+	// Map SBU atoms from the original MOF to sbu_mol
+	std::map<OBAtom*, OBAtom*> sbu_v_to_mol;
 	AtomSet poe_set = points_of_extension.GetAtoms();
-	for (AtomSet::iterator it=poe_set.begin(); it!=poe_set.end(); ++it) {
-		v_to_mol_poe[*it] = atomInOtherMol(*it, &sbu_mol);
+	AtomSet sbu_set = sbus.GetAtoms();
+	for (AtomSet::iterator it=sbu_set.begin(); it!=sbu_set.end(); ++it) {
+		sbu_v_to_mol[*it] = atomInOtherMol(*it, &sbu_mol);
 	}
 
 	// Find PoE-PoE bonds then delete them
@@ -708,30 +711,63 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 		OBAtom* begin = b->GetBeginAtom();
 		OBAtom* end = b->GetEndAtom();
 		if (points_of_extension.HasAtom(begin) && points_of_extension.HasAtom(end)) {
-			OBAtom* mol_begin = v_to_mol_poe[begin];
-			OBAtom* mol_end = v_to_mol_poe[end];
+			OBAtom* mol_begin = sbu_v_to_mol[begin];
+			OBAtom* mol_end = sbu_v_to_mol[end];
 			sbu_mol.DeleteBond(sbu_mol.GetBond(mol_begin, mol_end));
 		}
 	}
 
+	// Form external bonds to POE's and otherwise
+	ConnIntToExt ext_bonds_orig;  // mapping of bonds to form, based on the original MOF OBMol
+	std::map<AtomPair, int> ext_bond_elements;  // which element (atomic number) to use for the PA
+
 	if (external_bond_pa) {
-		OBUnitCell* uc = getPeriodicLattice(parent_molp);
 		for (AtomSet::iterator it=poe_set.begin(); it!=poe_set.end(); ++it) {
 			OBAtom* poe_orig_atom = *it;  // PoE in the original MOF OBMol
 			FOR_NBORS_OF_ATOM(nbor, *poe_orig_atom) {
-				if (!nodes.HasAtom(&*nbor)) {  // external
-					// Calculate a distance 1/3 of the way from the PoE to the external atom to avoid overlapping atoms
-					// when two POEs are next to each other in the MOF (e.g. POXHER_clean.cif)
-					vector3 poe_pos = poe_orig_atom->GetVector();
-					vector3 external_pos = uc->UnwrapCartesianNear(nbor->GetVector(), poe_pos);
-					vector3 conn_pos = uc->WrapCartesianCoordinate((2.0*poe_pos + external_pos) / 3.0);
-
-					PseudoAtom new_conn_atom = formAtom(&sbu_mol, conn_pos, POE_EXTERNAL_ELEMENT);
-					OBAtom* poe_mol_atom = v_to_mol_poe[poe_orig_atom];
-					formBond(&sbu_mol, poe_mol_atom, new_conn_atom, 1);
+				// Check against nodes.HasAtom instead of sbus.HasAtom, because we want
+				// to match a PoE in another SBU node.
+				if (!nodes.HasAtom(&*nbor)) {
+					AtomPair bond_pair(poe_orig_atom, &*nbor);
+					ext_bonds_orig.insert(bond_pair);
+					ext_bond_elements[bond_pair] = POE_EXTERNAL_ELEMENT;
 				}
 			}
 		}
+	}
+	if (external_conn_pa) {
+		// Similar to external_bond_pa, but bonding over the SBU
+		for (AtomSet::iterator it=sbu_set.begin(); it!=sbu_set.end(); ++it) {
+			OBAtom* sbu_orig_atom = *it;  // SBU atom in the original MOF OBMol
+			FOR_NBORS_OF_ATOM(nbor, *sbu_orig_atom) {
+				if (!sbus.HasAtom(&*nbor)) {
+					AtomPair bond_pair(sbu_orig_atom, &*nbor);
+					// Not overwiting existing pairs from external_bond_pa
+					if (ext_bonds_orig.find(bond_pair) == ext_bonds_orig.end()) {
+						ext_bonds_orig.insert(bond_pair);
+						ext_bond_elements[bond_pair] = SBU_EXTERNAL_ELEMENT;
+					}
+				}
+			}
+		}
+	}
+
+	// Connect the PoE or other internal SBU atom to the external
+	OBUnitCell* uc = getPeriodicLattice(parent_molp);
+	for (ConnIntToExt::iterator it=ext_bonds_orig.begin(); it!=ext_bonds_orig.end(); ++it) {
+		int connection_element = ext_bond_elements[*it];
+		PseudoAtom int_orig_atom = it->first;
+		PseudoAtom ext_orig_atom = it->second;
+
+		// Calculate a distance 1/3 of the way from the PoE/internal to the external atom to avoid
+		// overlapping atoms when two POEs are next to each other in the MOF (e.g. POXHER_clean.cif)
+		vector3 int_pos = int_orig_atom->GetVector();
+		vector3 ext_pos = uc->UnwrapCartesianNear(ext_orig_atom->GetVector(), int_pos);
+		vector3 conn_pos = uc->WrapCartesianCoordinate((2.0*int_pos + ext_pos) / 3.0);
+
+		PseudoAtom new_conn_atom = formAtom(&sbu_mol, conn_pos, connection_element);
+		OBAtom* int_mol_atom = sbu_v_to_mol[int_orig_atom];
+		formBond(&sbu_mol, int_mol_atom, new_conn_atom, 1);
 	}
 
 	writeCIF(&sbu_mol, GetOutputPath(base_filename));
