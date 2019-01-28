@@ -44,18 +44,12 @@ test: bin/sbu
 	python Python/check_mof_linkers.py
 
 # Download external programs, if not locally installed
-download: Resources/External/Systre-1.2.0-beta2.jar Resources/External/jq
+download: Resources/External/Systre-1.2.0-beta2.jar
 
 Resources/External/Systre-1.2.0-beta2.jar:
 	cd Resources/External; \
 	wget https://github.com/odf/gavrog/releases/download/v0.6.0-beta2/Systre-1.2.0-beta2.jar
 
-
-# Download json parser from https://stedolan.github.io/jq/download/
-# Warning: OS X code here and elsewhere in the repo is untested.  YMMV
-Resources/External/jq:
-	cd Resources/External; \
-	bash ../../Scripts/make_download_jq.sh
 
 
 init:

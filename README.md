@@ -11,7 +11,7 @@ A system for rapid identification and analysis of metal-organic frameworks
 * sqlite3 is useful for analysis.
 * Testing code is based on Python 2.7.  Long-term it would be good to move everything to Python 3.x, but for now Open Babel is primarily a Python 2 library so everything else is currently kept that way.  Based on the features used by the code, the biggest compatibility change in the future will likely be `print` statements.
 * The Python test suite requires the [`subprocess32`](https://pypi.org/project/subprocess32/) package to call executables like MOFid or Systre, which also backports functionality like call timeouts from Python 3.x.  Depending on your environment, this can be installed using a command like `pip install --user subprocess32`
-* Systre is required for topology detection (check that the path is correct in Python/extract_moffles.py).  `jq` is a useful utility to parse json files but is not strictly necessary.  Both of these can be automatically set up using `make download`
+* Systre is required for topology detection (check that the path is correct in Python/extract_moffles.py).
 * The Python code directly calls a C++ executable in most cases instead of directly using the `openbabel` Python library.  If `openbabel` or `pybel` is needed but raise an error, you may need to modify the library path, e.g. `export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH`
 * To get started, run `make init` the first time to compile Open Babel and set up the cmake environment.  Modifications to `sbu.cpp` or other code can be quickly compiled using `make exe` and tested using `make test`.
 
