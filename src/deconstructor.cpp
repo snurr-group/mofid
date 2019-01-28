@@ -776,8 +776,12 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 
 
 AllNodeDeconstructor::AllNodeDeconstructor(OBMol* orig_mof) : SingleNodeDeconstructor(orig_mof) {
-	branches = VirtualMol(orig_mof);
-	branch_points = VirtualMol(orig_mof);
+	branches_orig = VirtualMol(orig_mof);
+	branch_points_orig = VirtualMol(orig_mof);
+
+	OBMol* simplified_molp = simplified_net.GetAtoms().GetParent();  // temporary var
+	branches_pa = initMOFwithUC(simplified_molp);
+	branch_points_pa = initMOFwithUC(simplified_molp);
 }
 
 void AllNodeDeconstructor::CollapseLinkers() {
@@ -829,7 +833,8 @@ void AllNodeDeconstructor::CollapseLinkers() {
 				VirtualMol pa_network = frag_all_node.copy_pa_to_multiple[&*pa];
 				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
 				simplified_net.SetRoleToAtom("linker", collapsed);
-				branch_points.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));  // TODO: also consider the simplified atoms instead of original
+				branch_points_orig.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));
+				formAtom(&branch_points_pa, collapsed->GetVector(), TREE_BRANCH_POINT);
 
 				mapped_to_net[&*pa] = collapsed;
 				net_to_mapped[collapsed] = &*pa;
@@ -876,7 +881,8 @@ void AllNodeDeconstructor::CollapseLinkers() {
 				}
 				PseudoAtom collapsed = simplified_net.CollapseFragment(pa_network);
 				simplified_net.SetRoleToAtom("linker", collapsed);
-				branches.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));
+				branches_orig.AddVirtualMol(simplified_net.PseudoToOrig(collapsed));
+				formAtom(&branches_pa, collapsed->GetVector(), pa->GetAtomicNum());
 
 				std::map<PseudoAtom, vector3> external_nbors_to_restore;  // <PA in simplified net, conn location>
 				VirtualMol external_conns_to_delete(frag->GetParent());
@@ -1311,8 +1317,10 @@ void AllNodeDeconstructor::CollapseRings(MappedMol *fragment_to_simplify, bool f
 void AllNodeDeconstructor::WriteCIFs() {
 	// Call base class exporter, plus new outputs for branch info
 	SingleNodeDeconstructor::WriteCIFs();
-	branch_points.ToCIF(GetOutputPath("branch_points.cif"));
-	branches.ToCIF(GetOutputPath("branches.cif"));
+	branch_points_orig.ToCIF(GetOutputPath("branch_points.cif"));
+	branches_orig.ToCIF(GetOutputPath("branches.cif"));
+	writeCIF(&branch_points_pa, GetOutputPath("branch_points_simplified.cif"));
+	writeCIF(&branches_pa, GetOutputPath("branches_simplified.cif"));
 }
 
 

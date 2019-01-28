@@ -127,8 +127,13 @@ class AllNodeDeconstructor : public SingleNodeDeconstructor {
 // This algorithm is equivalent to the single node case, except for
 // detecting branch points within linkers.
 protected:
-	VirtualMol branches;
-	VirtualMol branch_points;
+	// Branch and branch point identification in both the original MOF and simplified net pseudoatoms.
+	// Need to use OBMol's for the pseudoatoms because the branches are converted to connectors,
+	// and branch points may get simplified out of the net (e.g. solvent removal).
+	VirtualMol branches_orig;
+	VirtualMol branch_points_orig;
+	OBMol branches_pa;
+	OBMol branch_points_pa;
 
 	virtual void CollapseLinkers();  // Detect branch points in the linker
 
