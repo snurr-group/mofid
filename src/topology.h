@@ -100,6 +100,7 @@ public:
 	VirtualMol GetDeletedOrigAtoms(const std::string &deletion_reason=ALL_DELETED_ORIG_ATOMS);
 	VirtualMol GetConnectors();
 	bool IsConnection(PseudoAtom a);
+	PseudoAtom GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin);
 
 	// Conversions between the original and simplified nets
 	VirtualMol OrigToPseudo(VirtualMol orig_atoms);

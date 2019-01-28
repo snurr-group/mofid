@@ -160,6 +160,11 @@ bool Topology::IsConnection(PseudoAtom a) {
 	return conns.IsConn(a);
 }
 
+PseudoAtom Topology::GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin) {
+	// Given a connection and one endpoint, what is the other endpoint?
+	return conns.GetOtherEndpoint(conn, begin);
+}
+
 VirtualMol Topology::GetDeletedOrigAtoms(const std::string &deletion_reason) {
 	// Get atoms that were in the original parent molecule but no longer in the simplified net
 	if (deletion_reason != ALL_DELETED_ORIG_ATOMS) {
@@ -529,6 +534,17 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 				AtomSet connectors = conns.GetAtomConns(&*a);
 				for (AtomSet::iterator it=connectors.begin(); it!=connectors.end(); ++it) {
 					two_xs.AddAtom(*it);
+					if (!multi_xs.HasAtom(*it)) {  // connection was already deleted
+						if (conns.GetOtherEndpoint(*it, &*a)->GetValence() != 2) {
+							obErrorLog.ThrowError(__FUNCTION__, "Unexpected double deletion of connector, not caused by a 2c-X-2c.  This code should not be reachable.", obError);
+						}
+						obErrorLog.ThrowError(__FUNCTION__, "Found two neighboring 2-c sites.  Flagging the cgd output to get an error instead of the incorrect topology.\nNote: Rerun ExportSystre() with simplify_two_conn=false if an unsimplified net is useful.", obError);
+						// One common cause of neighboring 2-c sites is if the linkers are not simplified (e.g. neighboring phenyl carbons).
+						// Instead of writing an errored file, we could alternatively delete the file using remove() from <cstdio>
+						ofs << "ERROR: improperly handled 2-coordinated sites." << std::endl;
+						ofs.close();
+						return;
+					}
 					multi_xs.RemoveAtom(*it);
 				}
 			}
