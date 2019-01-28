@@ -696,24 +696,20 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 	VirtualMol nodes = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
 	VirtualMol sbus = nodes;
 	sbus.AddVirtualMol(points_of_extension);
-	OBMol sbu_mol = sbus.ToOBMol();  // Copy POE's as new atoms
 
-	// Map SBU atoms from the original MOF to sbu_mol
-	std::map<OBAtom*, OBAtom*> sbu_v_to_mol;
-	AtomSet poe_set = points_of_extension.GetAtoms();
-	AtomSet sbu_set = sbus.GetAtoms();
-	for (AtomSet::iterator it=sbu_set.begin(); it!=sbu_set.end(); ++it) {
-		sbu_v_to_mol[*it] = atomInOtherMol(*it, &sbu_mol);
-	}
+	// Copy POE's as new atoms
+	MappedMol sbu_mapping;
+	sbus.CopyToMappedMol(&sbu_mapping);
+	OBMol* sbu_molp = &(sbu_mapping.mol_copy);
 
 	// Find PoE-PoE bonds then delete them
 	FOR_BONDS_OF_MOL(b, *parent_molp) {
 		OBAtom* begin = b->GetBeginAtom();
 		OBAtom* end = b->GetEndAtom();
 		if (points_of_extension.HasAtom(begin) && points_of_extension.HasAtom(end)) {
-			OBAtom* mol_begin = sbu_v_to_mol[begin];
-			OBAtom* mol_end = sbu_v_to_mol[end];
-			sbu_mol.DeleteBond(sbu_mol.GetBond(mol_begin, mol_end));
+			OBAtom* mol_begin = sbu_mapping.origin_to_copy[begin];
+			OBAtom* mol_end = sbu_mapping.origin_to_copy[end];
+			sbu_molp->DeleteBond(sbu_molp->GetBond(mol_begin, mol_end));
 		}
 	}
 
@@ -722,6 +718,7 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 	std::map<AtomPair, int> ext_bond_elements;  // which element (atomic number) to use for the PA
 
 	if (external_bond_pa) {
+		AtomSet poe_set = points_of_extension.GetAtoms();
 		for (AtomSet::iterator it=poe_set.begin(); it!=poe_set.end(); ++it) {
 			OBAtom* poe_orig_atom = *it;  // PoE in the original MOF OBMol
 			FOR_NBORS_OF_ATOM(nbor, *poe_orig_atom) {
@@ -737,6 +734,7 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 	}
 	if (external_conn_pa) {
 		// Similar to external_bond_pa, but bonding over the SBU
+		AtomSet sbu_set = sbus.GetAtoms();
 		for (AtomSet::iterator it=sbu_set.begin(); it!=sbu_set.end(); ++it) {
 			OBAtom* sbu_orig_atom = *it;  // SBU atom in the original MOF OBMol
 			FOR_NBORS_OF_ATOM(nbor, *sbu_orig_atom) {
@@ -765,12 +763,12 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 		vector3 ext_pos = uc->UnwrapCartesianNear(ext_orig_atom->GetVector(), int_pos);
 		vector3 conn_pos = uc->WrapCartesianCoordinate((2.0*int_pos + ext_pos) / 3.0);
 
-		PseudoAtom new_conn_atom = formAtom(&sbu_mol, conn_pos, connection_element);
-		OBAtom* int_mol_atom = sbu_v_to_mol[int_orig_atom];
-		formBond(&sbu_mol, int_mol_atom, new_conn_atom, 1);
+		PseudoAtom new_conn_atom = formAtom(sbu_molp, conn_pos, connection_element);
+		OBAtom* int_mol_atom = sbu_mapping.origin_to_copy[int_orig_atom];
+		formBond(sbu_molp, int_mol_atom, new_conn_atom, 1);
 	}
 
-	writeCIF(&sbu_mol, GetOutputPath(base_filename));
+	writeCIF(sbu_molp, GetOutputPath(base_filename));
 }
 
 
