@@ -43,7 +43,8 @@ else:
 # The default path is set in deconstructor.h:DEFAULT_OUTPUT_PATH.
 # Update it here if the directory changes.
 DEFAULT_OUTPUT_PATH = "Output/"
-DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "topology.cgd")
+# Default to the single-node decomposition algorithm for assigning topology
+DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "SingleNode/topology.cgd")
 
 
 def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
@@ -165,7 +166,7 @@ def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
 	if cat is not None:
-		topology = extract_topology(os.path.join(intermediate_output_path, "topology.cgd"))
+		topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
