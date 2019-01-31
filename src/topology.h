@@ -119,6 +119,7 @@ public:
 	void MergeAtomToAnother(PseudoAtom from, PseudoAtom to);
 	int SimplifyAxB();
 	int SplitFourVertexIntoTwoThree(PseudoAtom site);
+	PseudoAtom ConnTo2cPA(PseudoAtom conn_pa, int element=DEFAULT_ELEMENT);
 
 	// Export the Topology class to other formats
 	OBMol ToOBMol();

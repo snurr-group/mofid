@@ -781,4 +781,25 @@ int Topology::SplitFourVertexIntoTwoThree(PseudoAtom site) {
 }
 
 
+PseudoAtom Topology::ConnTo2cPA(PseudoAtom conn_pa, int element) {
+	// Converts a connection site into a 2-c pseudoatom connected to the original nbors.
+	// Returns the newly formed 2-c PA.
+	if (!IsConnection(conn_pa)) {
+		obErrorLog.ThrowError(__FUNCTION__, "Cannot convert non-connection PA.", obError);
+		return NULL;
+	}
+
+	PseudoAtom new_2c = formAtom(&simplified_net, conn_pa->GetVector(), element);
+	// As with SplitFourVertexIntoTwoThree, there's no need to set act_to_pa for the empty PA
+	pa_to_act[new_2c] = VirtualMol(orig_molp);  // empty: no atoms
+
+	FOR_NBORS_OF_ATOM(nbor, *conn_pa) {
+		ConnectAtoms(new_2c, &*nbor);
+	}
+	DeleteConnection(conn_pa);
+
+	return new_2c;
+}
+
+
 } // end namespace OpenBabel

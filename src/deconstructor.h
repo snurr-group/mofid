@@ -58,8 +58,10 @@ protected:
 	Topology simplified_net;
 	OBConversion obconv;
 	bool infinite_node_detected;
-	virtual void InitOutputFormat();
 
+	VirtualMol points_of_extension;  // Placeholder to track SBU points of extension separately from atom roles
+
+	virtual void InitOutputFormat();
 	static std::string GetBasicSMILES(OBMol fragment);
 
 	// Network simplification steps
@@ -107,8 +109,6 @@ class SingleNodeDeconstructor : public Deconstructor {
 // of extension for the SBUs, which is more natural for tri-metallic clusters, etc., and always
 // considers linkers as a single SBU (never any branch points).
 protected:
-	VirtualMol points_of_extension;  // track SBU points of extension separately from atom roles
-
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
 	virtual void PostSimplification() {};  // do not inherit the MOFid 4-to-2x3 step
 	void WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa);
