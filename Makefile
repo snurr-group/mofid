@@ -58,6 +58,7 @@ init:
 	cd build; \
 	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF ..; \
 	make -j2 || exit 2; \
+	make install; \
 	cd ../../; \
 	mkdir bin; \
 	cd bin; \
