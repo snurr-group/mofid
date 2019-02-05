@@ -1,10 +1,8 @@
 language: cpp
 
-matrix:
-  include:
-    - compiler: gcc
-    - compiler: clang
-
+compiler:
+  - gcc
+  - clang
 python:
   - "2.7"
   - "3.6"
