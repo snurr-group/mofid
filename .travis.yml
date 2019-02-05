@@ -14,7 +14,7 @@ before_install:
 
 install:
   - sudo apt-get install -qq default-jre
-  - if [[ $TRAVIS_PYTHON_VERSION < 3; then pip install --user subprocess32
+  - if [[ $TRAVIS_PYTHON_VERSION < 3; then pip install --user subprocess32 ]]
   - pip install --user subprocess32
   - make download
 
