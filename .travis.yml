@@ -33,3 +33,4 @@ script:
   #py2 test
   - source activate py2
   - make test
+  - source deactivate py2
