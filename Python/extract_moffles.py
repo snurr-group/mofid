@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Calculate a preliminary MOFFLES code
 
@@ -10,33 +8,44 @@ together.
 @author: Ben Bucior
 """
 
-import subprocess32  # Install with pip or from https://github.com/google/python-subprocess32
-# import re
-# import openbabel  # for visualization only, since my changes aren't backported to the python library
-import sys, os
+import sys
+import os
+
+# Ensure that subprocess32 is installed if running Py2
+if sys.version_info[0] < 3:
+	try:
+		import subprocess32 as subprocess
+	except:
+		raise AssertionError('You must install subprocess if running Python2')
+else:
+	import subprocess
+	
+# Make sure Java is in user's path
+try:
+	subprocess.call('java',stderr=subprocess.PIPE)
+except EnvironmentError:
+	raise AssertionError('You must have Java in your path!')
 
 def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
+	# Get the path to resources, such as the MOF DB's or C++ code
+	# without resorting to hardcoded paths
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
 
 def runcmd(cmd_list, timeout=None):
 	if timeout is None:
-		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE)
+		return subprocess.run(cmd_list, universal_newlines=True,
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	else:
-		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE, timeout=timeout)
+		return subprocess.run(cmd_list, universal_newlines=True,
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 
 
-# Some default settings for my computer.  Adjust these based on your configuration:
-SYSTRE_TIMEOUT = 30  # maximum time to allow Systre to run (seconds), since it hangs on certain CGD files
+# Some default settings for my computer.  Adjust these based on your config:
+SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
 GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
-if sys.platform == "win32":
-	JAVA_LOC = "C:/Program Files/Java/jre1.8.0_102/bin/java"
-elif sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
-	JAVA_LOC = "java"
-else:
-	raise ValueError("Unknown platform.  Please specify file paths in Python/extract_moffles.py")
+JAVA_LOC = "java"
 
 # The default path is set in deconstructor.h:DEFAULT_OUTPUT_PATH.
 # Update it here if the directory changes.
@@ -67,8 +76,10 @@ def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
 	try:
-		java_run = runcmd([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC, "org.gavrog.apps.systre.SystreCmdline", mof_path], timeout=SYSTRE_TIMEOUT)
-	except subprocess32.TimeoutExpired:
+		java_run = runcmd([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC,
+			"org.gavrog.apps.systre.SystreCmdline", mof_path],
+			timeout=SYSTRE_TIMEOUT)
+	except subprocess.TimeoutExpired:
 		return "TIMEOUT"
 	java_output = java_run.stdout
 
@@ -163,19 +174,17 @@ def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
 	if cat is not None:
-		topology = extract_topology(os.path.join(intermediate_output_path, "topology.cgd"))
+		topology = extract_topology(os.path.join(intermediate_output_path,
+			"topology.cgd"))
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
 	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
 
-def usage():
-	raise SyntaxError("Usage: python extract_moffles.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
-
 if __name__ == "__main__":
 	args = sys.argv[1:]
-	if len(args) not in [1, 2]:
-		usage()
+	if len(args) != 1 or len(args) != 2:
+		raise SyntaxError("Usage: python extract_moffles.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
 	cif_file = args[0]
 	
 	output_systre_and_cif_path = DEFAULT_OUTPUT_PATH

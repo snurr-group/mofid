@@ -9,7 +9,6 @@ Based on remove_metals.py, but with the purpose of saving the metal compositions
 """
 
 import sys
-
 import old_cheminformatics
 
 def usage():

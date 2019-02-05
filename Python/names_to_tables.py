@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Break a MOFFLES file into tables of its components
 
@@ -58,16 +56,13 @@ class MOFExporter:
 
 		tidy_output = self._tidy_tables()
 		for key in tidy_output:
-			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv", delim="\t")
-
-
-def usage():
-	raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single filename expected.")
+			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv",
+			delim="\t")
 
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		usage()
+		raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single filename expected.")
 
 	MOFExporter().parse(args[0]).write('OUTPUT')

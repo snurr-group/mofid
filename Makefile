@@ -62,7 +62,7 @@ init:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF ..; \
+	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
 	make -j2 || exit 2; \
 	make install; \
 	cd ../../; \

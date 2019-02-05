@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Calculate possible MOFFLES for a database
 
@@ -17,18 +15,13 @@ MOFs for generating linker SMILES, for now.
 """
 
 import sys
-
 from check_mof_linkers import TobaccoMOFs
 from extract_moffles import assemble_moffles
-
-def usage():
-	print("Usage: python list_to_moffles.py FILENAME_LIST.txt > MOFFLES.smi")
-	exit()
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		usage()
+		raise SyntaxError('Usage: python list_to_moffles.py FILENAME_LIST.txt > MOFFLES.smi')
 	
 	with open(args[0], "r") as f:
 		file_names = f.readlines()
@@ -38,7 +31,8 @@ if __name__ == "__main__":
 	for line in file_names:
 		expectation = compiler.expected_moffles(line)
 		if expectation is None:
-			print(assemble_moffles("*", "NA", mof_name=compiler.parse_filename(line)['name']))
+			print(assemble_moffles("*", "NA",
+				mof_name=compiler.parse_filename(line)['name']))
 		else:
 			print(compiler.expected_moffles(line)['default'])
 	

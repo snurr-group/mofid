@@ -7,16 +7,19 @@ A system for rapid identification and analysis of metal-organic frameworks
 **Supplement** the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches.  Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
 ## Installation notes/requirements
-* Needs a C++ compiler, make, cmake, and a Java Runtime Environment (for Systre)
-* sqlite3 is useful for analysis.
-* Testing code is based on Python 2.7.  Long-term it would be good to move everything to Python 3.x, but for now Open Babel is primarily a Python 2 library so everything else is currently kept that way.  Based on the features used by the code, the biggest compatibility change in the future will likely be `print` statements.
-* The Python test suite requires the [`subprocess32`](https://pypi.org/project/subprocess32/) package to call executables like MOFid or Systre, which also backports functionality like call timeouts from Python 3.x.  Depending on your environment, this can be installed using a command like `pip install --user subprocess32`
-* [Systre](https://github.com/odf/gavrog/releases) is required for topology detection (check that the path is correct in Python/extract_moffles.py).  `jq` is a useful utility to parse json files but is not strictly necessary.  Both of these can be automatically set up using `make download`
-* The Python code directly calls a C++ executable in most cases instead of directly using the `openbabel` Python library.  If `openbabel` or `pybel` is needed but raise an error, you may need to modify the library path, e.g. `export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH`
-* To get started, run `make init` the first time to compile Open Babel and set up the cmake environment.  Modifications to `sbu.cpp` or other code can be quickly compiled using `make exe` and tested using `make test`.
+1. Make sure you have the following: a C++ compiler installed, [cmake](https://cmake.org/), and access to GNU commands (such as `make`) . If running a Windows machine, this can all be done by installing [Cygwin](https://www.cygwin.com/), making sure to include both the `make` and `wget` packages in addition to the default options.
+2. Make sure you have a [Java Runtime Environment](https://www.java.com/en/download/) installed, which is needed for [Systre](http://gavrog.org/).
+Java in path
+
+3. Install [Systre](https://github.com/odf/gavrog/releases), which is required for topology detection (check that the path is correct in the `/Python/extract_moffles.py` file). Both of these can be automatically downloaded and installed using `make download`.
+4. Run `make init` to compile a customized development version of Open Babel and set up the `cmake` environment.  Modifications to `sbu.cpp` or other codes can be quickly compiled using `make exe` and tested using `make test`. `TODO: Why would one need this (the last sentence)?`
+
+Additional notes:
+1. The Python code directly calls a C++ executable in most cases instead of directly using the `openbabel` Python library.  If `openbabel` or `pybel` is needed but raise an error, you may need to modify the library path, e.g. `export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH`
+2. [SQlite3](https://www.sqlite.org/index.html) can be useful useful for analysis.
+3. The Python test suite requires the [`subprocess32`](https://pypi.org/project/subprocess32/) package to call executables like MOFid or Systre, which also backports functionality like call timeouts from Python 3.x.  Depending on your environment, this can be installed using a command like `pip install subprocess32==3.5.3`. `TODO: Make Py3 compatible and remove dependence on subprocess32.`
 
 ## Code overview
-* Build instructions are in this README and the Makefile
 * openbabel/ contains a modified version of the upstream openbabel library (development version)
 * src/ is the MOFid source code.
 	* sbu.cpp is the main MOFid deconstruction.  By default, it writes relevant CIFs and a Systre topology.cgd file to an Output/ directory

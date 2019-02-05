@@ -11,9 +11,16 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 # Calling an external obabel binary is more expensive than using the built-in Python
 # libraries but ensures that all Open Babel calls are consistent.
 
-import subprocess32  # Install with pip or from https://github.com/google/python-subprocess32
 import sys, os
 import re
+# Ensure that subprocess32 is installed if running Py2
+if sys.version_info[0] < 3:
+	try:
+		import subprocess32 as subprocess
+	except:
+		raise AssertionError('You must install subprocess if running Python2')
+else:
+	import subprocess
 
 def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
@@ -23,9 +30,11 @@ def path_to_resource(resource):
 
 def runcmd(cmd_list, timeout=None):
 	if timeout is None:
-		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE)
+		return subprocess.run(cmd_list, universal_newlines=True,
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	else:
-		return subprocess32.run(cmd_list, universal_newlines=True, stdout=subprocess32.PIPE, stderr=subprocess32.PIPE, timeout=timeout)
+		return subprocess.run(cmd_list, universal_newlines=True,
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
@@ -65,7 +74,8 @@ def openbabel_replace(mol_smiles, query, replacement):
 
 def openbabel_contains(mol_smiles, query):
 	# Checks if a molecule (including multi-fragment contains a SMARTS match
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query), "-xi", "-ocan"])
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query),
+		"-xi", "-ocan"])
 	if (cpp_run.stderr == "1 molecule converted\n"):
 		return True
 	elif (cpp_run.stderr == "0 molecules converted\n"):
@@ -78,7 +88,8 @@ def openbabel_formula(mol_smiles):
 	# Extracts a molecular formula without relying on the pybel module
 	# The .txt format prints the title: https://openbabel.org/docs/dev/FileFormats/Title_format.html
 	# Note: it looks like the various --append options are in descriptors/filters.cpp, etc.
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "--append", "FORMULA", "-otxt"])
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "--append",
+		"FORMULA", "-otxt"])
 	cpp_output = cpp_run.stdout
 	if (cpp_run.stderr != "1 molecule converted\n"):
 		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
