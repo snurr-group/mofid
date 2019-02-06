@@ -114,19 +114,27 @@ ConnIntToExt VirtualMol::GetExternalBondsOrConns() {
 	return connections;
 }
 
-OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
-	// Copies VirtualMol to an OpenBabel::OBMol
+void VirtualMol::CopyToMappedMol(MappedMol *dest, bool export_bonds, bool copy_bonds) {
+	// Copies VirtualMol to a destination MappedMol
 	// WARNING: the copy_bonds=false path is untested
 
-	OBMol mol = initMOFwithUC(_parent_mol);
-	typedef std::map<OBAtom*, OBAtom*> amap_t;
-	amap_t virtual_to_mol;
+	if (dest->origin_molp) {
+		obErrorLog.ThrowError(__FUNCTION__, "Overwriting contents of existing MappedMol", obWarning);
+	}
+	dest->origin_molp = _parent_mol;
+	dest->mol_copy = initMOFwithUC(_parent_mol);
+	OBMol* pmol_copied = &(dest->mol_copy);  // for convenience
+	dest->origin_to_copy.clear();
+	dest->copy_to_origin.clear();
+	dest->copy_pa_to_multiple.clear();
+
 	// Copy atoms
 	for (std::set<OBAtom*>::iterator it=_atoms.begin(); it!=_atoms.end(); ++it) {
 		OBAtom* virtual_atom = (*it);
-		OBAtom* mol_atom;
-		mol_atom = formAtom(&mol, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
-		virtual_to_mol[virtual_atom] = mol_atom;
+		OBAtom* mol_atom = formAtom(pmol_copied, virtual_atom->GetVector(), virtual_atom->GetAtomicNum());
+		dest->origin_to_copy[virtual_atom] = mol_atom;
+		dest->copy_to_origin[mol_atom] = virtual_atom;
+		dest->copy_pa_to_multiple[mol_atom] = VirtualMol(virtual_atom);
 
 		// Also copy paddlewheel detection.  Based on framework.cpp:resetBonds
 		bool is_paddlewheel = virtual_atom->HasData("Paddlewheel");
@@ -138,30 +146,31 @@ OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
 	}
 
 	if (!export_bonds) {
-		return mol;  // only returning atoms
+		return;  // Done: we've already copied the atoms
 	}
 
 	if (copy_bonds) {
-		std::set<OBBond*> virtual_bonds;
-		for(amap_t::iterator it=virtual_to_mol.begin(); it!=virtual_to_mol.end(); ++it) {
-			OBAtom* v_atom = it->first;
-			// Only export bonds if both atoms (v_atom and n) are in the VirtualMol
-			FOR_NBORS_OF_ATOM(n, *(v_atom)) {
-				if (HasAtom(&*n)) {
-					virtual_bonds.insert(v_atom->GetBond(&*n));
-				}
+		FOR_BONDS_OF_MOL(b, *_parent_mol) {
+			OBAtom* v_a1 = b->GetBeginAtom();
+			OBAtom* v_a2 = b->GetEndAtom();
+			int v_order = b->GetBondOrder();
+			if (HasAtom(v_a1) && HasAtom(v_a2)) {
+				OBAtom* copied_a1 = dest->origin_to_copy[v_a1];
+				OBAtom* copied_a2 = dest->origin_to_copy[v_a2];
+				formBond(pmol_copied, copied_a1, copied_a2, v_order);
 			}
 		}
-		for (std::set<OBBond*>::iterator it=virtual_bonds.begin(); it!=virtual_bonds.end(); ++it) {
-			OBAtom* v_a1 = (*it)->GetBeginAtom();
-			OBAtom* v_a2 = (*it)->GetEndAtom();
-			int v_order = (*it)->GetBondOrder();
-			formBond(&mol, virtual_to_mol[v_a1], virtual_to_mol[v_a2], v_order);
-		}
 	} else {  // recalculating bonds based on distance, etc.
-		resetBonds(&mol);
+		resetBonds(pmol_copied);
 	}
-	return mol;
+	return;
+}
+
+OBMol VirtualMol::ToOBMol(bool export_bonds, bool copy_bonds) {
+	// Wrapper for CopyToMappedMol() if we're only interested in an unmapped OBMol copy
+	MappedMol temp_map;
+	CopyToMappedMol(&temp_map, export_bonds, copy_bonds);
+	return temp_map.mol_copy;
 }
 
 void VirtualMol::ToCIF(const std::string &filename, bool write_bonds) {
