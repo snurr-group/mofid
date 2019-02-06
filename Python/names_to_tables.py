@@ -61,13 +61,11 @@ class MOFExporter:
 			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv", delim="\t")
 
 
-def usage():
-	raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single filename expected.")
-
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		usage()
+		raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single .smi filename expected.")
 
-	MOFExporter().parse(args[0]).write('OUTPUT')
+	input_smi = args[0]
+	MOFExporter().parse(input_smi).write('TableOutput')

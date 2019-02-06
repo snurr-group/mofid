@@ -4,6 +4,7 @@ Data/
 Test/
 Output/
 Output_*/
+TableOutput/
 err_*.txt
 pbs_out_*.txt
 out_*.smi
