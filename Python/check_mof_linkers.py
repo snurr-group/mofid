@@ -5,7 +5,7 @@ Calculate MOF linkers
 
 Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
 sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
-ToBACCo or hMOF structures against their "recipe."
+ToBACCo or GA hMOF structures against their "recipe."
 
 @author: Ben Bucior
 """
@@ -23,14 +23,12 @@ from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extrac
 from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
-HMOF_DB = "../Resources/hmof_linker_info.json"
 GA_DB = "../Resources/ga_hmof_info.json"
 TOBACCO_DB = "../Resources/tobacco_info.json"
 KNOWN_DB = "../Resources/known_mof_info.json"
 
 KNOWN_DEFAULT_CIFS = "../Resources/TestCIFs"
 TOBACCO_DEFAULT_CIFS = "../Data/tobacco_L_12/quick"
-HMOF_DEFAULT_CIFS = "../Data/hmofs_i_0_no_cat"
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
 EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a "_codes" field in the output JSON?
@@ -315,71 +313,9 @@ class KnownMOFs(MOFCompare):
 			return None
 
 
-class HypoMOFs(MOFCompare):
-	# Original hypothetical MOFs from Wilmer 2012
-	def __init__(self):
-		self.db_file = path_to_resource(HMOF_DB)
-		self.load_components()
-
-	def parse_filename(self, hmof_path):
-		# Extract hMOF recipes from the filename, formatted as xxxhypotheticalMOF_####_i_#_j_#_k_#_m_#.cif
-		codes = {"num": None, "i": None, "j": None, "k": None, "m": None, "cat": '0'}
-		mof_name = basename(hmof_path)  # Get the basename without file extension
-		parts = mof_name.split("_")
-		flag = None
-		for part in parts:
-			if flag is not None:
-				codes[flag] = part  # For now, keep it as a string, since our json will be string-based, anyway
-				flag = None
-				continue
-			if part.count("MOF") > 0 or part.count("mof") > 0:
-				flag = "num"
-				continue
-			if part in codes.keys():
-				flag = part
-				continue
-		codes["name"] = mof_name
-		return codes
-
-	def expected_moffles(self, cif_path):
-		# What is the expected MOFFLES based on the information in a MOF's filename?
-		# TODO: add catentation and expected (known?) topology
-		# For now, just assume everything is **pcu** since we're starting with Zn4O nodes
-		codes = self.parse_filename(cif_path)
-		code_key = {
-			'i': 'nodes',
-			'j': 'linkers',
-			'k': 'linkers',
-			'm': 'functionalization'
-		}
-
-		if codes['m'] != "0" or codes["k"] != codes["j"]:
-			return None  # For now, temporarily exclude functionalization (until we can figure out SMIRKS transforms)
-			# Also exclude multiple linkers, to narrow down the number of test structures, at least to begin
-
-		is_component_defined = []
-		for key in code_key:
-			is_component_defined.extend([x in self.mof_db[code_key[key]] for x in codes[key]])
-
-		if not any(False, is_component_defined):
-			sbus = []
-			sbu_codes = ['i', 'j', 'k']
-			for part in sbu_codes:
-				smiles = self.mof_db[code_key[part]][codes[part]]
-				# print "SMILES:", smiles
-				if smiles not in sbus:
-					sbus.append(smiles)
-			sbus.sort()
-
-			topology = "pcu"  # FIXME: temporary assumption for Zn4O nodes
-			cat = codes['cat']
-			return assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
-		else:
-			return None
-
-
 class GAMOFs(MOFCompare):
 	# Gene-based reduced WLLFHS hMOF database in Greg and Diego's 2016 paper
+	# Ref: https://doi.org/10.1126/sciadv.1600909
 	def __init__(self):
 		self.db_file = path_to_resource(GA_DB)
 		self.load_components()
@@ -669,7 +605,6 @@ class AutoCompare:
 	def __init__(self, recalculate=False):
 		self.known = KnownMOFs()
 		self.precalculated = self.known.mof_db.keys()
-		self.hmof = HypoMOFs()
 		self.ga = GAMOFs()
 		self.tobacco = TobaccoMOFs()
 		# Maybe also a NullMOFs class eventually, which is just a calculator sans comparisons?
@@ -708,8 +643,7 @@ class AutoCompare:
 		elif "hypotheticalmof_" in cif_name.lower() or "hmof_" in cif_name.lower():
 			# Underscore suffix prevents false positives in structures named optimized_hmof1.cif, etc.
 			if "_i_" in cif_name.lower():
-				mof_log("...parsing file with rules for Wilmer hypothetical MOFs\n")
-				return self.hmof
+				raise ValueError("Wilmer 2012 hypothetical MOF format no longer supported.  See updated GA format to run validations.")
 			else:
 				mof_log("...parsing file with rules for GA hypothetical MOFs\n")
 				return self.ga
