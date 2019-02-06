@@ -1,7 +1,7 @@
 """
-Break a MOFFLES file into tables of its components
+Break a MOFid file into tables of its components
 
-Converts a database of MOFFLES strings into a tables of the detected components
+Converts a database of MOFid strings into a tables of the detected components
 where the primary key in all the tables is the name.
 
 @author: Ben Bucior
@@ -23,7 +23,7 @@ def dict_to_delim(to_export, filename, delim="\t"):
 
 
 class MOFExporter:
-	# Exports a .smi-formatted list of MOFFLES into separate tables for the various parts
+	# Exports a .smi-formatted list of MOFid into separate tables for the various parts
 	def __init__(self):
 		self.tables = dict()
 		self.datatypes = list()  # smiles, topology, catenation, etc.
@@ -63,6 +63,6 @@ class MOFExporter:
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single filename expected.")
+		raise SyntaxError("Extract info from a list of MOFid strings.  Only a single filename expected.")
 
 	MOFExporter().parse(args[0]).write('OUTPUT')
