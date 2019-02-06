@@ -13,7 +13,7 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 
 ## Installation
 1. Run `make download` and then `make init` in the base `/mofid` directory.
-2. If using Python 2.x, you'll need to install the [`subprocess32`](https://pypi.org/project/subprocess32/) package, which can be done via `pip install subprocess32`.
+2. If using Python 2.x, you'll need to install the [`subprocess32`](https://pypi.org/project/subprocess32/) package, which can be done via `pip install --user subprocess32`.
 
 ## Usage
 1. Run `/mofid/Python/extract_moffles.py <NAME_OF_CIF.cif>` to output the unique identifier for the MOF of interest.
