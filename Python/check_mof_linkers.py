@@ -125,10 +125,20 @@ def compare_moffles(moffles1, moffles2, names=None):
 		expected = parsed[0][key]
 		if parsed[1][key] == expected:
 			comparison[key] = expected
-		else:
-			comparison[key] = False
-			comparison['match'] = False
-			comparison['errors'].append("err_" + key)
+			continue
+		elif key == "topology":  # Handling multiple, alternate topological definitions
+			other_topologies = parsed[1][key].split(",")
+			matched_topology = False
+			for topology in other_topologies:
+				if topology == expected:  # If any of them match
+					comparison[key] = topology
+					matched_topology = True
+			if matched_topology:
+				continue
+		# Else, it's a mismatch, so report an error
+		comparison[key] = False
+		comparison['match'] = False
+		comparison['errors'].append("err_" + key)
 
 	# Deeper investigation of SMILES-type errors
 	if "err_smiles" in comparison['errors']:

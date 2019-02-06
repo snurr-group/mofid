@@ -166,7 +166,12 @@ def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFFLES code from all of its pieces
 	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
 	if cat is not None:
-		topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
+		sn_topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
+		an_topology = extract_topology(os.path.join(intermediate_output_path, "AllNode/topology.cgd"))
+		if sn_topology == an_topology:
+			topology = sn_topology
+		else:
+			topology = sn_topology + "," + an_topology
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]

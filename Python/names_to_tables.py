@@ -37,6 +37,8 @@ class MOFExporter:
 				name = parsed['name']
 				del parsed['name']
 				parsed['smiles_part'] = parsed['smiles'].split('.')
+				parsed['base_topology'] = parsed['topology'].split(",")[0]
+				parsed['extra_topology'] = ",".join(parsed['topology'].split(",")[1:])  # '' if empty
 				self.tables[name] = copy.deepcopy(parsed)
 				self.datatypes = parsed.keys()
 		return self
