@@ -64,6 +64,7 @@ int main(int argc, char* argv[])
 		output_dir = std::string(argv[2]);
 	}
 	try_mkdir(output_dir);
+	try_mkdir(output_dir + NO_SBU_SUFFIX);
 	try_mkdir(output_dir + SINGLE_NODE_SUFFIX);
 	try_mkdir(output_dir + ALL_NODE_SUFFIX);
 
@@ -115,7 +116,7 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	}
 
 	MOFidDeconstructor simplifier(&orig_mol);
-	simplifier.SetOutputDir(output_dir);
+	simplifier.SetOutputDir(output_dir + NO_SBU_SUFFIX);
 	simplifier.SimplifyMOF();
 	simplifier.WriteCIFs();
 

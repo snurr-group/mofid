@@ -25,6 +25,7 @@ class OBMol;
 // Constants:
 // Default directory for CIF/Systre outputs.  Also used in Python/extract_moffles.py and
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
+const std::string NO_SBU_SUFFIX = "/NoSBU";  // base MOFidDeconstructor class
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
