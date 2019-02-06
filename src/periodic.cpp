@@ -74,6 +74,10 @@ UCMap unwrapFragmentUC(OBMol *fragment, bool allow_rod, bool warn_rod) {
 
 	std::queue<OBAtom*> to_visit;
 	UCMap unit_cells;
+	if (fragment->NumAtoms() == 0) {
+		return unit_cells;
+	}
+
 	// Start at whichever atom is (randomly?) saved first
 	// Note: atom arrays begin with 1 in OpenBabel, while bond arrays begin with 0.
 	OBAtom* start_atom = fragment->GetAtom(1);
