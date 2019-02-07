@@ -22,6 +22,8 @@
 	"ADARAA_clean" : "[Co]O[Co].[O-]C(=O)c1cc(cc(c1)C1=C2C=CC3=[N]2[Co]24n5c1ccc5C(=C1[N]2=C(C=C1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O-])C(=O)[O-])c1c(Br)cccc1Br)C(=O)[O-] f1.nbo.cat0.F1.ADARAA_clean",
 	"ic101935f_si_002_tobacco" : "[O-]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O-])Nc1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
 	
+	"nbob_sym_5_mc_2_sym_5_on_13_L_16" : "[Cu][Cu].[O-]C(=O)C#CC#Cc1ccc(cc1)C(=C(c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-] f1.nbo,fof.cat0.F1.nbob_sym_5_mc_2_sym_5_on_13_L_16",
+	
 	"MIL-47-P1-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-P1-RASPA",
 	"MIL-47-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-RASPA",
 	
@@ -50,6 +52,7 @@
 		"hypotheticalMOF_7002752_0_0_4_28_28_0" : "pcu topology after bound solvents are removed/simplified.  Also the linker should probably only be aromatic on two of its core rings.",
 		"hypotheticalMOF_22242_0_0_1_0_9_0" : "pcu topology after correctly detecting neighboring paddlewheels (not xah topology)",
 		"ABAVIJ_clean" : "Paddlewheel detection code should differentiate the direction of carboxylates, making this NOT a PW",
+		"nbob_sym_5_mc_2_sym_5_on_13_L_16" : "Presence of multiple topological representations from single-node and all-node algorithms",
 		"MIL-47-P1-RASPA" : "Basic proof-of-concept for rod-like topologies (specifically **rna** for this MOF)",
 		"MIL-47-RASPA" : "Proof-of-concept for applying symmetry operations to non-P1 MOFs",
 		"more" : "some more of the test cases above were kept as other regression tests, especially **pcu** topologies and MOFs with small unit cells"

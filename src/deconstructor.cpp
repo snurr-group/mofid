@@ -53,7 +53,8 @@ std::string getSMILES(OBMol fragment, OBConversion obconv) {
 Deconstructor::Deconstructor(OBMol* orig_mof) : simplified_net(orig_mof) {
 //Deconstructor::Deconstructor(OBMol* orig_mof) {
 	parent_molp = orig_mof;
-	// Avoid the copy constructor by using the member initializer list
+	points_of_extension = VirtualMol(orig_mof);
+	// Avoid the Topology copy constructor by using the member initializer list
 	//simplified_net = Topology(parent_molp);  // TODO: does topology.h, etc., use Begin/EndModify routines?
 	SetOutputDir(DEFAULT_OUTPUT_PATH);
 	InitOutputFormat();
@@ -156,6 +157,31 @@ bool Deconstructor::CollapseNodes() {
 	bool mil_type_mof = false;
 	VirtualMol node_pa = simplified_net.GetAtomsOfRole("node");
 	node_pa = simplified_net.FragmentWithIntConns(node_pa);
+
+	// If points of extension are defined, redefine PoE-PoE bonds as zero-atom 2-c linkers
+	AtomSet full_node_pa = node_pa.GetAtoms();
+	for (AtomSet::iterator it=full_node_pa.begin(); it!=full_node_pa.end(); ++it) {
+		if (simplified_net.IsConnection(*it)) {
+			bool connecting_poe = true;  // check if it's a PoE-PoE bond
+			FOR_NBORS_OF_ATOM(nbor, *it) {
+				VirtualMol nbor_pa = simplified_net.PseudoToOrig(VirtualMol(&*nbor));
+				if (nbor_pa.NumAtoms() != 1) {  // PoE cannot be previously simplified
+					connecting_poe = false;
+				} else if (!points_of_extension.HasAtom(*(nbor_pa.GetAtoms().begin()))) {
+					connecting_poe = false;
+				}
+			}
+			// Removing the PoE-PoE connections will prevent nearby nodes from appearing as an
+			// infinite chain in node_fragments (e.g. adjacent paddlewheels in hMOF-22242).
+			// Since we're effectively iterating over bonds (simplified net connectors), we
+			// don't have to worry about accidentally processing the same PoE-PoE bond twice.
+			if (connecting_poe) {
+				node_pa.RemoveAtom(*it);
+				simplified_net.ConnTo2cPA(*it);
+			}
+		}
+	}
+
 	std::vector<VirtualMol> node_fragments = node_pa.Separate();
 	for (std::vector<VirtualMol>::iterator it=node_fragments.begin(); it!=node_fragments.end(); ++it) {
 		VirtualMol fragment_mol = *it;
@@ -166,32 +192,31 @@ bool Deconstructor::CollapseNodes() {
 			simplified_net.SetRoleToAtom("node", collapsed);
 		} else {  // based on sepPeriodicChains
 			// TODO: consider refactoring this code to a method within topology.cpp
-			// or the upcoming simplification class
+			// or one of the deconstructor classes
 			obErrorLog.ThrowError(__FUNCTION__, "Detecting infinite chains", obInfo);
 			mil_type_mof = true;
 
-			// Detect single-atom nonmetal bridging atoms
-			AtomSet bridging_atoms;
-			AtomSet rod_atoms = it->GetAtoms();
+			// Detect nonmetal bridging atoms (including carboxylates)
+			VirtualMol bridging_atoms(fragment_mol.GetParent());
+			AtomSet rod_atoms = simplified_net.FragmentWithoutConns(fragment_mol).GetAtoms();
 			for (AtomSet::iterator rod_it=rod_atoms.begin(); rod_it!=rod_atoms.end(); ++rod_it) {
 				AtomSet rod_orig = simplified_net.PseudoToOrig(VirtualMol(*rod_it)).GetAtoms();
 				if (rod_orig.size() == 1) {
 					OBAtom* single_atom = *(rod_orig.begin());
 					if (!isMetal(single_atom)) {
-						bridging_atoms.insert(*rod_it);  // the PA, not single_atom from the original MOF
+						bridging_atoms.AddAtom(*rod_it);  // the PA, not single_atom from the original MOF
+						simplified_net.SetRoleToAtom("node bridge", *rod_it);
+						fragment_mol.RemoveAtom(*rod_it);
 					}
+				} else if (rod_orig.size() > 1) {
+					obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found pre-simplified node PA with more than one original MOF atom", obError);
 				}
 			}
 
-			// Handle bridging atoms separately from the rest of the rod.
-			for (AtomSet::iterator br_it=bridging_atoms.begin(); br_it!=bridging_atoms.end(); ++br_it) {
-				fragment_mol.RemoveAtom(*br_it);
-				simplified_net.SetRoleToAtom("node bridge", *br_it);
-			}
-			fragment_mol = simplified_net.FragmentWithoutConns(fragment_mol);
-
+			// Reset connection PA's within the node fragment_mol
+			fragment_mol = simplified_net.FragmentWithIntConns(simplified_net.FragmentWithoutConns(fragment_mol));
 			if (fragment_mol.NumAtoms() == 0) {
-				obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly deleted all atoms in a periodic rod during simplificaiton.", obError);
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly deleted all atoms in a periodic rod during simplification.", obError);
 				continue;
 			}
 
@@ -200,12 +225,22 @@ bool Deconstructor::CollapseNodes() {
 			for (std::vector<VirtualMol>::iterator frag_it=rod_fragments.begin(); frag_it!=rod_fragments.end(); ++frag_it) {
 				if (frag_it->NumAtoms() > 1) {
 					obErrorLog.ThrowError(__FUNCTION__, "Combining metal atoms within a periodic rod (likely okay, but untested code--check it).", obError);
-					fragment_mol = simplified_net.FragmentWithoutConns(fragment_mol);
-					PseudoAtom collapsed = simplified_net.CollapseFragment(fragment_mol);
+					PseudoAtom collapsed = simplified_net.CollapseFragment(*frag_it);
 					simplified_net.SetRoleToAtom("node", collapsed);
 				}  // else, if a single-metal fragment, there's nothing to simplify
 			}
 
+			// Simplify the bridging nonmetals.
+			// We don't have to worry about PoE-PoE bonds in this block, because there's a
+			// dedicated 2-c PA separating the PoE's in the simplified net.
+			std::vector<VirtualMol> bridge_frags = simplified_net.FragmentWithIntConns(bridging_atoms).Separate();
+			for (std::vector<VirtualMol>::iterator frag_it=bridge_frags.begin(); frag_it!=bridge_frags.end(); ++frag_it) {
+				if (frag_it->NumAtoms() > 1) {
+					obErrorLog.ThrowError(__FUNCTION__, "Combining nonmetal atoms within a periodic rod", obInfo);
+					PseudoAtom collapsed = simplified_net.CollapseFragment(*frag_it);
+					simplified_net.SetRoleToAtom("node bridge", collapsed);
+				}  // else, if a single-atom fragment, there's nothing to simplify
+			}
 		}
 	}
 
@@ -406,6 +441,8 @@ MOFidDeconstructor::MOFidDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof
 
 void MOFidDeconstructor::PostSimplification() {
 	// Split 4-coordinated linkers into 3+3 by convention for MIL-47, etc.
+	// This code was only necessary in the original MOFid deconstruction algorithm and will
+	// be automatically handled in the single/all-node deconstruction algorithms.
 	if (infinite_node_detected) {
 		AtomSet for_net_4c = simplified_net.GetAtoms(false).GetAtoms();
 		for (AtomSet::iterator it_4c=for_net_4c.begin(); it_4c!=for_net_4c.end(); ++it_4c) {
@@ -420,7 +457,6 @@ void MOFidDeconstructor::PostSimplification() {
 
 
 SingleNodeDeconstructor::SingleNodeDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
-	points_of_extension = VirtualMol(orig_mof);
 }
 
 
@@ -572,57 +608,82 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 		}
 
 		if (nn->GetAtomicNum() == 8) {  // oxygen
-			// Check coordination environment to classify as part of the metal oxide or "other"
+			// Check coordination environment to classify as part of the metal oxide, carboxylate, or "other"
 			VirtualMol attached_hydrogens(nn->GetParent());
-			OBAtom* attached_nonmetal = NULL;
+			OBAtom* attached_carbon = NULL;
+			bool metal_oxide_or_carboxylate = true;  // only connected to metals, oxygen, and hydrogen
 			FOR_NBORS_OF_ATOM(n, *nn) {
 				if (!nodes.HasAtom(&*n)) {  // metals and other bound oxygens
 					if (n->GetAtomicNum() == 1) {
 						attached_hydrogens.AddAtom(&*n);
 					} else if (n->GetAtomicNum() == 8) {
-						obErrorLog.ThrowError(__FUNCTION__, "Found a loosely bound peroxide, which will be handled by 1-c solvent codes.", obWarning);
-					} else {
-						if (attached_nonmetal) {  // O is already bound to a different nonmetal!
-							obErrorLog.ThrowError(__FUNCTION__, "Found a metal-bound oxygen with multiple nonmetal neighbors!  Results may have inconsistencies.", obError);
+						// Like a hydrogen, the n oxygen will only get added if it's classified as a metal oxide (and not a linker)
+						attached_hydrogens.AddAtom(&*n);
+						obErrorLog.ThrowError(__FUNCTION__, "Found a peroxo-species.", obInfo);
+						FOR_NBORS_OF_ATOM(n_nn, *n) {
+							if (&*n_nn == &*nn || nodes.HasAtom(&*nn)) {
+								continue;
+							} else if (n_nn->GetAtomicNum() == 1) {
+								attached_hydrogens.AddAtom(&*nn);
+							} else if (n_nn->GetAtomicNum() == 8) {
+								obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found O-O-O bond.  Classifying as linker.", obWarning);
+								metal_oxide_or_carboxylate = false;
+							} else {
+								obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found O-O-X bond.  Classifying as linker.", obWarning);
+								metal_oxide_or_carboxylate = false;
+							}
 						}
-						attached_nonmetal = &*n;
+					} else if (n->GetAtomicNum() == 6) {
+						if (attached_carbon) {
+							obErrorLog.ThrowError(__FUNCTION__, "Found a metal-bound oxygen with multiple carbon neighbors!  Results may have inconsistencies.", obError);
+						}
+						attached_carbon = &*n;
+					} else {  // oxygen nn is bonded to another nonmetal n
+						metal_oxide_or_carboxylate = false;
 					}
 				}
 			}
 
-			if (!attached_nonmetal) {
-				// Keep the oxygen and its bound H's
+			if (!metal_oxide_or_carboxylate) {
+				// Oxygen as part of a non-carboxylate, nonmetal cluster
+				nodes.RemoveAtom(nn);  // not part of an SBU cluster
+			} else if (!attached_carbon) {  // metal oxide
+				// Keep the oxygen and its bound H's (or peroxide)
 				nodes.AddVirtualMol(attached_hydrogens);
-			} else {
-				// Test the oxygen binding mode to classify it as part of node vs. linker
-				OBAtom* oxygen_bridge = NULL;
-				FOR_NBORS_OF_ATOM(n, *attached_nonmetal) {
-					if ((temp_node.find(&*n) != temp_node.end()) && (nn != &*n)) {
-						// Use temp_node because it's the original list of metals and NN's, not added carbons, rings, etc.
-						// Avoids a bug when handling self-connected paddlewheels, e.g. hMOF-22242.
-						// Note: the carboxylates will become "node bridges" in this instance to avoid a self-connected, periodic node.
-						if (n->GetAtomicNum() != 8) {
-							obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found an M-O-NM-NM-M bridge.  Excepted a second oxygen.", obError);
-						} else {
-							if (oxygen_bridge) {  // already defined
-								obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found multiple O2's for M-O1-NM-O2-M.", obWarning);
-							}
-							oxygen_bridge = &*n;
+			} else {  // carboxylate
+				// Check the valence of the carbon for carboxylate chemistry
+				bool is_carboxylate = true;
+				int carbon_c_nbors = 0;
+				int carbon_o_nbors = 0;
+				OBAtom* other_o_nbor = NULL;
+				FOR_NBORS_OF_ATOM(c_nn, attached_carbon) {
+					if (c_nn->GetAtomicNum() == 6) {
+						++carbon_c_nbors;
+					} else if (c_nn->GetAtomicNum() == 8) {
+						++carbon_o_nbors;
+						if (&*c_nn != nn) {
+							other_o_nbor = &*c_nn;
 						}
+					} else {
+						is_carboxylate = false;
 					}
 				}
-				if (!oxygen_bridge) {
-					// Binding end-on, e.g. carboxylates with a single oxygen binding or catechols.
-					// TODO: think about cases where an oxygen binds to multiple metal atoms.
-					// Should the oxygen in that case be part of the node or linker?
-					nodes.RemoveAtom(nn);  // not part of an SBU cluster
+				if (carbon_c_nbors != 1 || carbon_o_nbors != 2) {
+					is_carboxylate = false;
+				}
+
+				if (!is_carboxylate) {
+					nodes.RemoveAtom(nn);  // nn oxygen is not actually part of a carboxylate
 				} else {
-					// If there is a bridge, include the carboxylate carbon as part of the SBU
-					points_of_extension.AddAtom(attached_nonmetal);
-					visited_bridges.AddAtom(nn);
-					visited_bridges.AddAtom(oxygen_bridge);
+					points_of_extension.AddAtom(attached_carbon);
+					VirtualMol carboxylate(nn);
+					carboxylate.AddAtom(attached_carbon);
+					carboxylate.AddAtom(other_o_nbor);
+					visited_bridges.AddVirtualMol(carboxylate);
+					nodes.AddVirtualMol(carboxylate);
+
 					// Get hydrogens attached to the second oxygen atom
-					FOR_NBORS_OF_ATOM(b_h, *oxygen_bridge) {
+					FOR_NBORS_OF_ATOM(b_h, *other_o_nbor) {
 						if (b_h->GetAtomicNum() == 1) {
 							attached_hydrogens.AddAtom(&*b_h);
 						}
@@ -692,12 +753,9 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 	// If external_conn_pa is also true, also write out psuedoatoms for other connections
 	// from the SBU, not just the point of extension.
 
-	// Combine SBU's from nodes and PoE's (assigned as linkers for topological convenience)
-	VirtualMol nodes = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
-	VirtualMol sbus = nodes;
-	sbus.AddVirtualMol(points_of_extension);
-
-	// Copy POE's as new atoms
+	// Copy PoE's as new atoms
+	VirtualMol sbus = simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node"));
+	sbus.AddVirtualMol(simplified_net.PseudoToOrig(simplified_net.GetAtomsOfRole("node bridge")));
 	MappedMol sbu_mapping;
 	sbus.CopyToMappedMol(&sbu_mapping);
 	OBMol* sbu_molp = &(sbu_mapping.mol_copy);
@@ -722,9 +780,10 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 		for (AtomSet::iterator it=poe_set.begin(); it!=poe_set.end(); ++it) {
 			OBAtom* poe_orig_atom = *it;  // PoE in the original MOF OBMol
 			FOR_NBORS_OF_ATOM(nbor, *poe_orig_atom) {
-				// Check against nodes.HasAtom instead of sbus.HasAtom, because we want
-				// to match a PoE in another SBU node.
-				if (!nodes.HasAtom(&*nbor)) {
+				// Check PoE-external bonds or PoE-PoE connections.
+				// It's okay to have both PoE1-PoE2 and PoE2-PoE1 pairs, because
+				// we want both directions to be represented in the external conns.
+				if (!sbus.HasAtom(&*nbor) || points_of_extension.HasAtom(&*nbor)) {
 					AtomPair bond_pair(poe_orig_atom, &*nbor);
 					ext_bonds_orig.insert(bond_pair);
 					ext_bond_elements[bond_pair] = POE_EXTERNAL_ELEMENT;
