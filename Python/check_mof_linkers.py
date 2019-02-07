@@ -401,6 +401,7 @@ class GAMOFs(MOFCompare):
 			is_component_defined.extend([codes[key] in self.mof_db[code_key[key]]])
 
 		topology = self._topology_from_gene(codes)
+		codes['default_gene_topology'] = topology
 		cat = codes['cat']
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
@@ -457,6 +458,9 @@ class GAMOFs(MOFCompare):
 					n_sbus.sort()
 					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(
 						n_sbus, 'pcu', cat, mof_name=codes['name'])
+
+			if EXPORT_CODES:
+				moffles_options['_codes'] = codes
 
 			return moffles_options
 		else:
