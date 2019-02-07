@@ -43,9 +43,18 @@ def runcmd(cmd_list, timeout=None):
 
 # Some default settings for my computer.  Adjust these based on your config:
 SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
-GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
+GAVROG_LOC = path_to_resource("../Resources/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
 JAVA_LOC = "java"
+# Can update the RCSR version at http://rcsr.anu.edu.au/systre
+RCSR_PATH = path_to_resource("../Resources/RCSRnets.arc")
+SYSTRE_CMD_LIST = [
+	JAVA_LOC,
+	"-Xmx1024m",  # allocate up to 1GB of memory
+	"-cp", GAVROG_LOC,  # call a specific classpath in the .jar file
+	"org.gavrog.apps.systre.SystreCmdline",
+	RCSR_PATH  # RCSR archive to supplement the old version in the .jar file
+	]
 
 # The default path is set in deconstructor.h:DEFAULT_OUTPUT_PATH.
 # Update it here if the directory changes.
@@ -77,9 +86,7 @@ def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
 	try:
-		java_run = runcmd([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC,
-			"org.gavrog.apps.systre.SystreCmdline", mof_path],
-			timeout=SYSTRE_TIMEOUT)
+		java_run = runcmd(SYSTRE_CMD_LIST + [mof_path], timeout=SYSTRE_TIMEOUT)
 	except subprocess.TimeoutExpired:
 		return "TIMEOUT"
 	java_output = java_run.stdout
@@ -103,9 +110,11 @@ def extract_topology(mof_path):
 			topologies.append(topologies[int(components[-1]) - 1])  # Subtract one since Systre is one-indexed
 		elif "ERROR" in line:
 			return "ERROR"
-		elif line == "Structure was identified with RCSR symbol:":
+		elif "Structure was found in archive" in line:
 			topology_line = True
 		elif line == "Structure is new for this run.":
+			# This line is only printed if new to both versions of the RCSR database:
+			# a copy saved in the .jar file and an updated version in Resources/RCSRnets.arc
 			topologies.append("NEW")
 		elif line == "Structure already seen in this run.":
 			repeat_line = True
