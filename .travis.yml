@@ -19,7 +19,6 @@ install:
   - source activate py2
   - pip install --user subprocess32
   - source deactivate py2
-  - make download
 
 before_script:
   - make init
