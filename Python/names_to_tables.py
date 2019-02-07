@@ -65,7 +65,7 @@ class MOFExporter:
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError("Extract info from a list of MOFFLES strings.  Only a single .smi filename expected.")
+		raise SyntaxError("Extract info from a list of MOFid strings.  Only a single .smi filename expected.")
 
 	input_smi = args[0]
 	MOFExporter().parse(input_smi).write('TableOutput')
