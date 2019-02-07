@@ -75,3 +75,20 @@ foreach(linked_tool ${linked_tools})
   add_executable(${linked_tool} ${linked_tool}.cpp ${mofid_includes})
   target_link_libraries(${linked_tool} openbabel)
 endforeach(linked_tool)
+
+
+# Set up DLL's for Cygwin.
+# Windows cannot find the paths to DLL's unless $PATH is modified or
+# the DLL files are in the same directory as the exe.
+# This section will fix DLL issues on Cygwin but not Windows in general.
+IF (CYGWIN)
+  set (ob_dlls cyginchi-0.dll cygopenbabel-5.dll)
+  FOREACH(ob_dll ${ob_dlls})
+    add_custom_command(
+      TARGET sbu POST_BUILD COMMAND
+      ${CMAKE_COMMAND} -E copy_if_different
+      "${OpenBabel2_DIR}/bin/${ob_dll}" ${CMAKE_BINARY_DIR}
+    )
+  ENDFOREACH()
+ENDIF (CYGWIN)
+
