@@ -1,0 +1,19 @@
+#/bin/bash
+#MOAB -N mofid
+#MOAB -l nodes=1:ppn=1
+#MOAB -1 walltime=168:00:00
+#MOAB -q long
+#MOAB -r n
+#MOAB -V
+#MOAB -A p30663
+
+# Needs to be called from run_post_submit.sh to have the correct variables assigned.
+# Do not call this job file directly
+
+module load python
+
+cd $PBS_O_WORKDIR
+#echo $PBS_JOBID > "${SUMMARY_DIR}/jobid_${BASE_SMILES}_validation"
+
+python Python/check_mof_linkers.py ${SUMMARY_DIR}/${BASE_SMILES}.smi > ${SUMMARY_DIR}/${BASE_SMILES}_validation.json
+
