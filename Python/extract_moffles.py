@@ -46,6 +46,12 @@ SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs
 GAVROG_LOC = path_to_resource("../Resources/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
 JAVA_LOC = "java"
+SYSTRE_CMD_LIST = [
+	JAVA_LOC,
+	"-Xmx1024m",  # allocate up to 1GB of memory
+	"-cp", GAVROG_LOC,  # call a specific classpath in the .jar file
+	"org.gavrog.apps.systre.SystreCmdline"
+	]
 
 # The default path is set in deconstructor.h:DEFAULT_OUTPUT_PATH.
 # Update it here if the directory changes.
@@ -77,9 +83,7 @@ def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
 	try:
-		java_run = runcmd([JAVA_LOC, "-Xmx1024m", "-cp", GAVROG_LOC,
-			"org.gavrog.apps.systre.SystreCmdline", mof_path],
-			timeout=SYSTRE_TIMEOUT)
+		java_run = runcmd(SYSTRE_CMD_LIST + [mof_path], timeout=SYSTRE_TIMEOUT)
 	except subprocess.TimeoutExpired:
 		return "TIMEOUT"
 	java_output = java_run.stdout
