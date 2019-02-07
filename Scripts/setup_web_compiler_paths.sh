@@ -1,5 +1,6 @@
 #!/bin/bash
 # Sets up paths for emscripten in the current shell.
+# Requires emscripten to be installed.
 # Run this program via source import_emscripten.sh
 # TODO: Consider using a variable like $HOME for the paths for portability
 

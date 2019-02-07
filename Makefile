@@ -76,7 +76,7 @@ eclipse:
 # Not yet tested cross-platform in Linux
 # Warning: the path to web-data/core.smi has not yet been tested!
 init-web:
-	source Scripts/import_emscripten.sh; \
+	source Scripts/setup_web_compiler_paths.sh; \
 	cd openbabel; \
 	mkdir embuild eminstall; \
 	cd embuild; \
@@ -90,7 +90,7 @@ init-web:
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip
 
 openbabel/embuild/obabel.js:
-	source Scripts/import_emscripten.sh; \
+	source Scripts/setup_web_compiler_paths.sh; \
 	cd openbabel/embuild; \
 	emmake make; \
 	emmake make install
@@ -101,7 +101,7 @@ html: src/Web/*.html
 	cp $^ embin/
 
 embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
-	source Scripts/import_emscripten.sh; \
+	source Scripts/setup_web_compiler_paths.sh; \
 	cd embin; \
 	emmake make
 
