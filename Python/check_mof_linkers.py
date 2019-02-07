@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Calculate MOF linkers
 
@@ -14,12 +12,10 @@ import os, sys
 import glob
 import json
 import time
-import copy  # copy.deepcopy(x)
-import warnings
-# import re
-
-from cpp_cheminformatics import path_to_resource, ob_normalize, openbabel_replace, openbabel_contains
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles, extract_linkers
+import copy
+from cpp_cheminformatics import (path_to_resource, ob_normalize,
+	openbabel_replace, openbabel_contains)
+from extract_moffles import cif2moffles, assemble_moffles, parse_moffles
 from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
@@ -34,7 +30,10 @@ HMOF_DEFAULT_CIFS = "../Data/hmofs_i_0_no_cat"
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
 EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a "_codes" field in the output JSON?
-
+if sys.version_info[0] < 3:
+	py2 = True
+else:
+	py2 = False
 
 def any(member, list):
 	# Is the member any part of the list?
@@ -233,15 +232,19 @@ class MOFCompare:
 			return None  # Currently, skip reporting of structures with undefined nodes/linkers
 
 		# Add common classes of error
-		if type(moffles_from_name) in [str, unicode]:
+
+		if (py2 and type(moffles_from_name) in [str, unicode]) or (not py2 and type(moffles_from_name) is str):
 			orig_moffles = moffles_from_name
 			moffles_from_name = dict()
 			moffles_from_name['default'] = orig_moffles
 		default = parse_moffles(moffles_from_name['default'])
 		linkers = default['smiles'].split('.')
-		moffles_from_name['err_timeout'] = assemble_moffles(linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_systre_error'] = assemble_moffles(linkers, 'ERROR', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA', None, mof_name=default['name'])
+		moffles_from_name['err_timeout'] = assemble_moffles(linkers,
+			'TIMEOUT', default['cat'], mof_name=default['name'])
+		moffles_from_name['err_systre_error'] = assemble_moffles(linkers,
+			'ERROR', default['cat'], mof_name=default['name'])
+		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA',
+			None, mof_name=default['name'])
 
 
 		# Run transformations on the generated MOFFLES from CIF or smi database, if applicable (e.g. GA hMOFs)
@@ -250,12 +253,14 @@ class MOFCompare:
 			generation_type += "_transformed"
 
 		if test_moffles is None and generated_moffles is not None:
-			comparison = self.compare_multi_moffles(moffles_from_name, generated_moffles, ['from_name', generation_type])
+			comparison = self.compare_multi_moffles(moffles_from_name,
+				generated_moffles, ['from_name', generation_type])
 			comparison['errors'] = ['err_missing_transform']
 			comparison['match'] = False
 		else:
 			# Calculate the MOFFLES derived from the CIF structure itself
-			comparison = self.compare_multi_moffles(moffles_from_name, test_moffles, ['from_name', generation_type])
+			comparison = self.compare_multi_moffles(moffles_from_name,
+				test_moffles, ['from_name', generation_type])
 
 		if start_time is None:
 			comparison['time'] = 0
@@ -268,12 +273,13 @@ class MOFCompare:
 		# Allow multiple reference MOFFLES for comparison against the extracted version
 		# to account for known issues in either the naming or reference material (ambiguities, etc)
 
-		if type(multi_moffles1) in [str, unicode]:  # Base case where there's only a single reference
+		if (py2 and type(multi_moffles1) in [str, unicode]) or (not py2 and type(multi_moffles1) is str):
 			return compare_moffles(multi_moffles1, moffles2, names)
 
 		assert type(multi_moffles1) == dict  # Else, let's handle multiple references
 		assert 'default' in multi_moffles1
-		default_comparison = compare_moffles(multi_moffles1['default'], moffles2, names)
+		default_comparison = compare_moffles(multi_moffles1['default'],
+			moffles2, names)
 		if EXPORT_CODES and '_codes' in multi_moffles1:
 			default_comparison['_codes'] = multi_moffles1['_codes']
 		if default_comparison['match']:
@@ -366,7 +372,7 @@ class HypoMOFs(MOFCompare):
 			sbu_codes = ['i', 'j', 'k']
 			for part in sbu_codes:
 				smiles = self.mof_db[code_key[part]][codes[part]]
-				# print "SMILES:", smiles
+				# print("SMILES:", smiles)
 				if smiles not in sbus:
 					sbus.append(smiles)
 			sbus.sort()
@@ -461,7 +467,8 @@ class GAMOFs(MOFCompare):
 					if smiles not in sbus:
 						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions for pillared paddlewheels
-				if part in ["linker1", "linker2"] and codes['nodes'] in ["1", "2"] and topology == "pcu":
+				if (part in ["linker1", "linker2"] and codes['nodes'] 
+					in ["1", "2"] and topology == "pcu"):
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in n_components:
@@ -472,30 +479,37 @@ class GAMOFs(MOFCompare):
 			sbus.sort()
 
 			moffles_options = dict()
-			moffles_options['default'] = assemble_moffles(sbus, topology, cat, mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(sbus, topology, cat,
+			mof_name=codes['name'])
 
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
 				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
-				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus, 'pcu', cat, mof_name=codes['name'])
+				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus,
+					'pcu', cat, mof_name=codes['name'])
 			if codes['nodes'] == '4':  # Some Zr hMOFs have four linkers replaced by benzoic acid
-				moffles_options['Zr_mof_as_hex'] = assemble_moffles(sbus, 'hex', cat, mof_name=codes['name'])
+				moffles_options['Zr_mof_as_hex'] = assemble_moffles(sbus,
+					'hex', cat, mof_name=codes['name'])
 				if topology == 'pcu':
-					moffles_options['Zr_mof_pcu_as_fcu'] = assemble_moffles(sbus, 'fcu', cat, mof_name=codes['name'])
+					moffles_options['Zr_mof_pcu_as_fcu'] = assemble_moffles(
+						sbus, 'fcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
 				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
-				moffles_options['V_incomplete_linker'] = assemble_moffles(v_sbus, 'ERROR', cat, mof_name=codes['name'])
+				moffles_options['V_incomplete_linker'] = assemble_moffles(
+					v_sbus, 'ERROR', cat, mof_name=codes['name'])
 			if len(n_components) == 2:
 				for i, smi in enumerate(n_components):
 					n_sbus = copy.deepcopy(sbus)
 					n_sbus.append(smi)
 					n_sbus.sort()
-					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
+					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(
+						n_sbus, 'pcu', cat, mof_name=codes['name'])
 
 					n_sbus.remove(n_orig[i])
 					n_sbus.sort()
-					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(n_sbus, 'pcu', cat, mof_name=codes['name'])
+					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(
+						n_sbus, 'pcu', cat, mof_name=codes['name'])
 
 			return moffles_options
 		else:
@@ -591,7 +605,8 @@ class TobaccoMOFs(MOFCompare):
 		# sym_3_mc_0 is currently causing segfaults, so diagnose this node
 		# Also skipping a few more nodes until consistency issues are figured out.
 
-		if (not any(False, [x in self.mof_db['nodes'] for x in codes['nodes']])) and (codes['linker'] in self.mof_db['linkers']):
+		if (not any(False, [x in self.mof_db['nodes'] for x in 
+			codes['nodes']])) and (codes['linker'] in self.mof_db['linkers']):
 			# Skip structures with tricky nodes (undefined in the table for now)
 			# Apply "sticky ends" to node/linker definitions
 			assert len(codes['nodes']) in [1,2]
@@ -614,10 +629,12 @@ class TobaccoMOFs(MOFCompare):
 			moffles_options = dict()
 
 			# Generate a reference MOFFLES based on SBU composition
-			moffles_options['default'] = assemble_moffles(linkers, topology, cat, mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(linkers, topology,
+				cat, mof_name=codes['name'])
 			# Known classes of issues go here
 			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
-				moffles_options['stp_from_tpt'] = assemble_moffles(linkers, "stp", cat, mof_name=codes['name'])
+				moffles_options['stp_from_tpt'] = assemble_moffles(linkers,
+					"stp", cat, mof_name=codes['name'])
 
 			if EXPORT_CODES:
 				moffles_options['_codes'] = codes
@@ -732,7 +749,8 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
-	elif len(args) == 1 and (args[0].endswith('.txt') or args[0].endswith('.smi') or args[0].endswith('.out')):
+	elif len(args) == 1 and (args[0].endswith('.txt') or
+		args[0].endswith('.smi') or args[0].endswith('.out')):
 		input_type = "MOFid line"
 		with open(args[0], "r") as f:
 			inputs = f.readlines()
@@ -746,7 +764,8 @@ if __name__ == "__main__":
 		display_input = curr_input
 		if input_type == "MOFid line":
 			display_input = curr_input.split(".F1.")[1]
-		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of", str(len(inputs)), ":", display_input]) + "\n")
+		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of",
+			str(len(inputs)), ":", display_input]) + "\n")
 		if input_type == "CIF":
 			result = comparer.test_cif(curr_input)
 		elif input_type == "MOFid line":

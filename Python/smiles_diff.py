@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Run a diff between two SMILES codes
 
@@ -8,9 +6,8 @@ Report common classes of errors in the calculated MOFid.
 @author: Ben Bucior
 """
 
-import sys, os
+import sys
 import re
-
 from cpp_cheminformatics import ob_normalize, openbabel_replace, openbabel_formula, openbabel_GetSpacedFormula
 
 
@@ -162,14 +159,9 @@ def single_smiles_diff(smiles1, smiles2):
 	else:
 		return molec_type + "_bond_orders"
 
-
-def usage():
-	raise SyntaxError("Run a diff between two SMILES strings.  Be sure to quote to escape bash globbing, etc.")
-
-
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 2:
-		usage()
+		raise SyntaxError("Run a diff between two SMILES strings.  Be sure to quote to escape bash globbing, etc.")
 
-	print multi_smiles_diff(args[0], args[1])
+	print(multi_smiles_diff(args[0], args[1]))
