@@ -15,7 +15,7 @@ elif [[ $kernel == *Linux* || $kernel == *linux* ]]
 then
 	SBU_BIN="~/Git/mofid/bin/sbu"
 	JAVA_LOC="java"
-	GAVROG_LOC="~/Git/mofid/Resources/External/Systre-1.2.0-beta2.jar"
+	GAVROG_LOC="~/Git/mofid/Resources/Systre-1.2.0-beta2.jar"
 else
 	echo "Error: Unknown platform.  Please specify file paths in Scripts/run_systre.sh" 1>&2
 	exit 1

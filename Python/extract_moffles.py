@@ -43,7 +43,7 @@ def runcmd(cmd_list, timeout=None):
 
 # Some default settings for my computer.  Adjust these based on your config:
 SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
-GAVROG_LOC = path_to_resource("../Resources/External/Systre-1.2.0-beta2.jar")
+GAVROG_LOC = path_to_resource("../Resources/Systre-1.2.0-beta2.jar")
 SBU_BIN = path_to_resource("../bin/sbu")
 JAVA_LOC = "java"
 
