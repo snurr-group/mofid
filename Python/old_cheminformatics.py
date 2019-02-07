@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Load cheminformatics libraries and helper utilities
 
@@ -20,8 +18,6 @@ def path_to_resource(resource):
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
 os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/data")  # directory with native EOL
 import pybel  # Read SMILES to calculate molecular formulas, run SMARTS-based OBChemTsfm, etc.
-import openbabel  # for visualization only, since my changes aren't backported to the python library
-
 
 def ob_normalize(smiles):
 	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
