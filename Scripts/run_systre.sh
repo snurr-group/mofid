@@ -2,7 +2,7 @@
 # Run Systre analysis on a specified file (or the default)
 # Cannot call this successfully from Anaconda, so maintain paths separately
 
-DEFAULT_CGD_PATH="Output/topology.cgd"
+DEFAULT_CGD_PATH="Output/SingleNode/topology.cgd"
 
 kernel=$(uname -s)
 if [[ $kernel == *NT* ]]

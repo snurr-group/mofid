@@ -35,6 +35,8 @@ class MOFExporter:
 				name = parsed['name']
 				del parsed['name']
 				parsed['smiles_part'] = parsed['smiles'].split('.')
+				parsed['base_topology'] = parsed['topology'].split(",")[0]
+				parsed['extra_topology'] = ",".join(parsed['topology'].split(",")[1:])  # '' if empty
 				self.tables[name] = copy.deepcopy(parsed)
 				self.datatypes = parsed.keys()
 		return self
@@ -56,13 +58,14 @@ class MOFExporter:
 
 		tidy_output = self._tidy_tables()
 		for key in tidy_output:
-			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv",
-			delim="\t")
+			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv", delim="\t")
+
 
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError("Extract info from a list of MOFid strings.  Only a single filename expected.")
+		raise SyntaxError("Extract info from a list of MOFid strings.  Only a single .smi filename expected.")
 
-	MOFExporter().parse(args[0]).write('OUTPUT')
+	input_smi = args[0]
+	MOFExporter().parse(input_smi).write('TableOutput')
