@@ -19,4 +19,4 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 ## Usage
 1. Run `/mofid/Python/run_mofid.py NAME_OF_CIF.cif` to output the unique identifier for one MOF of interest. Decomposition information is written to `/mofid/Output/` by default.
 2. Run `bash /mofid/Scripts/run_folder.sh CIF_DIR OUTPUT_DIR > results.smi 2> log.txt` to output the unique identifiers for a folder of MOFs, using a temporary `OUTPUT_DIR` for scratch work.
-3. Run `/mofid/Python/convert_smi_to_tables.py results.smi` to translate a list of MOFid's from a .smi file into .tsv tables describing the generated SMILES and topological data about the MOFs.
+3. Run `/mofid/Python/convert_smi_to_tables.py results.smi` to translate a list of MOFid's from a .smi file into .tsv tables describing the generated SMILES and topological data about the MOFs to the `/mofid/TableOutput/` folder.

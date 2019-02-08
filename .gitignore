@@ -26,4 +26,5 @@ emsdk_set_env.bat
 openbabel/eminstall/
 openbabel/embuild/
 embin/
-
+results.smi
+log.txt
