@@ -19,5 +19,5 @@ echo $PBS_JOBID > "jobid_$OUTPUT_DIR"
 #OUTPUT_DIR="Output/"
 #OUTPUT_DIR="Output_$CIFOUTLABEL_$CIFDIR/"
 mkdir -p "$OUTPUT_DIR"
-bash Scripts/extract_folder.sh "$CIFDIR" "$OUTPUT_DIR" > $MOFSTDOUT
+bash Scripts/run_folder.sh "$CIFDIR" "$OUTPUT_DIR" > $MOFSTDOUT
 

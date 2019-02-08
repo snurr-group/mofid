@@ -14,7 +14,9 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 ## Installation
 1. Run `make init` in the base `/mofid` directory.
 2. If using Python 2.x, you'll need to install the [`subprocess32`](https://pypi.org/project/subprocess32/) package, which can be done via `pip install --user subprocess32`.
+3. Run `make test` to verify that everything is set up correctly. Some warning messages are expected and normal, because the test suite includes some non-MOF structures. At the end, the test code will report the number of mismatches, which should be zero (except for a known issue with ZIFs on some computers).
 
 ## Usage
-1. Run `/mofid/Python/extract_moffles.py <NAME_OF_CIF.cif>` to output the unique identifier for the MOF of interest.
-2. Run `/mofid/Python/names_to_tables.py <ARG GOES HERE>` to generate data about the MOF (e.g. `.cif` files of the isolated nodes and linkers) as well as topological data about the MOF.
+1. Run `/mofid/Python/run_mofid.py NAME_OF_CIF.cif` to output the unique identifier for one MOF of interest. Decomposition information is written to `/mofid/Output/` by default.
+2. Run `bash /mofid/Scripts/run_folder.sh CIF_DIR OUTPUT_DIR > results.smi 2> log.txt` to output the unique identifiers for a folder of MOFs, using a temporary `OUTPUT_DIR` for scratch work.
+3. Run `/mofid/Python/convert_smi_to_tables.py results.smi` to translate a list of MOFid's from a .smi file into .tsv tables describing the generated SMILES and topological data about the MOFs.
