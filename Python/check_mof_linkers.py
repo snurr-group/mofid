@@ -5,6 +5,10 @@ Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
 sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
 ToBACCo or GA hMOF structures against their "recipe."
 
+See comments in summarize, GAMOFs/TobaccoMOFs.expected_moffles,
+MOFCompare._test_generated, and smiles_diff.py for documentation on the error
+classes (and other warnings) reported in the json output from this script.
+
 @author: Ben Bucior
 """
 
@@ -134,7 +138,8 @@ def compare_moffles(moffles1, moffles2, names=None):
 					matched_topology = True
 			if matched_topology:
 				continue
-		# Else, it's a mismatch, so report an error
+		# Else, it's a mismatch, so report an error as "err_<KEY TYPE>",
+		# e.g. "err_topology"
 		comparison[key] = False
 		comparison['match'] = False
 		comparison['errors'].append("err_" + key)
@@ -148,7 +153,9 @@ def compare_moffles(moffles1, moffles2, names=None):
 	return comparison
 
 def summarize(results):
-	# Summarize the error classes for MOFFLES results
+	# Summarize the error classes for MOFFLES results.
+	# "error_types" from the header of the .json output are defined below
+	# in the main for loop.
 	summarized = {'mofs': results, 'errors': dict()}
 	error_types = {'err_topology': 0, 'err_smiles': 0, 'two': 0, 'three_plus': 0, 'success': 0, 'undefined': 0}
 	for match in results:
@@ -161,7 +168,10 @@ def summarize(results):
 			error_types['two'] += 1
 		elif len(match['errors']) > 2:
 			error_types['three_plus'] += 1
-		elif len(match['errors']) == 1:  # Other class of known issue with MOFFLES generation and/or naming scheme
+		elif len(match['errors']) == 1:
+			# Other classes of known issue with MOFid generation and/or naming
+			# scheme are copied verbatim, e.g. "err_"* from the
+			# `compare_moffles` function directly before this one.
 			known_issue = match['errors'][0]
 			if known_issue not in error_types:
 				error_types[known_issue] = 0  # Initialize new class of errors
@@ -239,14 +249,17 @@ class MOFCompare:
 		if moffles_from_name is None:  # missing SBU info in the DB file
 			return None  # Currently, skip reporting of structures with undefined nodes/linkers
 
-		# Add common classes of error
-
 		if (py2 and type(moffles_from_name) in [str, unicode]) or (not py2 and type(moffles_from_name) is str):
 			orig_moffles = moffles_from_name
 			moffles_from_name = dict()
 			moffles_from_name['default'] = orig_moffles
 		default = parse_moffles(moffles_from_name['default'])
 		linkers = default['smiles'].split('.')
+
+		# Define sources of error when the program exits with errors.
+		# Without these definitions, the validator would return a generic
+		# class of error, e.g. "err_topology", instead of actually indicating
+		# the root cause from program error or timeout.
 		moffles_from_name['err_timeout'] = assemble_moffles(linkers,
 			'TIMEOUT', default['cat'], mof_name=default['name'])
 		moffles_from_name['err_systre_error'] = assemble_moffles(linkers,
@@ -415,8 +428,9 @@ class GAMOFs(MOFCompare):
 					if smiles not in sbus:
 						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions for pillared paddlewheels
-				if (part in ["linker1", "linker2"] and codes['nodes'] 
-					in ["1", "2"] and topology == "pcu"):
+				if (part in ["linker1", "linker2"] and
+					codes['nodes'] in ["1", "2"] and topology == "pcu"
+					):
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in n_components:
@@ -427,11 +441,14 @@ class GAMOFs(MOFCompare):
 			sbus.sort()
 
 			moffles_options = dict()
-			moffles_options['default'] = assemble_moffles(sbus, topology, cat,
-			mof_name=codes['name'])
+			moffles_options['default'] = assemble_moffles(
+				sbus, topology, cat, mof_name=codes['name'])
 
+			# Flagging common cases when the generated MOF does not match the idealized recipe,
+			# for example when the bottom-up algorithm is missing a connection.
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
-				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
+				# Note: if we change the handling of bound modulators, we will have to add
+				# benzoic acid to these **pcu** MOF nodes
 				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus,
 					'pcu', cat, mof_name=codes['name'])
 			if codes['nodes'] == '4':  # Some Zr hMOFs have four linkers replaced by benzoic acid
@@ -447,13 +464,18 @@ class GAMOFs(MOFCompare):
 				moffles_options['V_incomplete_linker'] = assemble_moffles(
 					v_sbus, 'ERROR', cat, mof_name=codes['name'])
 			if len(n_components) == 2:
+				# Ambiguities arise when there is both a linker1 and linker2
+				# because of the combinations between N/carboxylate and L1/L2
+				# in pcu paddlewheel MOFs with pillars.
 				for i, smi in enumerate(n_components):
+					# Both L1 and L2, plus N-pillar i (unknown which one beforehand)
 					n_sbus = copy.deepcopy(sbus)
 					n_sbus.append(smi)
 					n_sbus.sort()
 					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(
 						n_sbus, 'pcu', cat, mof_name=codes['name'])
 
+					# Replacing linker i from a carboxylate to a pillar
 					n_sbus.remove(n_orig[i])
 					n_sbus.sort()
 					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(
@@ -584,8 +606,8 @@ class TobaccoMOFs(MOFCompare):
 				cat, mof_name=codes['name'])
 			# Known classes of issues go here
 			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
-				moffles_options['stp_from_tpt'] = assemble_moffles(linkers,
-					"stp", cat, mof_name=codes['name'])
+				moffles_options['stp_from_tpt'] = assemble_moffles(
+					linkers, "stp", cat, mof_name=codes['name'])
 
 			if EXPORT_CODES:
 				moffles_options['_codes'] = codes
@@ -698,8 +720,11 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
-	elif len(args) == 1 and (args[0].endswith('.txt') or
-		args[0].endswith('.smi') or args[0].endswith('.out')):
+	elif len(args) == 1 and (
+		args[0].endswith('.txt') or
+		args[0].endswith('.smi') or
+		args[0].endswith('.out')
+		):
 		input_type = "MOFid line"
 		with open(args[0], "r") as f:
 			inputs = f.readlines()
