@@ -79,7 +79,7 @@ mismatch_codes <- c("V_incomplete_linker",
 pillar_codes <- c("unk_pillar1", "unk_pillar2", "replaced_pillar1", "replaced_pillar2")
 
 summarize_errors <- function(error_char_vec) {
-  # Translate error codes from check_mof_linkers.py into their implications
+  # Translate error codes from check_mof_composition.py into their implications
   
   # First handle the easiest cases
   if (length(error_char_vec) == 0) {
@@ -123,10 +123,10 @@ tobacco_errs <- tobacco_errs %>%
   mutate(err_type=df_summarize_errors(errors)) %>% 
   #mutate(err_color=ifelse(err_type == "Definition mismatch", "Mismatch", "Error")) %>% 
   # More aggressively detect Systre crashes, since the Python code will hide them if multiple sources of error
-  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
+  mutate(err_type=ifelse(str_detect(from_mofid, "ERROR"), "Crash", err_type))
 ga_errs <- ga_errs %>% 
   mutate(err_type=df_summarize_errors(errors)) %>% 
-  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
+  mutate(err_type=ifelse(str_detect(from_mofid, "ERROR"), "Crash", err_type))
 
 
 ### UNDERSTANDING ERROR FLOWS ###

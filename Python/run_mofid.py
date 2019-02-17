@@ -1,9 +1,9 @@
 """
-Calculate a preliminary MOFFLES code
+Calculate a MOFid string for a single .cif file
 
-Extract the node and linker identities from bin/sbu (my OpenBabel code) as
-well as topological classification from Systre.  This wraps everything up
-together.
+Extract the node and linker identities from bin/sbu (my Open Babel code) as
+well as topological classification from Systre.  This script runs everything
+to wrap it up as a formated string.
 
 @author: Ben Bucior
 """
@@ -63,7 +63,7 @@ DEFAULT_OUTPUT_PATH = "Output/"
 DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "SingleNode/topology.cgd")
 
 
-def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
+def extract_fragments(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
 	cpp_run = runcmd([SBU_BIN, mof_path, output_file_path])
 	cpp_output = cpp_run.stdout
@@ -131,34 +131,34 @@ def extract_topology(mof_path):
 			return "MISMATCH"
 	return first_net
 
-def assemble_moffles(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
-	# Assemble the MOFFLES code from its components
-	moffles = ".".join(linkers) + " "
-	moffles = moffles + "f1" + "."
-	moffles = moffles + topology + "."
+def assemble_mofid(fragments, topology, cat = None, mof_name="NAME_GOES_HERE"):
+	# Assemble the MOFid string from its components
+	mofid = ".".join(fragments) + " "
+	mofid = mofid + "f1" + "."
+	mofid = mofid + topology + "."
 	if cat == "no_mof":
-		moffles += cat + "."
+		mofid += cat + "."
 	elif cat is not None:
-		moffles = moffles + "cat" + cat + "."
-	if moffles.startswith(" "):  # Null linkers.  Make .smi compatible
-		moffles = "*" + moffles + "no_mof."
-	moffles = moffles + "F1" + "."
-	moffles = moffles + mof_name
-	return moffles
+		mofid = mofid + "cat" + cat + "."
+	if mofid.startswith(" "):  # Null linkers.  Make .smi compatible
+		mofid = "*" + mofid + "no_mof."
+	mofid = mofid + "F1" + "."
+	mofid = mofid + mof_name
+	return mofid
 
-def parse_moffles(moffles):
-	# Deconstruct a MOFFLES string into its pieces
-	components = moffles.split()
+def parse_mofid(mofid):
+	# Deconstruct a MOFid string into its pieces
+	components = mofid.split()
 	if len(components) == 1:
-		if moffles.lstrip != moffles:  # Empty SMILES: no MOF found
+		if mofid.lstrip != mofid:  # Empty SMILES: no MOF found
 			components.append(components[0])  # Move metadata to the right
 			components[0] = ''
 		else:
 			raise ValueError("MOF metadata required")
 	smiles = components[0]
 	if len(components) > 2:
-		print("Bad MOFFLES:", moffles)
-		raise ValueError("FIXME: parse_moffles currently does not support spaces in common names")
+		print("Bad MOFid: ", mofid)
+		raise ValueError("FIXME: parse_mofid currently does not support spaces in common names")  # this will be fixed soon in the new MOFid format
 	metadata = components[1]
 	metadata = metadata.split('.')
 
@@ -167,7 +167,7 @@ def parse_moffles(moffles):
 	topology = None
 	for loc, tag in enumerate(metadata):
 		if loc == 0 and tag != 'f1':
-			raise ValueError("MOFFLES v1 must start with tag 'f1'")
+			raise ValueError("MOFid v1 must start with tag 'f1'")  # This tag will also change
 		if tag == 'F1':
 			mof_name = '.'.join(metadata[loc+1:])
 			break
@@ -182,9 +182,9 @@ def parse_moffles(moffles):
 		name = mof_name
 	)
 
-def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
-	# Assemble the MOFFLES code from all of its pieces
-	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
+def cif2mofid(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
+	# Assemble the MOFid string from all of its pieces
+	fragments, cat = extract_fragments(cif_path, intermediate_output_path)
 	if cat is not None:
 		sn_topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
 		an_topology = extract_topology(os.path.join(intermediate_output_path, "AllNode/topology.cgd"))
@@ -195,16 +195,16 @@ def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
-	return assemble_moffles(linkers, topology, cat, mof_name=mof_name)
+	return assemble_mofid(fragments, topology, cat, mof_name=mof_name)
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1 and len(args) != 2:
-		raise SyntaxError("Usage: python extract_moffles.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
+		raise SyntaxError("Usage: python run_mofid.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
 	cif_file = args[0]
 	
 	output_systre_and_cif_path = DEFAULT_OUTPUT_PATH
 	if len(args) == 2:
 		output_systre_and_cif_path = args[1]
 	
-	print(cif2moffles(cif_file, output_systre_and_cif_path))
+	print(cif2mofid(cif_file, output_systre_and_cif_path))

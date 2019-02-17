@@ -3,11 +3,11 @@ Rerun Systre with verbose output
 
 Calls the Systre command, writing its full, raw stdout and stderr instead of
 parsing out the RCSR topology or other error states.  This code can sometimes
-be a useful diagnostic after running bin/sbu.exe or Python/extract_moffles.py
+be a useful diagnostic after running bin/sbu.exe or Python/run_mofid.py
 """
 
 import sys
-from extract_moffles import subprocess, SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
+from run_mofid import subprocess, SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
 
 
 if __name__ == "__main__":
@@ -23,7 +23,7 @@ if __name__ == "__main__":
 	cmd_list = SYSTRE_CMD_LIST + [cgd_path]
 	java_run = subprocess.run(cmd_list, universal_newlines=True)
 	# Writing to stdout and stderr by default since they're not captured with
-	# a pipe here, unlike in extract_moffles.py:runcmd
+	# a pipe here, unlike in run_mofid.py:runcmd
 	
 	# Alternatively, manually re-forward the output to stdout and stderr
 	#print(java_run.stdout)

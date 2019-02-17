@@ -1,4 +1,4 @@
-# Parse JSON results files from Python/check_mof_linkers.py
+# Parse JSON results files from Python/check_mof_composition.py
 
 library(jsonlite)
 library(dplyr)
