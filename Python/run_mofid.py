@@ -63,7 +63,7 @@ DEFAULT_OUTPUT_PATH = "Output/"
 DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH, "SingleNode/topology.cgd")
 
 
-def extract_linkers(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
+def extract_fragments(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 	# Extract MOF decomposition information using a C++ code based on OpenBabel
 	cpp_run = runcmd([SBU_BIN, mof_path, output_file_path])
 	cpp_output = cpp_run.stdout
@@ -131,9 +131,9 @@ def extract_topology(mof_path):
 			return "MISMATCH"
 	return first_net
 
-def assemble_mofid(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
+def assemble_mofid(fragments, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	# Assemble the MOFid string from its components
-	mofid = ".".join(linkers) + " "
+	mofid = ".".join(fragments) + " "
 	mofid = mofid + "f1" + "."
 	mofid = mofid + topology + "."
 	if cat == "no_mof":
@@ -184,7 +184,7 @@ def parse_mofid(mofid):
 
 def cif2mofid(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFid string from all of its pieces
-	linkers, cat = extract_linkers(cif_path, intermediate_output_path)
+	fragments, cat = extract_fragments(cif_path, intermediate_output_path)
 	if cat is not None:
 		sn_topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
 		an_topology = extract_topology(os.path.join(intermediate_output_path, "AllNode/topology.cgd"))
@@ -195,7 +195,7 @@ def cif2mofid(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
-	return assemble_mofid(linkers, topology, cat, mof_name=mof_name)
+	return assemble_mofid(fragments, topology, cat, mof_name=mof_name)
 
 if __name__ == "__main__":
 	args = sys.argv[1:]

@@ -1,5 +1,5 @@
 """
-Calculate MOF linkers
+Calculate the expected MOF components from filename and compare against MOFid
 
 Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
 sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
@@ -8,9 +8,6 @@ ToBACCo or GA hMOF structures against their "recipe."
 See comments in summarize, GAMOFs/TobaccoMOFs.expected_mofid,
 MOFCompare._test_generated, and smiles_diff.py for documentation on the error
 classes (and other warnings) reported in the json output from this script.
-
-Note: linker/sbu terminology in this code is used loosely referring to MOF
-building blocks and their SMILES, not necessarily the exact building unit.
 
 @author: Ben Bucior
 """
@@ -257,16 +254,16 @@ class MOFCompare:
 			mofid_from_name = dict()
 			mofid_from_name['default'] = orig_mofid
 		default = parse_mofid(mofid_from_name['default'])
-		linkers = default['smiles'].split('.')
+		fragments = default['smiles'].split('.')
 
 		# Define sources of error when the program exits with errors.
 		# Without these definitions, the validator would return a generic
 		# class of error, e.g. "err_topology", instead of actually indicating
 		# the root cause from program error or timeout.
 		mofid_from_name['err_timeout'] = assemble_mofid(
-			linkers, 'TIMEOUT', default['cat'], mof_name=default['name'])
+			fragments, 'TIMEOUT', default['cat'], mof_name=default['name'])
 		mofid_from_name['err_systre_error'] = assemble_mofid(
-			linkers, 'ERROR', default['cat'], mof_name=default['name'])
+			fragments, 'ERROR', default['cat'], mof_name=default['name'])
 		mofid_from_name['err_cpp_error'] = assemble_mofid(
 			['*'], 'NA', None, mof_name=default['name'])
 		mofid_from_name['err_no_mof'] = assemble_mofid(
@@ -388,13 +385,13 @@ class GAMOFs(MOFCompare):
 		if fg not in self.mof_db["functionalization"]:
 			return None  # Raises a transform error
 
-		[sbus, fancy_name] = mofid.split()
+		[fragments, fancy_name] = mofid.split()  # TODO: fix this line with the new MOFid format
 		pattern = self.mof_db["functionalization"][fg]
-		if not openbabel_contains(sbus, pattern):
+		if not openbabel_contains(fragments, pattern):
 			return None  # will raise a transform error in the output
 
-		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in sbus.split('.')]
-		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart SBUs into multiple parts
+		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in fragments.split('.')]
+		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart building blocks into multiple parts
 		skeletons = list(set(skeletons))  # Only keep unique backbones if they have different functionalization patterns
 		if '' in skeletons:  # null linker from defunctionalization on a lone functional group
 			skeletons.remove('')
@@ -423,7 +420,7 @@ class GAMOFs(MOFCompare):
 		cat = codes['cat']
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
-			sbus = []
+			sbus = []  # more rigorously, MOF building blocks
 			sbu_codes = ['nodes', 'linker1', 'linker2']  # Functionalization handled in transform_mofid
 			n_components = []  # Potentially inconsistent ordering of paddlewheel pillars
 			n_orig = []  # Pillar molecule before transformation
@@ -594,8 +591,8 @@ class TobaccoMOFs(MOFCompare):
 			else:
 				node2 = self.mof_db['nodes'][codes['nodes'][1]]
 			linker = self.mof_db['linkers'][codes['linker']]
-			linkers = self.assemble_linkers(node1, node2, linker)
-			linkers.sort()
+			fragments = self.assemble_smiles(node1, node2, linker)
+			fragments.sort()
 
 			topology = codes['topology']
 			if topology.startswith('test.'):
@@ -608,11 +605,11 @@ class TobaccoMOFs(MOFCompare):
 
 			# Generate a reference MOFid based on SBU composition
 			mofid_options['default'] = assemble_mofid(
-				linkers, topology, cat, mof_name=codes['name'])
+				fragments, topology, cat, mof_name=codes['name'])
 			# Known classes of issues go here
 			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
 				mofid_options['stp_from_tpt'] = assemble_mofid(
-					linkers, "stp", cat, mof_name=codes['name'])
+					fragments, "stp", cat, mof_name=codes['name'])
 
 			if EXPORT_CODES:
 				mofid_options['_codes'] = codes
@@ -621,7 +618,7 @@ class TobaccoMOFs(MOFCompare):
 		else:
 			return None
 
-	def assemble_linkers(self, node1, node2, linker):
+	def assemble_smiles(self, node1, node2, linker):
 		# Assemble the expected nodes and linkers based on the designated compositions in the database,
 		# plus transformations to join "sticky ends" together (using an [Lr] pseudo atom).
 		# Returns a list of the SMILES components
