@@ -9,7 +9,7 @@ where the primary key in all the tables is the name.
 
 import os, sys
 import copy
-from extract_moffles import parse_moffles
+from run_mofid import parse_moffles
 
 
 def dict_to_delim(to_export, filename, delim="\t"):

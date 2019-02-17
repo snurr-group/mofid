@@ -29,7 +29,7 @@ for i in "${CIF_DIR}/"*.cif
 do
 	echo "Beginning $i" 1>&2
 	echo "----------------------------" 1>&2
-	python Python/extract_moffles.py "$i" "${OUTPUT_DIR}" | tee -a "${OUTPUT_COPY}"
+	python Python/run_mofid.py "$i" "${OUTPUT_DIR}" | tee -a "${OUTPUT_COPY}"
 done
 
 echo "----------------------------" 1>&2

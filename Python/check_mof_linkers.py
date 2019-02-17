@@ -19,7 +19,7 @@ import time
 import copy
 from cpp_cheminformatics import (path_to_resource, ob_normalize,
 	openbabel_replace, openbabel_contains)
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles
+from run_mofid import cif2moffles, assemble_moffles, parse_moffles
 from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code

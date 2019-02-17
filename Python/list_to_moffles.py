@@ -16,12 +16,12 @@ MOFs for generating linker SMILES, for now.
 
 import sys
 from check_mof_linkers import TobaccoMOFs
-from extract_moffles import assemble_moffles
+from run_mofid import assemble_moffles
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError('Usage: python list_to_moffles.py FILENAME_LIST.txt > MOFFLES.smi')
+		raise SyntaxError('Usage: python list_to_mofid.py FILENAME_LIST.txt > MOFFLES.smi')
 	
 	with open(args[0], "r") as f:
 		file_names = f.readlines()
