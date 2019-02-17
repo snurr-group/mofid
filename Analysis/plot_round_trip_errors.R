@@ -38,7 +38,7 @@ tobacco_errs <- import_err_df("Summary/tob_validation.json") %>%
   mutate(linker = ifelse(str_detect(code.linker, "^L_"), str_sub(code.linker, 3), code.linker))
 ga_errs <- import_err_df("Summary/ga_validation.json")
 
-# Extract the ON from ToBaCCo MOFs
+# Extract the MC and ON from ToBaCCo MOFs
 extract_on <- function(list_of_nodes, pattern="_on_") {
   matches <- str_detect(list_of_nodes, pattern)
   if (sum(matches) == 0) {
@@ -51,9 +51,13 @@ extract_on <- function(list_of_nodes, pattern="_on_") {
 }
 # See https://community.rstudio.com/t/dplyr-alternatives-to-rowwise/8071 on how to mutate by row
 df_extract_on <- Vectorize(extract_on)
+df_get_mc <- Vectorize(function(x, n) {return(x[n])})
 tobacco_errs <- tobacco_errs %>% 
   mutate(nodes.on = df_extract_on(code.nodes)) %>% 
-  mutate(nodes.on = ifelse(is.na(nodes.on), "None", nodes.on))
+  mutate(nodes.on = ifelse(is.na(nodes.on), "None", nodes.on)) %>% 
+  mutate(nodes.mc = df_extract_on(code.nodes, "_mc_")) %>% 
+  mutate(mc1 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 1)), nodes.mc)) %>% 
+  mutate(mc2 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 2)), NA))
 
 
 ### INTERPRET ERRORS ###
@@ -99,7 +103,6 @@ summarize_errors <- function(error_char_vec) {
   # between inconsistent bond assignment and incorrect bond assignment (or treat them separately)
   cleaned_errs <- str_replace(cleaned_errs, "_extra", "") %>% unique
   
-  # TODO STUFF
   if (length(cleaned_errs) == 1) {
     if (cleaned_errs %in% c("err_systre_error", "err_cpp_error")) {
       return("Crash")
@@ -115,33 +118,123 @@ summarize_errors <- function(error_char_vec) {
 }
 df_summarize_errors <- Vectorize(summarize_errors)
 
-# TODO: make a new .df to translate summarize_errors to an overall error class
-# "structure_mismatch" label?
-# Or just have an else statement for Success, etc.
 
 tobacco_errs <- tobacco_errs %>% 
   mutate(err_type=df_summarize_errors(errors)) %>% 
-  mutate(err_color=ifelse(err_type %in% mismatch_codes, "Mismatch", "Error"))
+  #mutate(err_color=ifelse(err_type == "Definition mismatch", "Mismatch", "Error")) %>% 
+  # More aggressively detect Systre crashes, since the Python code will hide them if multiple sources of error
+  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
 ga_errs <- ga_errs %>% 
   mutate(err_type=df_summarize_errors(errors)) %>% 
-  mutate(err_color=ifelse(err_type %in% mismatch_codes, "Mismatch", "Error"))
+  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
 
 
 ### UNDERSTANDING ERROR FLOWS ###
 
+# TODO: consider defining classes of nodes/linkers if we use that information
+
 RUN_ERROR_FLOWS <- TRUE
 if (RUN_ERROR_FLOWS) {
-  # TODO: run `summary` as described below to understand error flows, if I go that route
-  # TO GET STARTED, take each error class and run a summary command on the relevant classes of error
+  # There are two ways we can think about diagnosing the errors in the code
+  # 1. Going from errors to their cause (this block)
+  # 2. Going from patterns in the heatmap (e.g. certain linkers) back to types of error
+  # Both approaches could be informative, but let's start with #1 here.
+  
+  tobacco_errs$err_type %>% unique
+  colnames(tobacco_errs)
+  
+  # Define common classes of ToBaCCo linkers
+  tob_L_categories <- tibble(
+    code.linker = 1:47,  # adding the "L_" prefix below
+    L_4n_ring = logical(47),  # defaults to FALSE
+    L_triple_bond = logical(47),
+    L_double_bond = logical(47),
+    L_N_N_double = logical(47)
+  )
+  tob_L_categories[c(13, 26, 30, 35, 42, 44, 45), "L_4n_ring"] <- TRUE
+  tob_L_categories[c(3, 16, 19, 20, 27, 31:35, 37, 38, 41, 42, 46, 47), "L_triple_bond"] <- TRUE
+  tob_L_categories[c(2, 14, 15, 29, 30, 39), "L_double_bond"] <- TRUE
+  tob_L_categories[c(1, 40), "L_N_N_double"] <- TRUE
+  tob_L_categories <- tob_L_categories %>% mutate(code.linker = paste0("L_", code.linker))
+  
+  understand_tobacco <- tobacco_errs %>%
+    select(nodes.mc, nodes.on, code.linker, code.topology, cat, err_type, mc1, mc2) %>% 
+    left_join(tob_L_categories, by="code.linker") %>% 
+    mutate_all(funs(factor))  # set as factor so we can easily run summaries
+  
+  # Trivial example summary for tpt vs. stp:
+  understand_tobacco %>% filter(err_type=="Definition mismatch") %>% summary()
+  # Now let's dig into this data more closely
+  # For the figure in the paper, recall that my goal is to clearly show why these errors occur.
+  # We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
+  understand_tobacco %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
+  # Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
+  # followed by "see text/SI for discussion of classes of error".  We just need to reorganize the bars,
+  # add percentages, and possibly color the bars by success vs. node incompatibility and other common
+  # sources of error, etc.
+  #
+  # Then again, Sankey (or a heatmap) could also clearly show the relationship between a few causes
+  # and their many effects. Ask Randy and Andrew for their opinion.
+  
+  # By category:
+  # Most of the topological errors are sym_4_mc_1 (tetrahedral zinc).  Same with crashes
+  understand_tobacco %>% filter(err_type=="topology") %>% summary()
+  understand_tobacco %>% filter(err_type=="Crash") %>% summary()
+  # nodes errors are mostly sym_8_mc_7.  When including results from mc1/2, it's 273/282
+  understand_tobacco %>% filter(err_type=="node_single_bonds") %>% summary()
+  # "Many errors" is largely L_29 (strangely a benzene with double bonds coming off it)
+  # Ah, and again sym_8_mc_7 problems propagating back to other sources of error 
+  understand_tobacco %>% filter(err_type=="Many errors") %>% summary()
+  tobacco_errs %>% filter(err_type=="Many errors" & code.linker=="L_29")
+  # TODO: Based on "two errors" and the common problems with sym_8_mc_7, let's make a new class of error
+  # aggregating node and linker BO problems.
+  # But again, half of the errors are sym_8_mc_7.
+  understand_tobacco %>% filter(err_type=="Two errors") %>% summary
+  tobacco_errs %>% filter(err_type=="Two errors")
+  # Looking into the linkers, nothing particularly stands out from SB's
+  understand_tobacco %>% filter(err_type=="linker_single_bonds") %>% summary
+  # But 564/841 of the bond order problems are these 4-N rings
+  understand_tobacco %>% filter(err_type=="linker_bond_orders") %>% summary
+  # Interestingly, all of the "formula" errors are L_8,9,10, which have big rings next to a phenyl.
+  understand_tobacco %>% filter(err_type=="formula") %>% summary
+  
+  # Now repeating for the GA MOFs
+  
+  ga_errs$err_type %>% unique
+  colnames(ga_errs)
+  understand_ga <- ga_errs %>%
+    select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
+    #left_join(tob_L_categories, by="code.linker") %>% 
+    mutate_all(funs(factor))  # set as factor so we can easily run summaries
+  
+  understand_ga %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
+  
+  # From the bar graph, crashes are the most important to address.
+  # Interestingly, 101/129 are short L_0,1,2 secondary linkers
+  understand_ga %>% filter(err_type=="Crash") %>% summary()
+  # All of the definition mismatches are from Zr MOFs
+  understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  # Many of the "two error" cases are the definition mismatch plus something else
+  understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  ga_errs %>% filter(err_type=="Two errors")
+  # Most of the single bonds errors are the gigantic L_4 linker
+  understand_ga %>% filter(err_type=="linker_single_bonds") %>% summary()
+  # 7/15 of the linker_bond_orders errors are the 4N linker L_27
+  understand_ga %>% filter(err_type=="linker_bond_orders") %>% summary()
+  understand_ga %>% filter(err_type=="linker_bond_orders") %>%
+    filter(code.linker1==37 | code.linker2==37) %>% nrow
+  # Overall, only 260 non-successes in this DB, including the definition mismatches
+  understand_ga %>% filter(err_type!="Success") %>% nrow
+  
 }  # endif(RUN_ERROR_FLOWS)
 
 
 ### PLOTS FOR MAIN TEXT ###
 
-# TODO: implement figure for the paper
+# TODO: implement figure for the paper, whether it's Sankey, a heatmap, or a simple filled bar chart
 
 # Initial overall structure for the diagram
-sankey_tobacco <- 
+sankey_tobacco <-
   tobacco_errs %>%
   filter(err_type != "Success") %>%
   group_by(err_type, nodes.on, err_qty) %>%
