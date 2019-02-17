@@ -1,5 +1,5 @@
 """
-Removes metal nodes from a MOFFLES table
+Removes metal nodes from a MOFid table
 
 The names_to_tables script is powerful but still includes the metal nodes.
 Let's remove those and generate yet another table, but this time only

@@ -123,10 +123,10 @@ tobacco_errs <- tobacco_errs %>%
   mutate(err_type=df_summarize_errors(errors)) %>% 
   #mutate(err_color=ifelse(err_type == "Definition mismatch", "Mismatch", "Error")) %>% 
   # More aggressively detect Systre crashes, since the Python code will hide them if multiple sources of error
-  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
+  mutate(err_type=ifelse(str_detect(from_mofid, "ERROR"), "Crash", err_type))
 ga_errs <- ga_errs %>% 
   mutate(err_type=df_summarize_errors(errors)) %>% 
-  mutate(err_type=ifelse(str_detect(from_moffles, "ERROR"), "Crash", err_type))
+  mutate(err_type=ifelse(str_detect(from_mofid, "ERROR"), "Crash", err_type))
 
 
 ### UNDERSTANDING ERROR FLOWS ###

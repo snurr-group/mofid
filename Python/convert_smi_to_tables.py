@@ -9,7 +9,7 @@ where the primary key in all the tables is the name.
 
 import os, sys
 import copy
-from run_mofid import parse_moffles
+from run_mofid import parse_mofid
 
 
 def dict_to_delim(to_export, filename, delim="\t"):
@@ -31,7 +31,7 @@ class MOFExporter:
 	def parse(self, filename):
 		with open(filename, 'r') as f:
 			for line in f:
-				parsed = parse_moffles(line)
+				parsed = parse_mofid(line)
 				name = parsed['name']
 				del parsed['name']
 				parsed['smiles_part'] = parsed['smiles'].split('.')

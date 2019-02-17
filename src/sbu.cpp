@@ -1,6 +1,6 @@
 // Main MOFid code to decompose a CIF into nodes, linkers, and solvents.
 // Writes the SMILES and catenation info to stdout, errors to stderr, and
-// relevant CIFs and simplified topology.cgd to the Test/ directory.
+// relevant CIFs and simplified topology.cgd to the Output/ directory.
 
 // See https://openbabel.org/docs/dev/UseTheLibrary/CppExamples.html
 // Get iterator help from http://openbabel.org/dev-api/group__main.shtml
