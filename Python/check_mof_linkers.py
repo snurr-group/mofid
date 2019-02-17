@@ -266,6 +266,8 @@ class MOFCompare:
 			'ERROR', default['cat'], mof_name=default['name'])
 		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA',
 			None, mof_name=default['name'])
+		moffles_from_name['err_no_mof'] = assemble_moffles(['*'], 'NA',
+			'no_mof', mof_name=default['name'])
 
 
 		# Run transformations on the generated MOFFLES from CIF or smi database, if applicable (e.g. GA hMOFs)

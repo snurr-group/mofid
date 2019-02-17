@@ -10,7 +10,9 @@ Analysis scripts to generate figures and stats for the manuscript
 	1. `Scripts/HPC/run_submit_all.sh` and wait for jobs to finish.
 	2. `Scripts/HPC/run_post_submit_all.sh` to collect results and run the validator.
 3. TODO: probably something with `Python/convert_smi_to_tables.py`
-4. TODO: scripts in this directory for analysis
+4. Open the `mofid.Rproj` file in RStudio, then run analysis scripts to generate validation figures.
+	1. `Analysis/plot_round_trip_errors.R` parses the validator .json output to find a percent success/match rate for the MOFid code vs. structure recipe, as well as figures showing the composition.
+5. TODO: other scripts in this directory for analysis
 
 
 ## Other comments
