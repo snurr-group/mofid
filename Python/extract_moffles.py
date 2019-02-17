@@ -136,7 +136,9 @@ def assemble_moffles(linkers, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	moffles = ".".join(linkers) + " "
 	moffles = moffles + "f1" + "."
 	moffles = moffles + topology + "."
-	if cat is not None:
+	if cat == "no_mof":
+		moffles += cat + "."
+	elif cat is not None:
 		moffles = moffles + "cat" + cat + "."
 	if moffles.startswith(" "):  # Null linkers.  Make .smi compatible
 		moffles = "*" + moffles + "no_mof."
