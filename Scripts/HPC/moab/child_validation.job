@@ -15,5 +15,5 @@ module load python
 cd $PBS_O_WORKDIR
 #echo $PBS_JOBID > "${SUMMARY_DIR}/jobid_${BASE_SMILES}_validation"
 
-python Python/check_mof_linkers.py ${SUMMARY_DIR}/${BASE_SMILES}.smi > ${SUMMARY_DIR}/${BASE_SMILES}_validation.json
+python Python/check_mof_composition.py ${SUMMARY_DIR}/${BASE_SMILES}.smi > ${SUMMARY_DIR}/${BASE_SMILES}_validation.json
 

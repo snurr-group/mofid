@@ -79,7 +79,7 @@ mismatch_codes <- c("V_incomplete_linker",
 pillar_codes <- c("unk_pillar1", "unk_pillar2", "replaced_pillar1", "replaced_pillar2")
 
 summarize_errors <- function(error_char_vec) {
-  # Translate error codes from check_mof_linkers.py into their implications
+  # Translate error codes from check_mof_composition.py into their implications
   
   # First handle the easiest cases
   if (length(error_char_vec) == 0) {
