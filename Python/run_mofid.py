@@ -200,7 +200,7 @@ def cif2moffles(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 if __name__ == "__main__":
 	args = sys.argv[1:]
 	if len(args) != 1 and len(args) != 2:
-		raise SyntaxError("Usage: python extract_moffles.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
+		raise SyntaxError("Usage: python run_mofid.py path_to_cif_for_analysis.cif OutputPathIfNonstandard")
 	cif_file = args[0]
 	
 	output_systre_and_cif_path = DEFAULT_OUTPUT_PATH
