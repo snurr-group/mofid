@@ -237,10 +237,15 @@ class MOFCompare:
 		# Compares an arbitrary CIF file against its expected specification
 		# Returns a formatted JSON string with the result
 		start = time.time()
-		mofid_auto = cif2mofid(cif_path)
-		return self._test_generated(cif_path, mofid_auto, start, "from_cif")
+		auto_ids = cif2mofid(cif_path)
+		return self._test_generated(cif_path, auto_ids['mofid'],
+			start, "from_cif", auto_ids['mofkey'])
 
-	def _test_generated(self, cif_path, generated_mofid, start_time = None, generation_type = "from_generated"):
+	def _test_generated(self,
+		cif_path, generated_mofid,
+		start_time = None, generation_type = "from_generated",
+		mofkey = None
+		):
 		# Compares an arbitrary MOFid string against the value generated,
 		# either locally in the script (cif2mofid) or from an external .smi file.
 		# Also tests for common classes of error
@@ -289,6 +294,8 @@ class MOFCompare:
 			comparison['time'] = 0
 		else:
 			comparison['time'] = time.time() - start_time
+		if mofkey is not None:
+			comparison['mofkey'] = mofkey
 		comparison['name_parser'] = self.__class__.__name__
 		return comparison
 

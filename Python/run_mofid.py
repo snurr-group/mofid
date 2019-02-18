@@ -81,7 +81,14 @@ def extract_fragments(mof_path, output_file_path=DEFAULT_OUTPUT_PATH):
 		if cat == "-1":
 			cat = None
 
-	return (sorted(fragments), cat)
+	base_mofkey = None
+	if not cpp_run.returncode:  # If it's a successful run
+		mofkey_loc = os.path.join(
+			output_file_path, "NoSBU", "mofkey_no_topology.txt")
+		with open(mofkey_loc) as f:
+			base_mofkey = f.read().rstrip()  # ending newlines, etc.
+
+	return (sorted(fragments), cat, base_mofkey)
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
@@ -146,6 +153,10 @@ def assemble_mofid(fragments, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	mofid = mofid + mof_name
 	return mofid
 
+def assemble_mofkey(base_mofkey, base_topology):
+	# Add a topology to an existing MOFkey
+	return base_mofkey.replace("MOFkey-v1-", "MOFkey-v1-" + base_topology + "-")
+
 def parse_mofid(mofid):
 	# Deconstruct a MOFid string into its pieces
 	components = mofid.split()
@@ -183,8 +194,9 @@ def parse_mofid(mofid):
 	)
 
 def cif2mofid(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
-	# Assemble the MOFid string from all of its pieces
-	fragments, cat = extract_fragments(cif_path, intermediate_output_path)
+	# Assemble the MOFid string from all of its pieces.
+	# Also export the MOFkey in an output dict for convenience.
+	fragments, cat, base_mofkey = extract_fragments(cif_path, intermediate_output_path)
 	if cat is not None:
 		sn_topology = extract_topology(os.path.join(intermediate_output_path, "SingleNode/topology.cgd"))
 		an_topology = extract_topology(os.path.join(intermediate_output_path, "AllNode/topology.cgd"))
@@ -195,7 +207,16 @@ def cif2mofid(cif_path, intermediate_output_path=DEFAULT_OUTPUT_PATH):
 	else:
 		topology = "NA"
 	mof_name = os.path.splitext(os.path.basename(cif_path))[0]
-	return assemble_mofid(fragments, topology, cat, mof_name=mof_name)
+
+	mofkey = base_mofkey
+	if topology != "NA":
+		base_topology = topology.split(',')[0]
+		mofkey = assemble_mofkey(mofkey, base_topology)
+
+	return {
+		'mofid' : assemble_mofid(fragments, topology, cat, mof_name=mof_name),
+		'mofkey' : mofkey
+	}
 
 if __name__ == "__main__":
 	args = sys.argv[1:]
@@ -206,5 +227,14 @@ if __name__ == "__main__":
 	output_systre_and_cif_path = DEFAULT_OUTPUT_PATH
 	if len(args) == 2:
 		output_systre_and_cif_path = args[1]
-	
-	print(cif2mofid(cif_file, output_systre_and_cif_path))
+
+	identifiers = cif2mofid(cif_file, output_systre_and_cif_path)
+	print(identifiers['mofid'])
+	#print(identifiers['mofkey'])  # but incompatible with the use of stdout in run_folder.sh
+
+	# Write MOFid and MOFkey output to files for easier scripting.  See also run_folder.sh
+	with open(os.path.join(output_systre_and_cif_path, "python_mofid.txt"), "w") as f:
+		f.write(identifiers['mofid'] + "\n")
+	with open(os.path.join(output_systre_and_cif_path, "python_mofkey.txt"), "w") as f:
+		f.write(identifiers['mofkey'] + "\n")
+
