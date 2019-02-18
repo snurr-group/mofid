@@ -18,6 +18,7 @@
 #include <openbabel/generic.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obiter.h>
+#include <openbabel/elements.h>
 
 
 namespace OpenBabel
@@ -40,12 +41,18 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
 }
 
 
-std::string getSMILES(OBMol fragment, OBConversion obconv) {
-	// Prints SMILES based on OBConversion parameters
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv) {
+	// Resets a fragment's bonding/location before format conversion
 	OBMol canon = fragment;
 	resetBonds(&canon);
 	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
+}
+
+
+std::string getSMILES(OBMol fragment, OBConversion obconv) {
+	// Prints SMILES based on OBConversion parameters
+	return exportNormalizedMol(fragment, obconv);
 }
 
 
@@ -452,6 +459,82 @@ void MOFidDeconstructor::PostSimplification() {
 			}
 		}
 	}
+}
+
+
+std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
+	// Print out the detected MOFkey, optionally with the topology field.
+	// This method is implemented in MOFidDeconstructor instead of the others, because the
+	// organic building blocks must be intact (e.g. including carboxylates) to properly
+	// calculate the MOFkey.
+	std::stringstream mofkey;
+	mofkey << "MOFkey" << MOFKEY_SEP << "v" << MOFKEY_VERSION;  // MOFkey format signature
+
+	if (!topology.empty()) {
+		mofkey << MOFKEY_SEP << topology;
+	}
+
+	// Get unique metal atoms from the nodes
+	std::vector<int> unique_elements;
+	VirtualMol full_node_export = simplified_net.GetAtomsOfRole("node");
+	full_node_export.AddVirtualMol(simplified_net.GetAtomsOfRole("node bridge"));
+	full_node_export = simplified_net.PseudoToOrig(full_node_export);
+	AtomSet node_set = full_node_export.GetAtoms();
+	for (AtomSet::iterator it=node_set.begin(); it!=node_set.end(); ++it) {
+		int it_element = (*it)->GetAtomicNum();
+		if (isMetal(*it) && !inVector<int>(it_element, unique_elements)) {
+			unique_elements.push_back(it_element);
+		}
+	}
+	if (unique_elements.size() == 0) {
+		mofkey << MOFKEY_SEP << MOFKEY_NO_METALS;
+	} else {
+		std::sort(unique_elements.begin(), unique_elements.end());  // sort by atomic number
+		bool first_element = true;
+		for (std::vector<int>::iterator element=unique_elements.begin(); element!=unique_elements.end(); ++element) {
+			if (first_element) {
+				mofkey << MOFKEY_SEP;
+			} else {
+				mofkey << MOFKEY_METAL_DELIM;
+			}
+			mofkey << OBElements::GetSymbol(*element);
+		}
+	}
+
+	// Then, write unique InChIKeys (sans protonation state)
+	OBConversion ikey;
+	ikey.SetOutFormat("inchikey");
+	ikey.AddOption("X", OBConversion::OUTOPTIONS, "SNon");  // ignoring stereochemistry, at least for now
+	ikey.AddOption("w");  // reduce verbosity about InChI behavior:
+	// 'Omitted undefined stereo', 'Charges were rearranged', 'Proton(s) added/removed', 'Metal was disconnected'
+	// See https://openbabel.org/docs/dev/FileFormats/InChI_format.html for more information.
+	std::vector<std::string> unique_ikeys;
+
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	linker_export = simplified_net.PseudoToOrig(linker_export);
+	OBMol linker_mol = linker_export.ToOBMol();
+	std::vector<OBMol> linker_frags = linker_mol.Separate();
+	for (std::vector<OBMol>::iterator frag=linker_frags.begin(); frag!=linker_frags.end(); ++frag) {
+		std::string frag_ikey = exportNormalizedMol(*frag, ikey);
+		const std::string ob_newline = "\n";
+		if (frag_ikey.length() != (27 + ob_newline.size())) {
+			obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
+			continue;
+		}
+		frag_ikey = frag_ikey.substr(0, 25);  // 14 + 1 + 10 (minus the -protonation flag and \n)
+		if (!inVector<std::string>(frag_ikey, unique_ikeys)) {
+			unique_ikeys.push_back(frag_ikey);
+		}
+	}
+	if (unique_ikeys.size() == 0) {
+		unique_ikeys.push_back(MOFKEY_NO_LINKERS);
+	}
+	std::sort(unique_ikeys.begin(), unique_ikeys.end());  // sort alphabetically
+	for (std::vector<std::string>::iterator it=unique_ikeys.begin(); it!=unique_ikeys.end(); ++it) {
+		mofkey << MOFKEY_SEP << *it;
+	}
+
+	return mofkey.str();
 }
 
 

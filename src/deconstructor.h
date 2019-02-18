@@ -29,6 +29,14 @@ const std::string NO_SBU_SUFFIX = "/NoSBU";  // base MOFidDeconstructor class
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
+// Default placeholder topology and details for MOFkey
+const std::string DEFAULT_MOFKEY_TOPOLOGY = "";  // Alternatively, "OPTIONAL_TOPOLOGY" for user-friendliness // TODO: MAYBE NA???
+const std::string MOFKEY_VERSION = "1";
+const std::string MOFKEY_SEP = "-";
+const std::string MOFKEY_METAL_DELIM = ",";  // If multiple metal nodes, the delimiter between elements
+const std::string MOFKEY_NO_METALS = "NA";
+const std::string MOFKEY_NO_LINKERS = "MISSING_LINKERS";
+
 // PA's to describe points of extension
 const int POE_EXTERNAL_ELEMENT = 118;  // Og
 const int SBU_EXTERNAL_ELEMENT = 117;  // Ts
@@ -42,6 +50,7 @@ const int TREE_EXT_CONN = 115;  // Mc
 
 // Function prototypes
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv);
 std::string getSMILES(OBMol fragment, OBConversion obconv);
 
 
@@ -101,6 +110,7 @@ protected:
 public:
 	MOFidDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~MOFidDeconstructor() {};
+	virtual std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
 };
 
 
