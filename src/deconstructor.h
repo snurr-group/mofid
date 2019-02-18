@@ -106,11 +106,13 @@ class MOFidDeconstructor : public Deconstructor {
 // Converts 4-c linkers in MIL-47, etc., to 2 x 3-c.
 protected:
 	virtual void PostSimplification();
+	std::vector<std::string> PAsToUniqueInChIs(VirtualMol pa, const std::string &format);
 
 public:
 	MOFidDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~MOFidDeconstructor() {};
-	virtual std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
+	std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
+	std::string GetLinkerInChIs();
 };
 
 

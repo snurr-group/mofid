@@ -462,6 +462,46 @@ void MOFidDeconstructor::PostSimplification() {
 }
 
 
+std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
+	// Convert PsuedoAtoms in the simplified net to their unique InChI(key) values
+	// This code will strip the protonation state off of the InChIKey
+
+	std::vector<std::string> unique_inchi;
+	if (format != "inchi" && format != "inchikey") {
+		obErrorLog.ThrowError(__FUNCTION__, "Unexpected format flag", obError);
+		return unique_inchi;
+	}
+
+	OBConversion conv;
+	conv.SetOutFormat(format.c_str());
+	conv.AddOption("X", OBConversion::OUTOPTIONS, "SNon");  // ignoring stereochemistry, at least for now
+	conv.AddOption("w");  // reduce verbosity about InChI behavior:
+	// 'Omitted undefined stereo', 'Charges were rearranged', 'Proton(s) added/removed', 'Metal was disconnected'
+	// See https://openbabel.org/docs/dev/FileFormats/InChI_format.html for more information.
+
+	OBMol pa_mol = simplified_net.PseudoToOrig(pa).ToOBMol();
+	std::vector<OBMol> fragments = pa_mol.Separate();
+	for (std::vector<OBMol>::iterator frag=fragments.begin(); frag!=fragments.end(); ++frag) {
+		std::string frag_inchi = exportNormalizedMol(*frag, conv);
+		const std::string ob_newline = "\n";
+		if (format == "inchikey") {
+			if (frag_inchi.length() != (27 + ob_newline.size())) {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
+				continue;
+			}
+			frag_inchi = frag_inchi.substr(0, 25);  // 14 + 1 + 10 (minus the -protonation flag and \n)
+		}
+
+		if (!inVector<std::string>(frag_inchi, unique_inchi)) {
+			unique_inchi.push_back(frag_inchi);
+		}
+	}
+	std::sort(unique_inchi.begin(), unique_inchi.end());  // sort alphabetically
+
+	return unique_inchi;
+}
+
+
 std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 	// Print out the detected MOFkey, optionally with the topology field.
 	// This method is implemented in MOFidDeconstructor instead of the others, because the
@@ -502,39 +542,28 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 	}
 
 	// Then, write unique InChIKeys (sans protonation state)
-	OBConversion ikey;
-	ikey.SetOutFormat("inchikey");
-	ikey.AddOption("X", OBConversion::OUTOPTIONS, "SNon");  // ignoring stereochemistry, at least for now
-	ikey.AddOption("w");  // reduce verbosity about InChI behavior:
-	// 'Omitted undefined stereo', 'Charges were rearranged', 'Proton(s) added/removed', 'Metal was disconnected'
-	// See https://openbabel.org/docs/dev/FileFormats/InChI_format.html for more information.
-	std::vector<std::string> unique_ikeys;
-
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
-	linker_export = simplified_net.PseudoToOrig(linker_export);
-	OBMol linker_mol = linker_export.ToOBMol();
-	std::vector<OBMol> linker_frags = linker_mol.Separate();
-	for (std::vector<OBMol>::iterator frag=linker_frags.begin(); frag!=linker_frags.end(); ++frag) {
-		std::string frag_ikey = exportNormalizedMol(*frag, ikey);
-		const std::string ob_newline = "\n";
-		if (frag_ikey.length() != (27 + ob_newline.size())) {
-			obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
-			continue;
-		}
-		frag_ikey = frag_ikey.substr(0, 25);  // 14 + 1 + 10 (minus the -protonation flag and \n)
-		if (!inVector<std::string>(frag_ikey, unique_ikeys)) {
-			unique_ikeys.push_back(frag_ikey);
-		}
-	}
+	std::vector<std::string> unique_ikeys = PAsToUniqueInChIs(linker_export, "inchikey");
 	if (unique_ikeys.size() == 0) {
 		unique_ikeys.push_back(MOFKEY_NO_LINKERS);
 	}
-	std::sort(unique_ikeys.begin(), unique_ikeys.end());  // sort alphabetically
 	for (std::vector<std::string>::iterator it=unique_ikeys.begin(); it!=unique_ikeys.end(); ++it) {
 		mofkey << MOFKEY_SEP << *it;
 	}
 
 	return mofkey.str();
+}
+
+
+std::string MOFidDeconstructor::GetLinkerInChIs() {
+	// Get unique, sorted InChI's for linkers in a MOF, delimited by newlines
+	std::stringstream inchis;
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	std::vector<std::string> unique_inchis = PAsToUniqueInChIs(linker_export, "inchi");
+	for (std::vector<std::string>::iterator it=unique_inchis.begin(); it!=unique_inchis.end(); ++it) {
+		inchis << *it;  // don't need a std::endl, because Open Babel adds it by default to the export
+	}
+	return inchis.str();
 }
 
 
