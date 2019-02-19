@@ -31,8 +31,8 @@ const std::string ALL_NODE_SUFFIX = "/AllNode";
 
 // Default placeholder topology and details for MOFkey
 const std::string DEFAULT_MOFKEY_TOPOLOGY = "";  // Alternatively, "OPTIONAL_TOPOLOGY" for user-friendliness // TODO: MAYBE NA???
-const std::string MOFKEY_VERSION = "1";
-const std::string MOFKEY_SEP = "-";
+const std::string MOFKEY_VERSION = "v1";
+const std::string MOFKEY_SEP = ".";
 const std::string MOFKEY_METAL_DELIM = ",";  // If multiple metal nodes, the delimiter between elements
 const std::string MOFKEY_NO_METALS = "NA";
 const std::string MOFKEY_NO_LINKERS = "MISSING_LINKERS";

@@ -508,7 +508,7 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 	// organic building blocks must be intact (e.g. including carboxylates) to properly
 	// calculate the MOFkey.
 	std::stringstream mofkey;
-	mofkey << "MOFkey" << MOFKEY_SEP << "v" << MOFKEY_VERSION;  // MOFkey format signature
+	mofkey << "MOFkey-" << MOFKEY_VERSION;  // MOFkey format signature
 
 	if (!topology.empty()) {
 		mofkey << MOFKEY_SEP << topology;

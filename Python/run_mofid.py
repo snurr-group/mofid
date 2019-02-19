@@ -141,8 +141,8 @@ def extract_topology(mof_path):
 def assemble_mofid(fragments, topology, cat = None, mof_name="NAME_GOES_HERE"):
 	# Assemble the MOFid string from its components
 	mofid = ".".join(fragments) + " "
-	mofid = mofid + "MOFid-v1" + "-"
-	mofid = mofid + topology + "-"
+	mofid = mofid + "MOFid-v1" + "."
+	mofid = mofid + topology + "."
 	if cat == "no_mof":
 		mofid = mofid + cat
 	elif cat is not None:
@@ -154,7 +154,7 @@ def assemble_mofid(fragments, topology, cat = None, mof_name="NAME_GOES_HERE"):
 
 def assemble_mofkey(base_mofkey, base_topology):
 	# Add a topology to an existing MOFkey
-	return base_mofkey.replace("MOFkey-v1-", "MOFkey-v1-" + base_topology + "-")
+	return base_mofkey.replace("MOFkey-v1.", "MOFkey-v1." + base_topology + ".")
 
 def parse_mofid(mofid):
 	# Deconstruct a MOFid string into its pieces
@@ -177,16 +177,16 @@ def parse_mofid(mofid):
 	if len(components) > 2:
 		raise ValueError("Bad MOFid containing extra spaces before the semicolon:" + mofid)
 	metadata = components[1]
-	metadata = metadata.split('-')
+	metadata = metadata.split('.')
 
 	cat = None
 	topology = None
 	for loc, tag in enumerate(metadata):
-		if loc == 0 and tag != 'MOFid':
+		if loc == 0 and not tag.startswith('MOFid'):
 			raise ValueError("MOFid-v1 must start with the correct tag")
-		if loc == 1 and tag != 'v1':
+		if loc == 0 and tag[5:] != '-v1':
 			raise ValueError("Unsupported version of MOFid")
-		elif loc == 2:
+		elif loc == 1:
 			topology = tag
 		elif tag.lower().startswith('cat'):
 			cat = tag[3:]
