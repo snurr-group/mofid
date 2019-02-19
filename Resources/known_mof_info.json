@@ -1,44 +1,44 @@
 {
-	"P1-IRMOF-1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.P1-IRMOF-1",
-	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat1.F1.hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
-	"VUSKEA_clean" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.VUSKEA_clean",
+	"P1-IRMOF-1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pcu-cat0;P1-IRMOF-1",
+	"hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pcu-cat1;hypotheticalMOF_1_i_0_j_0_k_0_m_0_cat_1",
+	"VUSKEA_clean" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pcu-cat0;VUSKEA_clean",
 	
-	"Zn4O_cluster_with_hydrogen" : "* f1.NA.no_mof.F1.Zn4O_cluster_with_hydrogen",
+	"Zn4O_cluster_with_hydrogen" : "* MOFid-v1-NA-no_mof;Zn4O_cluster_with_hydrogen",
 	
-	"hypotheticalMOF_5071180_i_2_j_25_k_1_m_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)c1ccc(cc1)C(=O)[O-].n1ccc(cc1)c1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_5071180_i_2_j_25_k_1_m_0",
+	"hypotheticalMOF_5071180_i_2_j_25_k_1_m_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)c1ccc(cc1)C(=O)[O-].n1ccc(cc1)c1ccncc1 MOFid-v1-pcu-cat0;hypotheticalMOF_5071180_i_2_j_25_k_1_m_0",
 	
-	"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "[O-]C(=O)c1cc2ccc3c4c2c(c1)ccc4cc(c3)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_15286_i_0_j_17_k_17_m_0",
+	"hypotheticalMOF_15286_i_0_j_17_k_17_m_0" : "[O-]C(=O)c1cc2ccc3c4c2c(c1)ccc4cc(c3)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pcu-cat0;hypotheticalMOF_15286_i_0_j_17_k_17_m_0",
 	
-	"P1-Cu-BTC" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] f1.tbo.cat0.F1.P1-Cu-BTC",
+	"P1-Cu-BTC" : "[Cu][Cu].[O-]C(=O)c1cc(cc(c1)C(=O)[O-])C(=O)[O-] MOFid-v1-tbo-cat0;P1-Cu-BTC",
 	
-	"ZIF-8-RASPA" : "CC1=NC=C[N]1.[Zn] f1.sod.cat0.F1.ZIF-8-RASPA",
-	"ZIF-69-RASPA" : "Clc1ccc2c(c1)N=C[N]2.Clc1ccc2c(c1)[N]C=N2.O=N(=O)C1=NC=C[N]1.O=N(=O)C1=N[CH]C=N1.[Zn] f1.gme.cat0.F1.ZIF-69-RASPA",
+	"ZIF-8-RASPA" : "CC1=NC=C[N]1.[Zn] MOFid-v1-sod-cat0;ZIF-8-RASPA",
+	"ZIF-69-RASPA" : "Clc1ccc2c(c1)N=C[N]2.Clc1ccc2c(c1)[N]C=N2.O=N(=O)C1=NC=C[N]1.O=N(=O)C1=N[CH]C=N1.[Zn] MOFid-v1-gme-cat0;ZIF-69-RASPA",
 	
-	"NU-1000_S1" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.csq.cat0.F1.NU-1000_S1",
-	"super_nu1000" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.csq.cat0.F1.super_nu1000",
+	"NU-1000_S1" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] MOFid-v1-csq-cat0;NU-1000_S1",
+	"super_nu1000" : "O[Zr]123([OH2])[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)([OH2])O)([OH2])O)([OH2])O.[O-]C(=O)c1ccc(cc1)c1cc(c2ccc(cc2)C(=O)[O-])c2c3c1ccc1c3c(cc2)c(cc1c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] MOFid-v1-csq-cat0;super_nu1000",
 	
-	"super_csq_sym_5_mc_2_sym_8_mc_9_L_12" : "O[Zr]123(O)[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)O)(O)O.[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Cu][Cu][O] f1.csq.cat0.F1.super_csq_sym_5_mc_2_sym_8_mc_9_L_12",
-	"ja_512311a_si_007_tobacco" : "[O-]C(=O)c1c(F)cc(cc1F)c1cc(cc(c1)c1cc(F)c(c(c1)F)C(=O)[O-])c1cc(F)c(c(c1)F)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.qom.cat0.F1.ja_512311a_si_007_tobacco",
-	"ADARAA_clean" : "[Co]O[Co].[O-]C(=O)c1cc(cc(c1)C1=C2C=CC3=[N]2[Co]24n5c1ccc5C(=C1[N]2=C(C=C1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O-])C(=O)[O-])c1c(Br)cccc1Br)C(=O)[O-] f1.nbo.cat0.F1.ADARAA_clean",
-	"ic101935f_si_002_tobacco" : "[O-]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O-])Nc1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pyr.cat0.F1.ic101935f_si_002_tobacco",
+	"super_csq_sym_5_mc_2_sym_8_mc_9_L_12" : "O[Zr]123(O)[OH]4[Zr]56[O]3[Zr]37([OH]2[Zr]28[O]1[Zr]14([O]6[Zr]([OH]53)([OH]21)([O]78)(O)O)(O)O)(O)O.[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Cu][Cu][O] MOFid-v1-csq-cat0;super_csq_sym_5_mc_2_sym_8_mc_9_L_12",
+	"ja_512311a_si_007_tobacco" : "[O-]C(=O)c1c(F)cc(cc1F)c1cc(cc(c1)c1cc(F)c(c(c1)F)C(=O)[O-])c1cc(F)c(c(c1)F)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-qom-cat0;ja_512311a_si_007_tobacco",
+	"ADARAA_clean" : "[Co]O[Co].[O-]C(=O)c1cc(cc(c1)C1=C2C=CC3=[N]2[Co]24n5c1ccc5C(=C1[N]2=C(C=C1)C(=c1n4c(=C3c2c(Br)cccc2Br)cc1)c1cc(cc(c1)C(=O)[O-])C(=O)[O-])c1c(Br)cccc1Br)C(=O)[O-] MOFid-v1-nbo-cat0;ADARAA_clean",
+	"ic101935f_si_002_tobacco" : "[O-]C(=O)c1ccc(cc1)NC1=NC(=[N]=C([N]1)Nc1ccc(cc1)C(=O)[O-])Nc1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pyr-cat0;ic101935f_si_002_tobacco",
 	
-	"nbob_sym_5_mc_2_sym_5_on_13_L_16" : "[Cu][Cu].[O-]C(=O)C#CC#Cc1ccc(cc1)C(=C(c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-] f1.nbo,fof.cat0.F1.nbob_sym_5_mc_2_sym_5_on_13_L_16",
+	"nbob_sym_5_mc_2_sym_5_on_13_L_16" : "[Cu][Cu].[O-]C(=O)C#CC#Cc1ccc(cc1)C(=C(c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-])c1ccc(cc1)C#CC#CC(=O)[O-] MOFid-v1-nbo,fof-cat0;nbob_sym_5_mc_2_sym_5_on_13_L_16",
 	
-	"MIL-47-P1-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-P1-RASPA",
-	"MIL-47-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] f1.rna.cat0.F1.MIL-47-RASPA",
+	"MIL-47-P1-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] MOFid-v1-rna-cat0;MIL-47-P1-RASPA",
+	"MIL-47-RASPA" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O].[V] MOFid-v1-rna-cat0;MIL-47-RASPA",
 	
-	"hypotheticalMOF_27262_1_0_2_9_9_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)C(=O)[O-].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_27262_1_0_2_9_9_0",
-	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "[O-]C(=O)C=CC=CC(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.fcu.cat0.F1.hypotheticalMOF_1003830_0_0_4_10_10_0",
-	"hypotheticalMOF_2000756_0_0_2_32_32_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] f1.tbo.cat0.F1.hypotheticalMOF_2000756_0_0_2_32_32_0",
-	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O-]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] f1.pcu.cat0.F1.hypotheticalMOF_5026325_3_0_0_27_27_0",
-	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "[O-]C(=O)c1ccc(cc1)N1C(=O)c2ccc3c4c2c(C1=O)ccc4C(=O)N(C3=O)c1ccc(cc1)C(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 f1.pcu.cat0.F1.hypotheticalMOF_7002752_0_0_4_28_28_0",
-	"hypotheticalMOF_22242_0_0_1_0_9_0" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.hypotheticalMOF_22242_0_0_1_0_9_0",
-	"super_hMOF_22242" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 f1.pcu.cat0.F1.super_hMOF_22242",
+	"hypotheticalMOF_27262_1_0_2_9_9_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)C(=O)[O-].n1ccncc1 MOFid-v1-pcu-cat0;hypotheticalMOF_27262_1_0_2_9_9_0",
+	"hypotheticalMOF_1003830_0_0_4_10_10_0" : "[O-]C(=O)C=CC=CC(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 MOFid-v1-fcu-cat0;hypotheticalMOF_1003830_0_0_4_10_10_0",
+	"hypotheticalMOF_2000756_0_0_2_32_32_0" : "[Cu][Cu].[O-]C(=O)c1ccc(cc1)c1cc(cc(c1)c1ccc(cc1)C(=O)[O-])c1ccc(cc1)C(=O)[O-] MOFid-v1-tbo-cat0;hypotheticalMOF_2000756_0_0_2_32_32_0",
+	"hypotheticalMOF_5026325_3_0_0_27_27_0" : "[O-]C(=O)c1ccc(cc1)c1nnc(nn1)c1ccc(cc1)C(=O)[O-].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-pcu-cat0;hypotheticalMOF_5026325_3_0_0_27_27_0",
+	"hypotheticalMOF_7002752_0_0_4_28_28_0" : "[O-]C(=O)c1ccc(cc1)N1C(=O)c2ccc3c4c2c(C1=O)ccc4C(=O)N(C3=O)c1ccc(cc1)C(=O)[O-].[O]12[Zr]34[O]5[Zr]62[O]2[Zr]71[O]4[Zr]14[O]3[Zr]35[O]6[Zr]2([O]71)[O]43 MOFid-v1-pcu-cat0;hypotheticalMOF_7002752_0_0_4_28_28_0",
+	"hypotheticalMOF_22242_0_0_1_0_9_0" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 MOFid-v1-pcu-cat0;hypotheticalMOF_22242_0_0_1_0_9_0",
+	"super_hMOF_22242" : "[O-]C(=O)C(=O)[O-].[O-]C(=O)c1ccc(cc1)C(=O)[O-].[Zn][Zn].n1ccncc1 MOFid-v1-pcu-cat0;super_hMOF_22242",
 	
-	"ABAVIJ_clean" : "[Co].[O-]C(=O)c1ccncc1 f1.rtl.cat0.F1.ABAVIJ_clean",
+	"ABAVIJ_clean" : "[Co].[O-]C(=O)c1ccncc1 MOFid-v1-rtl-cat0;ABAVIJ_clean",
 	
-	"COD_2100028" : "* f1.NA.no_mof.F1.COD_2100028",
-	"intentionally_messed_up_hmof1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Zn][O]([Zn][O])([Zn])[Zn].[Zn][O]([Zn])([Zn])[Zn] f1.MISMATCH.cat1.F1.intentionally_messed_up_hmof1",
+	"COD_2100028" : "* MOFid-v1-NA-no_mof;COD_2100028",
+	"intentionally_messed_up_hmof1" : "[O-]C(=O)c1ccc(cc1)C(=O)[O-].[O][Zn][O]([Zn][O])([Zn])[Zn].[Zn][O]([Zn])([Zn])[Zn] MOFid-v1-MISMATCH-cat1;intentionally_messed_up_hmof1",
 	
 	"_some_known_issues" : {
 		"ic101935f_si_002_tobacco" : "Strange radical in nitrogen ring",
