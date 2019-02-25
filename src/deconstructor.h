@@ -49,9 +49,9 @@ const int TREE_EXT_CONN = 115;  // Mc
 
 
 // Function prototypes
-std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv);
-std::string exportNormalizedMol(OBMol fragment, OBConversion obconv);
-std::string getSMILES(OBMol fragment, OBConversion obconv);
+std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds=false);
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds=false);
+std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bonds=false);
 
 
 class Deconstructor {

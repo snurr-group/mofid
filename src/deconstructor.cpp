@@ -25,13 +25,13 @@ namespace OpenBabel
 {
 
 
-std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
+std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds) {
 	// Write a list of unique SMILES for a set of fragments
 	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
 	std::stringstream written;
 	std::set<std::string> unique_smiles;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		unique_smiles.insert(getSMILES(*it, obconv));  // only adds unique values in a set
+		unique_smiles.insert(getSMILES(*it, obconv, only_single_bonds));  // only adds unique values in a set
 	}
 	for (std::set<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		written << *i2;
@@ -41,18 +41,24 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
 }
 
 
-std::string exportNormalizedMol(OBMol fragment, OBConversion obconv) {
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
 	// Resets a fragment's bonding/location before format conversion
+	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders
 	OBMol canon = fragment;
 	resetBonds(&canon);
+	if (only_single_bonds) {
+		FOR_BONDS_OF_MOL(b, canon) {
+			b->SetBondOrder(1);
+		}
+	}
 	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
 }
 
 
-std::string getSMILES(OBMol fragment, OBConversion obconv) {
+std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
 	// Prints SMILES based on OBConversion parameters
-	return exportNormalizedMol(fragment, obconv);
+	return exportNormalizedMol(fragment, obconv, only_single_bonds);
 }
 
 
@@ -389,21 +395,23 @@ std::string Deconstructor::GetMOFInfo() {
 	// Print out the SMILES for nodes and linkers, and the detected catenation
 	std::stringstream analysis;
 
+	const bool export_single_bonds = true;  // Using single bonds instead of bond orders for nodes
+
 	VirtualMol node_export = simplified_net.GetAtomsOfRole("node");
 	// Handle node and node_bridge separately to match old test SMILES
 	node_export = simplified_net.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
-	analysis << writeFragments(node_mol.Separate(), obconv);
+	analysis << writeFragments(node_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol node_bridge_export = simplified_net.GetAtomsOfRole("node bridge");
 	node_bridge_export = simplified_net.PseudoToOrig(node_bridge_export);
 	OBMol node_bridge_mol = node_bridge_export.ToOBMol();
-	analysis << writeFragments(node_bridge_mol.Separate(), obconv);
+	analysis << writeFragments(node_bridge_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
 	linker_export = simplified_net.PseudoToOrig(linker_export);
 	OBMol linker_mol = linker_export.ToOBMol();
-	analysis << writeFragments(linker_mol.Separate(), obconv);
+	analysis << writeFragments(linker_mol.Separate(), obconv, !export_single_bonds);
 
 	analysis << GetCatenationInfo(CheckCatenation());
 	return analysis.str();
