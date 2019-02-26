@@ -10,6 +10,6 @@ Scripts/HPC/${JOB_SCHEDULER}/submit_parallel.sh Data/opt_tobacco/split-all/ tob
 echo "Submitting CoRE MOF 2019"
 Scripts/HPC/${JOB_SCHEDULER}/submit_parallel.sh Data/core2019 core
 echo "Submitting GA hMOFs"
-Scripts/HPC/${JOB_SCHEDULER}/submit_one.sh Data/ParentGA/ ga
+Scripts/HPC/${JOB_SCHEDULER}/submit_one.sh Data/CatParentGA/ ga
 echo "Done submitting HPC jobs."
 
