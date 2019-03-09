@@ -159,7 +159,8 @@ def assemble_mofkey(base_mofkey, base_topology):
 def parse_mofid(mofid):
 	# Deconstruct a MOFid string into its pieces
 	#[mofid_data, mofid_name]
-	mofid_parts = mofid.split(';')
+	# Normalize the string by removing trailing spaces, e.g. newlines
+	mofid_parts = mofid.rstrip().split(';')
 	mofid_data = mofid_parts[0]
 	if len(mofid_parts) > 1:
 		mofid_name = ';'.join(mofid_parts[1:])
