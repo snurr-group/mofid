@@ -10,15 +10,8 @@
 # - GA MOFs: success, replaced_pillarX, or unk_pillarX.  That means the MOF is either an exact match or
 #   ambiguous results from primary vs. secondary linker for carboxylate vs. pyridine pillar.
 #
-# Thinking about these results for a new analysis, generate two types of figures:
-# 1. For the main text, draw a Sankey/alluvial diagram showing flow of BB's vs. error types
-#    See also https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html
-# 2. For the SI, consider using heatmaps, and possibly a sum over different error types
-#    This might not be necessary -- TBD.
-#
-# If I need treemaps later, consider library(treemapify) and this layout:
-# https://support.office.com/en-us/article/create-a-treemap-chart-in-office-dfe86d28-a610-4ef5-9b30-362d5c624b68
-
+# Thinking about these results, the figure we need to generate is a simple bar graph showing
+# the rates of success and different types of failures, along with common causes.
 
 source('Analysis/R-Utilities/parse_json_results.R')
 
@@ -131,8 +124,37 @@ ga_errs <- ga_errs %>%
 
 ### UNDERSTANDING ERROR FLOWS ###
 
-# TODO: consider defining classes of nodes/linkers if we use that information
+tobacco_errs$err_type %>% unique
+colnames(tobacco_errs)
 
+# Define common classes of ToBaCCo linkers
+tob_L_categories <- tibble(
+  code.linker = 1:47,  # adding the "L_" prefix below
+  L_4n_ring = logical(47),  # defaults to FALSE
+  L_triple_bond = logical(47),
+  L_double_bond = logical(47),
+  L_N_N_double = logical(47)
+)
+tob_L_categories[c(13, 26, 30, 35, 42, 44, 45), "L_4n_ring"] <- TRUE
+tob_L_categories[c(3, 16, 19, 20, 27, 31:35, 37, 38, 41, 42, 46, 47), "L_triple_bond"] <- TRUE
+tob_L_categories[c(2, 14, 15, 29, 30, 39), "L_double_bond"] <- TRUE
+tob_L_categories[c(1, 40), "L_N_N_double"] <- TRUE
+tob_L_categories <- tob_L_categories %>% mutate(code.linker = paste0("L_", code.linker))
+
+understand_tobacco <- tobacco_errs %>%
+  select(nodes.mc, nodes.on, code.linker, code.topology, cat, err_type, mc1, mc2) %>% 
+  left_join(tob_L_categories, by="code.linker") %>% 
+  mutate_all(funs(factor))  # set as factor so we can easily run summaries
+
+# TODO
+# Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
+# followed by "see text/SI for discussion of classes of error". (specific examples of visualized CIFs)
+# We just need to reorganize the bars, add percentages, and possibly color the bars by success vs.
+# node incompatibility and other common sources of error, etc.
+  
+# Now let's dig into this data more closely
+# For the figure in the paper, recall that my goal is to clearly show why these errors occur.
+# We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
 RUN_ERROR_FLOWS <- TRUE
 if (RUN_ERROR_FLOWS) {
   # There are two ways we can think about diagnosing the errors in the code
@@ -140,43 +162,9 @@ if (RUN_ERROR_FLOWS) {
   # 2. Going from patterns in the heatmap (e.g. certain linkers) back to types of error
   # Both approaches could be informative, but let's start with #1 here.
   
-  tobacco_errs$err_type %>% unique
-  colnames(tobacco_errs)
-  
-  # Define common classes of ToBaCCo linkers
-  tob_L_categories <- tibble(
-    code.linker = 1:47,  # adding the "L_" prefix below
-    L_4n_ring = logical(47),  # defaults to FALSE
-    L_triple_bond = logical(47),
-    L_double_bond = logical(47),
-    L_N_N_double = logical(47)
-  )
-  tob_L_categories[c(13, 26, 30, 35, 42, 44, 45), "L_4n_ring"] <- TRUE
-  tob_L_categories[c(3, 16, 19, 20, 27, 31:35, 37, 38, 41, 42, 46, 47), "L_triple_bond"] <- TRUE
-  tob_L_categories[c(2, 14, 15, 29, 30, 39), "L_double_bond"] <- TRUE
-  tob_L_categories[c(1, 40), "L_N_N_double"] <- TRUE
-  tob_L_categories <- tob_L_categories %>% mutate(code.linker = paste0("L_", code.linker))
-  
-  understand_tobacco <- tobacco_errs %>%
-    select(nodes.mc, nodes.on, code.linker, code.topology, cat, err_type, mc1, mc2) %>% 
-    left_join(tob_L_categories, by="code.linker") %>% 
-    mutate_all(funs(factor))  # set as factor so we can easily run summaries
-  
+  # By category:
   # Trivial example summary for tpt vs. stp:
   understand_tobacco %>% filter(err_type=="Definition mismatch") %>% summary()
-  # Now let's dig into this data more closely
-  # For the figure in the paper, recall that my goal is to clearly show why these errors occur.
-  # We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
-  understand_tobacco %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
-  # Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
-  # followed by "see text/SI for discussion of classes of error".  We just need to reorganize the bars,
-  # add percentages, and possibly color the bars by success vs. node incompatibility and other common
-  # sources of error, etc.
-  #
-  # Then again, Sankey (or a heatmap) could also clearly show the relationship between a few causes
-  # and their many effects. Ask Randy and Andrew for their opinion.
-  
-  # By category:
   # Most of the topological errors are sym_4_mc_1 (tetrahedral zinc).  Same with crashes
   understand_tobacco %>% filter(err_type=="topology") %>% summary()
   understand_tobacco %>% filter(err_type=="Crash") %>% summary()
@@ -198,7 +186,7 @@ if (RUN_ERROR_FLOWS) {
   # Interestingly, all of the "formula" errors are L_8,9,10, which have big rings next to a phenyl.
   understand_tobacco %>% filter(err_type=="formula") %>% summary
   
-  # Now repeating for the GA MOFs
+  ### Now repeating for the GA MOFs ###
   
   ga_errs$err_type %>% unique
   colnames(ga_errs)
@@ -206,8 +194,6 @@ if (RUN_ERROR_FLOWS) {
     select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
     #left_join(tob_L_categories, by="code.linker") %>% 
     mutate_all(funs(factor))  # set as factor so we can easily run summaries
-  
-  understand_ga %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
   
   # From the bar graph, crashes are the most important to address.
   # Interestingly, 101/129 are short L_0,1,2 secondary linkers
@@ -234,78 +220,21 @@ if (RUN_ERROR_FLOWS) {
 # TODO: implement figure for the paper, whether it's Sankey, a heatmap, or a simple filled bar chart
 
 # Initial overall structure for the diagram
-sankey_tobacco <-
-  tobacco_errs %>%
-  filter(err_type != "Success") %>%
-  group_by(err_type, nodes.on, err_qty) %>%
-  summarize(err_n = n()) %>%
-  #ggplot(aes(y=1, axis1=linker, axis2=nodes.on, axis3=err_qty)) +
-  ggplot(aes(y=err_n, axis1=err_type, axis2=nodes.on, axis3=err_qty)) +
-  geom_alluvium(aes(fill=err_type)) +
-  geom_stratum(width=1/6, color="grey") +
-  guides(fill=FALSE) +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Error class", "on", "Num errs"), expand = c(.05, .05))
-cowplot::save_plot("Analysis/Figures/sankey_tobacco.png", sankey_tobacco, base_aspect_ratio=2.0)
+p_errors_tob <-
+  understand_tobacco %>% 
+#  filter(err_type != "Success") %>% 
+  ggplot(aes(err_type)) +
+  geom_bar() +
+#  scale_y_continuous(position = "right") +  # for later, if I design the figure as a breakout inset
+  coord_flip() +
+  labs(x = NULL, y = "Number of MOFs")
+cowplot::save_plot("Analysis/Figures/errors_tobacco.png", p_errors_tob, base_aspect_ratio=2.0)
 
-sankey_ga <-
-  ga_errs %>%
-  filter(err_type != "Success") %>%  # Report % success as a number
-  group_by(err_type, code.nodes, code.linker1) %>%
-  summarize(err_n = n()) %>%
-  #ggplot(aes(y=1, axis1=linker, axis2=nodes.on, axis3=err_qty)) +
-  ggplot(aes(y=err_n, axis1=err_type, axis2=code.nodes, axis3=code.linker1)) +
-  geom_alluvium(aes(fill=err_type)) +
-  geom_stratum(width=1/6, color="grey") +
-  guides(fill=FALSE) +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Error class", "Metal node", "L1"), expand = c(.05, .05))
-cowplot::save_plot("Analysis/Figures/sankey_ga.png", sankey_ga, base_aspect_ratio=2.0)
-
-# TODO: consider the networkD3::sankeyNetwork layout, instead
-# https://www.r-graph-gallery.com/323-sankey-diagram-with-the-networkd3-library/
-# Would need to revamp the figure by running a series of steps to convert the data frame, if we went that route
-# Maybe also river plot as an alternative: https://stackoverflow.com/questions/9968433/sankey-diagrams-in-r
-# That package seems a bit cleaner if you don't need interactivity
-# At any rate, I'll need to semi-manually calculate flows/my story instead of relying on ggplot.
-# The format for makeRiver is a dataframe with N1, N2, Value.
-
-# Idea: the purpose of the Sankey diagram will be error attribution, to complement the heatmaps
-# TODO: rephrase the "success" of the heatmaps for the GA MOFs - and notate properly wihtin the text
-# Also, maybe then it could be a 2-part figure for both GA/ToBaCCo.  A heatmap with overall sucess, then Sankey to drill down.
-
-
-### PLOTS FOR SI ###
-
-# TODO: consider breaking up the diagram into more specific classes of error?
-# Honestly, these plots might become irrelevant if the Sankey diagram has sufficient information.
-
-tobacco_heatmap <- 
-  tobacco_errs %>% 
-  group_by(linker, nodes.on) %>% 
-  summarize(num_successes = sum(match), num_total = n()) %>%
-  mutate(success_rate = num_successes / num_total) %>% 
-  mutate(Linker = factor(linker, levels=c("_", 1:50))) %>% 
-  ggplot(aes(Linker, nodes.on)) +
-  geom_tile(aes(fill=success_rate)) +
-  # scale_fill_viridis() +
-  guides(fill=FALSE) +
-  scale_x_discrete(breaks=c(1, seq(5, 47, 5)), drop=FALSE)
-cowplot::save_plot("Analysis/Figures/si_recipe_tobacco.png", tobacco_heatmap)
-
-# And repeat for catenated, non-functionalized ("parent") GA hMOFs
-ga_heatmap <- 
-  ga_errs %>% 
-  group_by(code.linker1, code.linker2, code.nodes) %>% 
-  summarize(num_successes = sum(match), num_total = n()) %>%
-  mutate(success_rate = num_successes / num_total) %>% 
-  mutate(Linker1 = factor(code.linker1, levels=0:39)) %>% 
-  mutate(Linker2 = factor(code.linker2, levels=0:39)) %>% 
-  ggplot(aes(Linker1, Linker2)) +
-  geom_tile(aes(fill=success_rate)) +
-  guides(fill=FALSE) +
-  facet_grid(code.nodes~.) +
-  scale_x_discrete(drop=FALSE) +
-  scale_y_discrete(drop=FALSE)
-cowplot::save_plot("Analysis/Figures/si_recipe_ga.png", ga_heatmap)
+p_errors_ga <-
+  understand_ga %>% 
+  ggplot(aes(err_type)) +
+  geom_bar() +
+  coord_flip() +
+  labs(x = NULL, y = "Number of MOFs")
+cowplot::save_plot("Analysis/Figures/errors_ga.png", p_errors_ga, base_aspect_ratio=2.0)
 
