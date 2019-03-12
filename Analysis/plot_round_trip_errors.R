@@ -21,6 +21,7 @@ library(cowplot)
 library(viridis)
 library(ggalluvial)
 library(purrr)
+library(forcats)
 
 
 ### DATA IMPORT ###
@@ -146,7 +147,7 @@ understand_tobacco <- tobacco_errs %>%
   left_join(tob_L_categories, by="code.linker") %>% 
   mutate_all(funs(factor))  # set as factor so we can easily run summaries
 
-# TODO
+
 # Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
 # followed by "see text/SI for discussion of classes of error". (specific examples of visualized CIFs)
 # We just need to reorganize the bars, add percentages, and possibly color the bars by success vs.
@@ -238,7 +239,7 @@ plot_successes <- function(x, db_name) {
 p_errors_tob <-
   understand_tobacco %>% 
   filter(err_type != "Success") %>% 
-  ggplot(aes(err_type)) +
+  ggplot(aes(fct_rev(fct_infreq(err_type)))) +
   geom_bar() +
   scale_y_continuous(position = "right") +
   coord_flip() +
@@ -259,7 +260,7 @@ cowplot::save_plot(
 p_errors_ga <-
   understand_ga %>% 
   filter(err_type != "Success") %>% 
-  ggplot(aes(err_type)) +
+  ggplot(aes(fct_rev(fct_infreq(err_type)))) +
   scale_y_continuous(position = "right") +
   geom_bar() +
   coord_flip() +
