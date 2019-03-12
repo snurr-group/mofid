@@ -218,6 +218,21 @@ if (RUN_ERROR_FLOWS) {
 
 ### PLOTS FOR MAIN TEXT ###
 
+error_code_translator <- tribble(
+  ~err_type, ~err_plot,
+  "Crash", "Program error",
+  "linker_bond_orders", "Wrong bond orders",
+  "linker_single_bonds", "Linker bonding",
+  "node_single_bonds", "Node bonding",
+  "Two errors", "Multiple errors",
+  "Many errors", "Multiple errors",
+  "topology", "Different topology",
+  "formula", "Missing/extra atoms",
+  "no_mof", "No MOF found",
+  "nonplanar_carboxylate", "Nonplanar carboxylate",
+  "Definition mismatch", "Misleading definition"
+)
+
 # Top bar for the overall success rate
 plot_successes <- function(x, db_name) {
   num_mofs <- nrow(x)
@@ -239,7 +254,8 @@ plot_successes <- function(x, db_name) {
 p_errors_tob <-
   understand_tobacco %>% 
   filter(err_type != "Success") %>% 
-  ggplot(aes(fct_rev(fct_infreq(err_type)))) +
+  left_join(error_code_translator, by="err_type") %>% 
+  ggplot(aes(fct_rev(fct_infreq(err_plot)))) +
   geom_bar() +
   scale_y_continuous(position = "right") +
   coord_flip() +
@@ -260,7 +276,8 @@ cowplot::save_plot(
 p_errors_ga <-
   understand_ga %>% 
   filter(err_type != "Success") %>% 
-  ggplot(aes(fct_rev(fct_infreq(err_type)))) +
+  left_join(error_code_translator, by="err_type") %>% 
+  ggplot(aes(fct_rev(fct_infreq(err_plot)))) +
   scale_y_continuous(position = "right") +
   geom_bar() +
   coord_flip() +
