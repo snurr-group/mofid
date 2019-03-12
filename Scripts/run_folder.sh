@@ -13,9 +13,19 @@
 # Parse input arguments
 CIF_DIR="$1"
 OUTPUT_DIR="$2"
+if [ $# -ne 2 ]
+then
+	echo "ERROR: Incorrect number of arguments" 1>&2 && exit
+fi
 
 OUTPUT_COPY="${OUTPUT_DIR}/results_part.txt"
 mkdir -p "${OUTPUT_DIR}"
+PYTHON_MOFID="${OUTPUT_DIR}/python_mofid.txt"
+PYTHON_MOFKEY="${OUTPUT_DIR}/python_mofkey.txt"
+COPY_MOFID="${OUTPUT_DIR}/folder_mofid.smi"
+COPY_MOFKEY="${OUTPUT_DIR}/folder_mofkey.tsv"
+rm -f "${COPY_MOFID}" "${COPY_MOFKEY}"
+echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
 
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
 git rev-parse --verify HEAD 1>&2
@@ -30,6 +40,11 @@ do
 	echo "Beginning $i" 1>&2
 	echo "----------------------------" 1>&2
 	python Python/run_mofid.py "$i" "${OUTPUT_DIR}" | tee -a "${OUTPUT_COPY}"
+	
+	# Make an extra copy of the MOFid and MOFkey as written to files
+	cat "${PYTHON_MOFID}" >> "${COPY_MOFID}"
+	echo -e "$(basename "$i")\t$(tr -d '\n' < "${PYTHON_MOFKEY}")" >> "${COPY_MOFKEY}"
+	rm -f "${PYTHON_MOFID}" "${PYTHON_MOFKEY}"
 done
 
 echo "----------------------------" 1>&2

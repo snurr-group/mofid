@@ -45,6 +45,7 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir=DEFAU
 extern "C" void analyzeMOFc(const char *cifdata, char *analysis, int buflen);
 extern "C" int SmilesToSVG(const char* smiles, int options, void* mbuf, unsigned int buflen);
 void try_mkdir(const std::string &path);
+void write_string(const std::string &contents, const std::string &path);
 
 
 int main(int argc, char* argv[])
@@ -107,18 +108,15 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 
 	// Save a copy of the original mol for debugging
 	writeCIF(&orig_mol, output_dir + "/orig_mol.cif");
-	std::ofstream file_info;
-	std::string mol_name_path = output_dir + "/mol_name.txt";
-	file_info.open(mol_name_path.c_str(), std::ios::out | std::ios::trunc);
-	if (file_info.is_open()) {
-		file_info << filename << std::endl;
-		file_info.close();
-	}
+	write_string(filename, output_dir + "/mol_name.txt");
 
 	MOFidDeconstructor simplifier(&orig_mol);
-	simplifier.SetOutputDir(output_dir + NO_SBU_SUFFIX);
+	std::string no_sbu_dir = output_dir + NO_SBU_SUFFIX;
+	simplifier.SetOutputDir(no_sbu_dir);
 	simplifier.SimplifyMOF();
 	simplifier.WriteCIFs();
+	write_string(simplifier.GetMOFkey(), no_sbu_dir + "/mofkey_no_topology.txt");
+	write_string(simplifier.GetLinkerInChIs(), no_sbu_dir + "/inchi_linkers.txt");
 
 	SingleNodeDeconstructor sn_simplify(&orig_mol);
 	sn_simplify.SetOutputDir(output_dir + SINGLE_NODE_SUFFIX);
@@ -184,6 +182,15 @@ void try_mkdir(const std::string &path) {
 	int created_new_dir = mkdir(path.c_str(), 0755);  // may need _mkdir for Windows
 	if (created_new_dir == 0) {
 		std::cerr << "Created a new output directory: " << path << std::endl;
+	}
+}
+
+void write_string(const std::string &contents, const std::string &path) {
+	std::ofstream file_info;
+	file_info.open(path.c_str(), std::ios::out | std::ios::trunc);
+	if (file_info.is_open()) {
+		file_info << contents << std::endl;
+		file_info.close();
 	}
 }
 

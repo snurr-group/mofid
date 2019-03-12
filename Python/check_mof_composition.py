@@ -220,7 +220,7 @@ class MOFCompare:
 
 	def test_auto(self, spec):
 		# Automatically test a MOF spec, given either as a CIF filename or MOFid string
-		if 'f1' in spec and 'F1' in spec:
+		if 'MOFid' in spec:
 			return self.test_mofid(spec)
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
@@ -237,10 +237,15 @@ class MOFCompare:
 		# Compares an arbitrary CIF file against its expected specification
 		# Returns a formatted JSON string with the result
 		start = time.time()
-		mofid_auto = cif2mofid(cif_path)
-		return self._test_generated(cif_path, mofid_auto, start, "from_cif")
+		auto_ids = cif2mofid(cif_path)
+		return self._test_generated(cif_path, auto_ids['mofid'],
+			start, "from_cif", auto_ids['mofkey'])
 
-	def _test_generated(self, cif_path, generated_mofid, start_time = None, generation_type = "from_generated"):
+	def _test_generated(self,
+		cif_path, generated_mofid,
+		start_time = None, generation_type = "from_generated",
+		mofkey = None
+		):
 		# Compares an arbitrary MOFid string against the value generated,
 		# either locally in the script (cif2mofid) or from an external .smi file.
 		# Also tests for common classes of error
@@ -289,6 +294,8 @@ class MOFCompare:
 			comparison['time'] = 0
 		else:
 			comparison['time'] = time.time() - start_time
+		if mofkey is not None:
+			comparison['mofkey_from_cif'] = mofkey
 		comparison['name_parser'] = self.__class__.__name__
 		return comparison
 
@@ -385,7 +392,8 @@ class GAMOFs(MOFCompare):
 		if fg not in self.mof_db["functionalization"]:
 			return None  # Raises a transform error
 
-		[fragments, fancy_name] = mofid.split()  # TODO: fix this line with the new MOFid format
+		fragments = mofid.split()[0]
+		fancy_name = " ".join(mofid.split()[1:])
 		pattern = self.mof_db["functionalization"][fg]
 		if not openbabel_contains(fragments, pattern):
 			return None  # will raise a transform error in the output
@@ -675,7 +683,7 @@ class AutoCompare:
 		return parser.test_cif(cif_path)
 
 	def test_mofid(self, mofid):
-		assert 'f1' in mofid and 'F1' in mofid
+		assert 'MOFid' in mofid
 		parser = self._choose_parser(parse_mofid(mofid)['name'])
 		if parser is None:
 			return None
@@ -684,7 +692,7 @@ class AutoCompare:
 	def test_auto(self, spec):
 		# Automatically test a MOF spec, given either as a CIF filename or MOFid string
 		# See also the implementation in MOFCompare
-		if 'f1' in spec and 'F1' in spec:
+		if 'MOFid' in spec:
 			return self.test_mofid(spec)
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
@@ -739,7 +747,10 @@ if __name__ == "__main__":
 	for num_cif, curr_input in enumerate(inputs):
 		display_input = curr_input
 		if input_type == "MOFid line":
-			display_input = curr_input.split(".F1.")[1]
+			if len(curr_input.split(";")) == 1:
+				display_input = curr_input
+			else:
+				display_input = ";".join(curr_input.split(";")[1:])
 		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of",
 			str(len(inputs)), ":", display_input]) + "\n")
 		if input_type == "CIF":
