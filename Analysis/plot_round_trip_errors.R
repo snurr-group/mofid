@@ -217,24 +217,61 @@ if (RUN_ERROR_FLOWS) {
 
 ### PLOTS FOR MAIN TEXT ###
 
-# TODO: implement figure for the paper, whether it's Sankey, a heatmap, or a simple filled bar chart
+# Top bar for the overall success rate
+plot_successes <- function(x, db_name) {
+  num_mofs <- nrow(x)
+  x %>% 
+    mutate(success = ifelse(err_type=="Success", "Match", "Mismatch"), fake="MOFs") %>% 
+    mutate(success = factor(success, levels=c("Mismatch", "Match"))) %>% 
+    group_by(success, fake) %>% 
+    summarize(success_rate = n()) %>% 
+    mutate(match_label = paste(success_rate, success)) %>% 
+    ggplot(aes(x=fake, y=success_rate, fill=success, label=match_label)) +
+    geom_col() +
+    coord_flip() +
+    theme_nothing() +
+    geom_text(position=position_stack(vjust=0.5)) +  # thanks to https://stackoverflow.com/questions/6644997/showing-data-values-on-stacked-bar-chart-in-ggplot2
+    ggtitle(paste(nrow(x), db_name, "in total")) +
+    theme(plot.title=element_text())
+}
 
-# Initial overall structure for the diagram
 p_errors_tob <-
   understand_tobacco %>% 
-#  filter(err_type != "Success") %>% 
+  filter(err_type != "Success") %>% 
   ggplot(aes(err_type)) +
   geom_bar() +
-#  scale_y_continuous(position = "right") +  # for later, if I design the figure as a breakout inset
+  scale_y_continuous(position = "right") +
   coord_flip() +
-  labs(x = NULL, y = "Number of MOFs")
-cowplot::save_plot("Analysis/Figures/errors_tobacco.png", p_errors_tob, base_aspect_ratio=2.0)
+  labs(x = NULL, y = NULL)
+cowplot::save_plot(
+  "Analysis/Figures/errors_tobacco.png",
+  ggdraw() +
+    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.9, height=0.1) +
+    # TODO: manually edit line annotations:
+    # also ask Andrew for his opinion on presenting the data
+    draw_line(x=c(0.2, 0.7), y=c(0.85, 0.90), size=1, color=2) +
+    #draw_line(x=c(0.5, 0.7), y=c(0.85, 0.90), size=1, color=2) +
+    draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
+    draw_plot(p_errors_tob, y=0.0, height=0.85),
+  base_aspect_ratio=2.0
+  )
 
 p_errors_ga <-
   understand_ga %>% 
+  filter(err_type != "Success") %>% 
   ggplot(aes(err_type)) +
+  scale_y_continuous(position = "right") +
   geom_bar() +
   coord_flip() +
-  labs(x = NULL, y = "Number of MOFs")
-cowplot::save_plot("Analysis/Figures/errors_ga.png", p_errors_ga, base_aspect_ratio=2.0)
+  labs(x = NULL, y = NULL)
+cowplot::save_plot(
+  "Analysis/Figures/errors_ga.png",
+  ggdraw() +
+    draw_plot(plot_successes(understand_ga, "GA hMOFs"), y=0.9, height=0.1) +
+    # TODO: SEE TOBACCO NOTES ABOVE
+    draw_line(x=c(0.2, 0.7), y=c(0.85, 0.90), size=1, color=2) +
+    draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
+    draw_plot(p_errors_ga, y=0.0, height=0.85),
+  base_aspect_ratio=2.0
+  )
 
