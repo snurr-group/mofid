@@ -51,7 +51,7 @@ tobacco_errs <- tobacco_errs %>%
   mutate(nodes.on = ifelse(is.na(nodes.on), "None", nodes.on)) %>% 
   mutate(nodes.mc = df_extract_on(code.nodes, "_mc_")) %>% 
   mutate(mc1 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 1)), nodes.mc)) %>% 
-  mutate(mc2 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 2)), NA))
+  mutate(mc2 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 2)), "None"))
 
 
 ### INTERPRET ERRORS ###
@@ -156,7 +156,9 @@ understand_tobacco <- tobacco_errs %>%
 # Now let's dig into this data more closely
 # For the figure in the paper, recall that my goal is to clearly show why these errors occur.
 # We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
-RUN_ERROR_FLOWS <- TRUE
+RUN_ERROR_FLOWS <- TRUE  # warning: disabling will also disable attribution notation
+understand_tobacco <- understand_tobacco %>% mutate(err_cause = NA)
+understand_ga <- understand_ga %>% mutate(err_cause = NA)
 if (RUN_ERROR_FLOWS) {
   # There are two ways we can think about diagnosing the errors in the code
   # 1. Going from errors to their cause (this block)
@@ -166,15 +168,36 @@ if (RUN_ERROR_FLOWS) {
   # By category:
   # Trivial example summary for tpt vs. stp:
   understand_tobacco %>% filter(err_type=="Definition mismatch") %>% summary()
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(err_type=="Definition mismatch" & code.topology=="tpt", "stp-tpt mixup", err_cause))
   # Most of the topological errors are sym_4_mc_1 (tetrahedral zinc).  Same with crashes
   understand_tobacco %>% filter(err_type=="topology") %>% summary()
   understand_tobacco %>% filter(err_type=="Crash") %>% summary()
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("topology", "Crash") & mc1=="sym_4_mc_1",
+      "sym_4_mc_1", err_cause
+      ))
   # nodes errors are mostly sym_8_mc_7.  When including results from mc1/2, it's 273/282
   understand_tobacco %>% filter(err_type=="node_single_bonds") %>% summary()
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="node_single_bonds" & (mc1=="sym_8_mc_7" | mc2=="sym_8_mc_7"),
+      "sym_8_mc_7", err_cause
+      ))
   # "Many errors" is largely L_29 (strangely a benzene with double bonds coming off it)
   # Ah, and again sym_8_mc_7 problems propagating back to other sources of error 
   understand_tobacco %>% filter(err_type=="Many errors") %>% summary()
   tobacco_errs %>% filter(err_type=="Many errors" & code.linker=="L_29")
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("Many errors", "Two errors") & code.linker=="L_29",
+      "L_29", err_cause
+    )) %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("Many errors", "Two errors") & (mc1=="sym_8_mc_7" | mc2=="sym_8_mc_7"),
+      "sym_8_mc_7", err_cause
+    ))
   # TODO: Based on "two errors" and the common problems with sym_8_mc_7, let's make a new class of error
   # aggregating node and linker BO problems.
   # But again, half of the errors are sym_8_mc_7.
@@ -184,8 +207,18 @@ if (RUN_ERROR_FLOWS) {
   understand_tobacco %>% filter(err_type=="linker_single_bonds") %>% summary
   # But 564/841 of the bond order problems are these 4-N rings
   understand_tobacco %>% filter(err_type=="linker_bond_orders") %>% summary
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="linker_bond_orders" & as.logical(L_4n_ring),
+      "4-N ring", err_cause
+    ))
   # Interestingly, all of the "formula" errors are L_8,9,10, which have big rings next to a phenyl.
   understand_tobacco %>% filter(err_type=="formula") %>% summary
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="formula" & code.linker %in% c("L_8", "L_9", "L_10"),
+      "Overlapping rings", err_cause
+    ))
   
   ### Now repeating for the GA MOFs ###
   
@@ -255,11 +288,12 @@ p_errors_tob <-
   understand_tobacco %>% 
   filter(err_type != "Success") %>% 
   left_join(error_code_translator, by="err_type") %>% 
-  ggplot(aes(fct_rev(fct_infreq(err_plot)))) +
+  ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
   geom_bar() +
   scale_y_continuous(position = "right") +
   coord_flip() +
-  labs(x = NULL, y = NULL)
+  labs(x = NULL, y = NULL, fill = "Error attribution") +
+  theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 cowplot::save_plot(
   "Analysis/Figures/errors_tobacco.png",
   ggdraw() +
@@ -270,7 +304,7 @@ cowplot::save_plot(
     #draw_line(x=c(0.5, 0.7), y=c(0.85, 0.90), size=1, color=2) +
     draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
     draw_plot(p_errors_tob, y=0.0, height=0.85),
-  base_aspect_ratio=2.0
+  base_aspect_ratio=1.5
   )
 
 p_errors_ga <-
@@ -281,7 +315,7 @@ p_errors_ga <-
   scale_y_continuous(position = "right") +
   geom_bar() +
   coord_flip() +
-  labs(x = NULL, y = NULL)
+  labs(x = NULL, y = NULL, fill = "Error attribution")
 cowplot::save_plot(
   "Analysis/Figures/errors_ga.png",
   ggdraw() +
