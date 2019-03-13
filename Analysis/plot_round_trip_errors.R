@@ -147,6 +147,13 @@ understand_tobacco <- tobacco_errs %>%
   left_join(tob_L_categories, by="code.linker") %>% 
   mutate_all(funs(factor))  # set as factor so we can easily run summaries
 
+ga_errs$err_type %>% unique
+colnames(ga_errs)
+understand_ga <- ga_errs %>%
+  select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
+  #left_join(tob_L_categories, by="code.linker") %>% 
+  mutate_all(funs(factor))  # set as factor so we can easily run summaries
+
 
 # Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
 # followed by "see text/SI for discussion of classes of error". (specific examples of visualized CIFs)
@@ -222,28 +229,62 @@ if (RUN_ERROR_FLOWS) {
   
   ### Now repeating for the GA MOFs ###
   
-  ga_errs$err_type %>% unique
-  colnames(ga_errs)
-  understand_ga <- ga_errs %>%
-    select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
-    #left_join(tob_L_categories, by="code.linker") %>% 
-    mutate_all(funs(factor))  # set as factor so we can easily run summaries
-  
   # From the bar graph, crashes are the most important to address.
   # Interestingly, 101/129 are short L_0,1,2 secondary linkers
   understand_ga %>% filter(err_type=="Crash") %>% summary()
+  short_ga <- c(0,1,2)
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "Crash" & (code.linker1 %in% short_ga | code.linker2 %in% short_ga),
+      "Short linker (0-3)", err_cause
+    ))
+  understand_ga %>% filter(err_type=="Crash") %>% filter(!(code.linker1 %in% short_ga) & !(code.linker2 %in% short_ga)) %>% summary()
   # All of the definition mismatches are from Zr MOFs
   understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "Definition mismatch" & code.nodes == 4,
+      "Zr coordination", err_cause
+    ))
   # Many of the "two error" cases are the definition mismatch plus something else
-  understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  understand_ga %>% filter(err_type=="Two errors") %>% summary()
   ga_errs %>% filter(err_type=="Two errors")
   # Most of the single bonds errors are the gigantic L_4 linker
   understand_ga %>% filter(err_type=="linker_single_bonds") %>% summary()
-  # 7/15 of the linker_bond_orders errors are the 4N linker L_27
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "linker_single_bonds" & (code.linker1==4 | code.linker2==4),
+      "Bulky L_4", err_cause
+    ))
+  # 32/51 of the linker_bond_orders errors are the 4N linker L_27
   understand_ga %>% filter(err_type=="linker_bond_orders") %>% summary()
-  understand_ga %>% filter(err_type=="linker_bond_orders") %>%
-    filter(code.linker1==37 | code.linker2==37) %>% nrow
-  # Overall, only 260 non-successes in this DB, including the definition mismatches
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "linker_bond_orders" & (code.linker1==27 | code.linker2==27),
+      "4-N ring", err_cause
+    ))
+  # Formula errors?  Weirdly enough, the first linker is always either L_6 or L_27
+  understand_ga %>% filter(err_type=="formula") %>% summary()
+  #library(readr)
+  #ga_errs %>% filter(err_type=="formula") %>% select(from_mofid) %>% write_delim("test.smi", col_names=FALSE, delim="|")
+  # Even weirder, there is not a single correct 6/14 combo
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "formula" & (code.linker1==6 | code.linker2==14),
+      "L_6/L_14 combo", err_cause
+    )) %>% 
+    mutate(err_cause = ifelse(
+      err_type == "formula" & (code.linker1==27),
+      "4-N ring", err_cause
+    ))
+  # Nonplanar carboxylates: all of the planar 4-c nodular "linkers" have this problem
+  understand_ga %>% filter(err_type=="nonplanar_carboxylate") %>% summary()
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "nonplanar_carboxylate" & (code.linker1 %in% c(38,39)),
+      "Planar 4-c 'linker'", err_cause
+    ))
+  # Overall, only 389 non-successes in this DB, including the definition mismatches
   understand_ga %>% filter(err_type!="Success") %>% nrow
   
 }  # endif(RUN_ERROR_FLOWS)
@@ -280,7 +321,7 @@ plot_successes <- function(x, db_name) {
     coord_flip() +
     theme_nothing() +
     geom_text(position=position_stack(vjust=0.5)) +  # thanks to https://stackoverflow.com/questions/6644997/showing-data-values-on-stacked-bar-chart-in-ggplot2
-    ggtitle(paste(nrow(x), db_name, "in total")) +
+    ggtitle(paste(nrow(x), db_name, "in test set")) +
     theme(plot.title=element_text())
 }
 
@@ -292,7 +333,7 @@ p_errors_tob <-
   geom_bar() +
   scale_y_continuous(position = "right") +
   coord_flip() +
-  labs(x = NULL, y = NULL, fill = "Error attribution") +
+  labs(x = NULL, y = NULL, fill = "Likely cause") +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 cowplot::save_plot(
   "Analysis/Figures/errors_tobacco.png",
@@ -311,11 +352,12 @@ p_errors_ga <-
   understand_ga %>% 
   filter(err_type != "Success") %>% 
   left_join(error_code_translator, by="err_type") %>% 
-  ggplot(aes(fct_rev(fct_infreq(err_plot)))) +
-  scale_y_continuous(position = "right") +
+  ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
   geom_bar() +
+  scale_y_continuous(position = "right") +
   coord_flip() +
-  labs(x = NULL, y = NULL, fill = "Error attribution")
+  labs(x = NULL, y = NULL, fill = "Likely cause") +
+  theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 cowplot::save_plot(
   "Analysis/Figures/errors_ga.png",
   ggdraw() +
@@ -324,6 +366,6 @@ cowplot::save_plot(
     draw_line(x=c(0.2, 0.7), y=c(0.85, 0.90), size=1, color=2) +
     draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
     draw_plot(p_errors_ga, y=0.0, height=0.85),
-  base_aspect_ratio=2.0
+  base_aspect_ratio=1.5
   )
 
