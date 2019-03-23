@@ -575,6 +575,57 @@ std::string MOFidDeconstructor::GetLinkerInChIs() {
 }
 
 
+std::string MOFidDeconstructor::GetLinkerStats(std::string sep) {
+	// Get detailed stats about the linkers in a MOF, such as connectivity
+	// and the SMILES-reduced InChIkey mapping
+
+	std::stringstream output;
+	std::vector<std::string> ikeys;
+	std::map<std::string, std::string> ikey_to_inchi;
+	std::map<std::string, std::string> ikey_to_smiles;
+	std::map<std::string, std::string> ikey_to_smiles_skeleton;
+	std::map<std::string, int> ikey_to_conn;
+	std::map<std::string, int> ikey_to_uc_count;
+
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	AtomSet linker_set = linker_export.GetAtoms();
+	for (AtomSet::iterator pa=linker_set.begin(); pa!=linker_set.end(); ++pa) {
+		VirtualMol pa_vmol = VirtualMol(*pa);
+		std::vector<std::string> pa_ikey_list = PAsToUniqueInChIs(pa_vmol, "inchikey");
+		if (pa_ikey_list.size() != 1) {
+			obErrorLog.ThrowError(__FUNCTION__, "Failed to calculate an InChIkey!", obWarning);
+			continue;  // not updating the stats for this particular PA
+		}
+		std::string pa_ikey = pa_ikey_list[0];
+
+		if (inVector<std::string>(pa_ikey, ikeys)) {
+			++ikey_to_uc_count[pa_ikey];
+		} else {
+			ikeys.push_back(pa_ikey);
+			ikey_to_uc_count[pa_ikey] = 1;
+		}
+
+		ikey_to_inchi[pa_ikey] = rtrimWhiteSpace(PAsToUniqueInChIs(pa_vmol, "inchi")[0]);
+		OBMol orig_linker = simplified_net.PseudoToOrig(pa_vmol).ToOBMol();
+		const bool skeleton_flag = true;
+		ikey_to_smiles[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, !skeleton_flag));
+		ikey_to_smiles_skeleton[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, skeleton_flag));
+		ikey_to_conn[pa_ikey] = (*pa)->GetValence();
+	}
+
+	for (std::vector<std::string>::iterator it=ikeys.begin(); it!=ikeys.end(); ++it) {
+		output << *it
+			<< sep << ikey_to_conn[*it]
+			<< sep << ikey_to_uc_count[*it]
+			<< sep << ikey_to_inchi[*it]
+			<< sep << ikey_to_smiles[*it]
+			<< sep << ikey_to_smiles_skeleton[*it]
+			<< std::endl;
+	}
+	return output.str();
+}
+
+
 
 SingleNodeDeconstructor::SingleNodeDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
 }

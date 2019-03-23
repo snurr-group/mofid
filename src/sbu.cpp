@@ -117,6 +117,7 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	simplifier.WriteCIFs();
 	write_string(simplifier.GetMOFkey(), no_sbu_dir + "/mofkey_no_topology.txt");
 	write_string(simplifier.GetLinkerInChIs(), no_sbu_dir + "/inchi_linkers.txt");
+	write_string(simplifier.GetLinkerStats(), no_sbu_dir + "/linker_stats.txt");
 
 	SingleNodeDeconstructor sn_simplify(&orig_mol);
 	sn_simplify.SetOutputDir(output_dir + SINGLE_NODE_SUFFIX);
