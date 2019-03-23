@@ -31,7 +31,7 @@ COPY_LINKER_STATS="${OUTPUT_DIR}/folder_linker_stats.tsv"
 
 rm -f "${COPY_MOFID}"
 echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
-echo -e "filename\tinchikey\tconnections_nosbu_net\tuc_count\tinchi\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
+echo -e "filename\tinchikey\tconnections_nosbu_net\tuc_count\tinchi\ttruncated_inchikey\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
 
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
 git rev-parse --verify HEAD 1>&2
