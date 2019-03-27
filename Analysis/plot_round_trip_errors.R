@@ -374,16 +374,6 @@ p_errors_tob <-
   coord_flip() +
   labs(x = NULL, y = NULL, fill = "Likely cause") +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
-cowplot::save_plot(
-  "Analysis/Figures/errors_tobacco.png",
-  ggdraw() +
-    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.8, height=0.2) +
-    # Adjust these bracket locations as necessary
-    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.80) +
-    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.90, width=0.10) +
-    draw_plot(p_errors_tob, y=0.0, height=0.75),
-  base_aspect_ratio=1.5
-  )
 
 p_errors_ga <-
   understand_ga %>% 
@@ -396,14 +386,25 @@ p_errors_ga <-
   coord_flip() +
   labs(x = NULL, y = NULL, fill = "Likely cause") +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
-cowplot::save_plot(
-  "Analysis/Figures/errors_ga.png",
+
+default_subfig_labels <- paste0("(", letters, ")")
+plot_grid(
+  # Adjust these brace locations as necessary for aesthetics:
   ggdraw() +
     draw_plot(plot_successes(understand_ga, "GA hMOFs"), y=0.8, height=0.2) +
-    # SEE TOBACCO NOTES ABOVE FOR ADJUSTING THE BRACKET LOCATIONS
     draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.90) +
     draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.95, width=0.05) +
     draw_plot(p_errors_ga, y=0.0, height=0.75),
-  base_aspect_ratio=1.5
+  ggdraw() +
+    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.8, height=0.2) +
+    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.80) +
+    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.90, width=0.10) +
+    draw_plot(p_errors_tob, y=0.0, height=0.75),
+  nrow = 2,
+  labels = default_subfig_labels, label_size=14, hjust=0, vjust=1
+  ) %>% 
+  cowplot::save_plot(
+    "Analysis/Figures/roundtrip.png", .,
+    base_aspect_ratio=1.5, nrow = 2
   )
 
