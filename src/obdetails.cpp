@@ -1,4 +1,5 @@
 #include <vector>
+#include <string>
 #include <map>
 
 #include "obdetails.h"
@@ -169,7 +170,7 @@ std::map<int,int> getNumericFormula(OBMol *mol) {
 	return formula;
 }
 
-std::string rtrimWhiteSpace(const std::string str) {
+std::string rtrimWhiteSpace(const std::string &str) {
 	// Right-trims white space from a string, per obconversion.cpp and consensus from SO
 	std::string trimmed(str);
 	std::string::size_type notwhite = trimmed.find_last_not_of(" \t\n\r");

@@ -7,6 +7,7 @@ obdetails.h - Convenience functions to simplify use of Open Babel
 
 #include <openbabel/babelconfig.h>
 #include <map>
+#include <string>
 
 namespace OpenBabel
 {
@@ -26,7 +27,7 @@ bool atomsEqual(const OBAtom &atom1, const OBAtom &atom2);
 OBAtom* atomInOtherMol(OBAtom *atom, OBMol *mol);
 bool isSubMol(OBMol *sub, OBMol *super);
 std::map<int,int> getNumericFormula(OBMol *mol);
-std::string rtrimWhiteSpace(const std::string str);
+std::string rtrimWhiteSpace(const std::string &str);
 
 } // end namespace OpenBabel
 
