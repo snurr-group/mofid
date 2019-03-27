@@ -22,6 +22,8 @@ library(viridis)
 library(ggalluvial)
 library(purrr)
 library(forcats)
+library(RColorBrewer)
+library(assertthat)
 
 
 ### DATA IMPORT ###
@@ -287,6 +289,11 @@ if (RUN_ERROR_FLOWS) {
   # Overall, only 389 non-successes in this DB, including the definition mismatches
   understand_ga %>% filter(err_type!="Success") %>% nrow
   
+  
+  
+  understand_tobacco <- understand_tobacco %>% mutate(err_cause = ifelse(is.na(err_cause), "Other", err_cause))
+  understand_ga <- understand_ga %>% mutate(err_cause = ifelse(is.na(err_cause), "Other", err_cause))
+  
 }  # endif(RUN_ERROR_FLOWS)
 
 
@@ -307,6 +314,28 @@ error_code_translator <- tribble(
   "Definition mismatch", "Misleading definition"
 )
 
+# Make error colors consistent between the two plots
+all_err_causes <- 
+  c(unique(understand_ga$err_cause), unique(understand_tobacco$err_cause)) %>% 
+  unique() %>% 
+  factor() %>% 
+  levels()
+# WARNING: the labels will break if more levels are added/removed, so let's add an assertion right here:
+assert_that(length(all_err_causes) == 12)
+err_colors_mapped <- brewer.pal(12, "Set3")
+names(err_colors_mapped) <- all_err_causes
+understand_ga <- understand_ga %>%
+  mutate(err_cause = factor(err_cause, levels = all_err_causes)) %>% 
+  mutate(err_cause = fct_drop(fct_infreq(err_cause)))
+understand_tobacco <- understand_tobacco %>%
+  mutate(err_cause = factor(err_cause, levels = all_err_causes)) %>% 
+  mutate(err_cause = fct_drop(fct_infreq(err_cause)))
+tobacco_err_names <- levels(understand_tobacco$err_cause)
+tobacco_err_colors <- err_colors_mapped[tobacco_err_names]
+ga_err_names <- levels(understand_ga$err_cause)
+ga_err_colors <- err_colors_mapped[ga_err_names]
+
+
 # Top bar for the overall success rate
 plot_successes <- function(x, db_name) {
   num_mofs <- nrow(x)
@@ -315,7 +344,7 @@ plot_successes <- function(x, db_name) {
     mutate(success = factor(success, levels=c("Mismatch", "Match"))) %>% 
     group_by(success, fake) %>% 
     summarize(success_rate = n()) %>% 
-    mutate(match_label = paste(success_rate, success)) %>% 
+    mutate(match_label = paste0(success_rate, "\n", success)) %>% 
     ggplot(aes(x=fake, y=success_rate, fill=success, label=match_label)) +
     geom_col() +
     coord_flip() +
@@ -325,6 +354,15 @@ plot_successes <- function(x, db_name) {
     theme(plot.title=element_text())
 }
 
+plot_curve_brace <- function(direction=1) {
+  # Set direction of the sigmoid to +1 or -1 for upside down
+  seq(0.0, 1.0, 0.001) %>% 
+    data.frame(x=., y=sapply(., function(x) {direction*log((x)/(1-x))})) %>% 
+    ggplot(aes(x, y)) +
+    geom_point(color="#f8756d") +
+    theme_nothing()
+}
+
 p_errors_tob <-
   understand_tobacco %>% 
   filter(err_type != "Success") %>% 
@@ -332,19 +370,18 @@ p_errors_tob <-
   ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
   geom_bar() +
   scale_y_continuous(position = "right") +
+  scale_fill_manual(values=tobacco_err_colors, breaks=tobacco_err_names) +
   coord_flip() +
   labs(x = NULL, y = NULL, fill = "Likely cause") +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 cowplot::save_plot(
   "Analysis/Figures/errors_tobacco.png",
   ggdraw() +
-    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.9, height=0.1) +
-    # TODO: manually edit line annotations:
-    # also ask Andrew for his opinion on presenting the data
-    draw_line(x=c(0.2, 0.7), y=c(0.85, 0.90), size=1, color=2) +
-    #draw_line(x=c(0.5, 0.7), y=c(0.85, 0.90), size=1, color=2) +
-    draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
-    draw_plot(p_errors_tob, y=0.0, height=0.85),
+    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.8, height=0.2) +
+    # Adjust these bracket locations as necessary
+    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.80) +
+    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.90, width=0.10) +
+    draw_plot(p_errors_tob, y=0.0, height=0.75),
   base_aspect_ratio=1.5
   )
 
@@ -355,17 +392,18 @@ p_errors_ga <-
   ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
   geom_bar() +
   scale_y_continuous(position = "right") +
+  scale_fill_manual(values=ga_err_colors, breaks=ga_err_names) +
   coord_flip() +
   labs(x = NULL, y = NULL, fill = "Likely cause") +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 cowplot::save_plot(
   "Analysis/Figures/errors_ga.png",
   ggdraw() +
-    draw_plot(plot_successes(understand_ga, "GA hMOFs"), y=0.9, height=0.1) +
-    # TODO: SEE TOBACCO NOTES ABOVE
-    draw_line(x=c(0.2, 0.7), y=c(0.85, 0.90), size=1, color=2) +
-    draw_line(x=c(0.75, 0.95), y=c(0.85, 0.90), size=1, color=2) +
-    draw_plot(p_errors_ga, y=0.0, height=0.85),
+    draw_plot(plot_successes(understand_ga, "GA hMOFs"), y=0.8, height=0.2) +
+    # SEE TOBACCO NOTES ABOVE FOR ADJUSTING THE BRACKET LOCATIONS
+    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.90) +
+    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.95, width=0.05) +
+    draw_plot(p_errors_ga, y=0.0, height=0.75),
   base_aspect_ratio=1.5
   )
 
