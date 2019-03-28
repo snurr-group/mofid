@@ -500,13 +500,16 @@ std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, co
 		std::string frag_inchi = exportNormalizedMol(*frag, conv);
 		const std::string ob_newline = "\n";
 		if (conv_format == "inchikey") {
-			if (frag_inchi.length() != (27 + ob_newline.size())) {  // 14 + 1 + 10 + 1 + 1
+			if (frag_inchi.length() != (27 + ob_newline.size())) {  // 14 + 1 + 10 + 1 + 1 + \n
 				obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
 				continue;
 			}
 			if (truncate_inchikey) {
-				frag_inchi = frag_inchi.substr(0, 25);  // minus the -protonation flag and \n
-				// TODO: set this to 14 if we only want to keep the first connectivity layer
+				// We only need the first connectivity layer if excluding stereo, isotopes, etc.
+				// Per the [InChI technical FAQ](https://www.inchi-trust.org/technical-faq-2/),
+				// the empty Standard InChIKey is InChIKey=MOSFIJXAXDLOML-UHFFFAOYSA-N.
+				// For typical MOFs without stereo, the second layer matches "UHFFFAOYSA".
+				frag_inchi = frag_inchi.substr(0, 14);
 			} else {
 				frag_inchi = frag_inchi.substr(0, 27);  // only stripping the final \n
 			}
