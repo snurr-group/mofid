@@ -27,3 +27,5 @@ openbabel/eminstall/
 openbabel/embuild/
 embin/
 
+
+*.stackdump

@@ -16,7 +16,7 @@ if sys.version_info[0] < 3:
 	try:
 		import subprocess32 as subprocess
 	except:
-		raise AssertionError('You must install subprocess if running Python2')
+		raise AssertionError('You must install subprocess32 if running Python2')
 else:
 	import subprocess
 	
