@@ -10,7 +10,6 @@ import os
 
 def path_to_resource(resource):
 	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	# However, some absolute paths are still present in extract_moffles.py since they're system-wide
 	python_path = os.path.dirname(__file__)
 	return os.path.join(python_path, resource)
 

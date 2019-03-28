@@ -1,7 +1,9 @@
 """
 Run a diff between two SMILES codes
 
-Report common classes of errors in the calculated MOFid.
+Report common classes of errors in the calculated MOFid.  Provides more
+specific SMILES errors/differences than just "err_smiles".  See DIFF_LEVELS
+and single_smiles_diff for documentation on the reported error classifications.
 
 @author: Ben Bucior
 """
@@ -11,8 +13,16 @@ import re
 from cpp_cheminformatics import ob_normalize, openbabel_replace, openbabel_formula, openbabel_GetSpacedFormula
 
 
+# Define priority order for differences between SMILES.
+# The lowest matching value indicates the closest match, so it has precedence.
+# See the function `single_smiles_diff` to see how these errors are defined.
+#
+# The _extra suffix from `find_closest_match` indicates that a component has been
+# replicated in the MOFid with a redundant copy containing the specified error.
+# Examples: a heterocycle containing the expected SMILES and a copy with the wrong
+# aromaticity specification; or a copy of a node in the MOF with extra bonds between metals.
 DIFF_LEVELS = dict({
-	'same' : 0,
+	'same' : 0,  # match
 	'formula' : 50,
 	'nonplanar_carboxylate': 5,
 	'phenyl_radicals': 6,
@@ -53,7 +63,7 @@ def find_closest_match(smiles, preferred_list, extra_list):
 
 def multi_smiles_diff(smiles1, smiles2):
 	# What are the differences between two dot-separated SMILES codes, a reference and candidate?
-	# Just bond orders?  The entire bond structure?  Nothing similar?
+	# e.g. Just bond orders?  The entire bond structure?  Nothing similar?
 	if smiles1 == smiles2:
 		return []
 
@@ -124,6 +134,7 @@ def single_smiles_diff(smiles1, smiles2):
 
 	def radical_to_carb(smiles):
 		return openbabel_replace(smiles, '[#6:1][#6D3:2](~[O-0:3])[O:4]', '[#6:1][#6:2](=[O:3])[O-:4]')
+	# OB will not assign a double bond to nonplanar carboxylates (if the torsion is above a threshold)
 	if radical_to_carb(smiles1) == radical_to_carb(smiles2):
 		return "nonplanar_carboxylate"
 
@@ -155,9 +166,9 @@ def single_smiles_diff(smiles1, smiles2):
 	base2 = base2.upper()
 
 	if base1 != base2:
-		return molec_type + "_single_bonds"
+		return molec_type + "_single_bonds"  # the underlying connectivity does not match
 	else:
-		return molec_type + "_bond_orders"
+		return molec_type + "_bond_orders"  # the connectivity itself is okay, just not the BO
 
 if __name__ == "__main__":
 	args = sys.argv[1:]

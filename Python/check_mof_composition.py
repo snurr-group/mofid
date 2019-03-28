@@ -1,9 +1,13 @@
 """
-Calculate MOF linkers
+Calculate the expected MOF components from filename and compare against MOFid
 
 Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
 sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
 ToBACCo or GA hMOF structures against their "recipe."
+
+See comments in summarize, GAMOFs/TobaccoMOFs.expected_mofid,
+MOFCompare._test_generated, and smiles_diff.py for documentation on the error
+classes (and other warnings) reported in the json output from this script.
 
 @author: Ben Bucior
 """
@@ -15,7 +19,7 @@ import time
 import copy
 from cpp_cheminformatics import (path_to_resource, ob_normalize,
 	openbabel_replace, openbabel_contains)
-from extract_moffles import cif2moffles, assemble_moffles, parse_moffles
+from run_mofid import cif2mofid, assemble_mofid, parse_mofid
 from smiles_diff import multi_smiles_diff as diff
 
 # Locations of important files, relative to the Python source code
@@ -96,30 +100,30 @@ def extend_molecule(base, extension, connection_start=20, pseudo_atom='[Lr]'):
 
 	return extended
 
-def compare_moffles(moffles1, moffles2, names=None):
-	# Compares MOFFLES strings to identify sources of difference, if any
+def compare_mofids(mofid1, mofid2, names=None):
+	# Compares MOFid strings to identify sources of difference, if any
 	if names is None:
 		names = ['mof1', 'mof2']
-	if moffles1 is None or moffles2 is None:
+	if mofid1 is None or mofid2 is None:
 		mof_name = 'Undefined'
-		for x in [moffles1, moffles2]:
+		for x in [mofid1, mofid2]:
 			if x is not None:
-				mof_name = parse_moffles(x)['name']
+				mof_name = parse_mofid(x)['name']
 		return {'match': 'NA',
 		        'errors': ['Undefined composition'],
 		        'topology': None,
 		        'smiles': None,
 		        'cat': None,
-		        names[0]: moffles1,
-		        names[1]: moffles2,
+		        names[0]: mofid1,
+		        names[1]: mofid2,
 		        'name': mof_name
 		        }
-	parsed = [parse_moffles(x) for x in [moffles1, moffles2]]
+	parsed = [parse_mofid(x) for x in [mofid1, mofid2]]
 	comparison = dict()
 	comparison['match'] = True
 	comparison['errors'] = []
-	comparison[names[0]] = moffles1
-	comparison[names[1]] = moffles2
+	comparison[names[0]] = mofid1
+	comparison[names[1]] = mofid2
 	for key in parsed[0]:
 		expected = parsed[0][key]
 		if parsed[1][key] == expected:
@@ -134,7 +138,8 @@ def compare_moffles(moffles1, moffles2, names=None):
 					matched_topology = True
 			if matched_topology:
 				continue
-		# Else, it's a mismatch, so report an error
+		# Else, it's a mismatch, so report an error as "err_<KEY TYPE>",
+		# e.g. "err_topology"
 		comparison[key] = False
 		comparison['match'] = False
 		comparison['errors'].append("err_" + key)
@@ -148,7 +153,9 @@ def compare_moffles(moffles1, moffles2, names=None):
 	return comparison
 
 def summarize(results):
-	# Summarize the error classes for MOFFLES results
+	# Summarize the error classes for MOFid results.
+	# "error_types" from the header of the .json output are defined below
+	# in the main for loop.
 	summarized = {'mofs': results, 'errors': dict()}
 	error_types = {'err_topology': 0, 'err_smiles': 0, 'two': 0, 'three_plus': 0, 'success': 0, 'undefined': 0}
 	for match in results:
@@ -161,7 +168,10 @@ def summarize(results):
 			error_types['two'] += 1
 		elif len(match['errors']) > 2:
 			error_types['three_plus'] += 1
-		elif len(match['errors']) == 1:  # Other class of known issue with MOFFLES generation and/or naming scheme
+		elif len(match['errors']) == 1:
+			# Other classes of known issue with MOFid generation and/or naming
+			# scheme are copied verbatim, e.g. "err_"* from the
+			# `compare_mofids` function directly before this one.
 			known_issue = match['errors'][0]
 			if known_issue not in error_types:
 				error_types[known_issue] = 0  # Initialize new class of errors
@@ -181,7 +191,7 @@ class MOFCompare:
 	def __init__(self):
 		self.db_file = None
 		# self.load_components()  # Used in subclasses
-		raise UserWarning("MOF parsing only (partially) implemented for hMOFs and ToBACCo")
+		raise UserWarning("MOF parsing only (partially) implemented for GA hMOFs and ToBACCo")
 
 	def load_components(self, db_file = None):
 		# Load node and linker compositions from a saved JSON definition (to keep this file cleaner)
@@ -202,107 +212,119 @@ class MOFCompare:
 		for id in linkers:
 			print(linkers[id] + " " + id)
 
-	def transform_moffles(self, moffles):
-		# Transforms the read MOFFLES read into a script.
+	def transform_mofid(self, mofid):
+		# Transforms the raw MOFid read into a script.
 		# Override in subclasses, if applicable.
 		# Used by the GA hMOFs to get the skeleton of the functionalized MOFs, and only compare the unfunctionalized versions
-		return moffles
+		return mofid
 
 	def test_auto(self, spec):
-		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
-		if 'f1' in spec and 'F1' in spec:
-			return self.test_moffles(spec)
+		# Automatically test a MOF spec, given either as a CIF filename or MOFid string
+		if 'MOFid' in spec:
+			return self.test_mofid(spec)
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
 		else:
 			raise ValueError("Unknown specification for testing: " + spec)
 
-	def test_moffles(self, moffles):
-		# Test a generated MOFFLES string against the expectation based on the CIF filename
+	def test_mofid(self, mofid):
+		# Test a generated MOFid string against the expectation based on the CIF filename
 		start = time.time()
-		cif_path = parse_moffles(moffles)['name']
-		return self._test_generated(cif_path, moffles, start, "from_moffles")
+		cif_path = parse_mofid(mofid)['name']
+		return self._test_generated(cif_path, mofid, start, "from_mofid")
 
 	def test_cif(self, cif_path):
 		# Compares an arbitrary CIF file against its expected specification
 		# Returns a formatted JSON string with the result
 		start = time.time()
-		moffles_auto = cif2moffles(cif_path)
-		return self._test_generated(cif_path, moffles_auto, start, "from_cif")
+		auto_ids = cif2mofid(cif_path)
+		return self._test_generated(cif_path, auto_ids['mofid'],
+			start, "from_cif", auto_ids['mofkey'])
 
-	def _test_generated(self, cif_path, generated_moffles, start_time = None, generation_type = "from_generated"):
-		# Compares an arbitrary MOFFLES string against the value generated,
-		# either locally in the script (cif2moffles) or from an external .smi file.
+	def _test_generated(self,
+		cif_path, generated_mofid,
+		start_time = None, generation_type = "from_generated",
+		mofkey = None
+		):
+		# Compares an arbitrary MOFid string against the value generated,
+		# either locally in the script (cif2mofid) or from an external .smi file.
 		# Also tests for common classes of error
-		moffles_from_name = self.expected_moffles(cif_path)
+		mofid_from_name = self.expected_mofid(cif_path)
 
-		if moffles_from_name is None:  # missing SBU info in the DB file
+		if mofid_from_name is None:  # missing SBU info in the DB file
 			return None  # Currently, skip reporting of structures with undefined nodes/linkers
 
-		# Add common classes of error
+		if (py2 and type(mofid_from_name) in [str, unicode]) or (not py2 and type(mofid_from_name) is str):
+			orig_mofid = mofid_from_name
+			mofid_from_name = dict()
+			mofid_from_name['default'] = orig_mofid
+		default = parse_mofid(mofid_from_name['default'])
+		fragments = default['smiles'].split('.')
 
-		if (py2 and type(moffles_from_name) in [str, unicode]) or (not py2 and type(moffles_from_name) is str):
-			orig_moffles = moffles_from_name
-			moffles_from_name = dict()
-			moffles_from_name['default'] = orig_moffles
-		default = parse_moffles(moffles_from_name['default'])
-		linkers = default['smiles'].split('.')
-		moffles_from_name['err_timeout'] = assemble_moffles(linkers,
-			'TIMEOUT', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_systre_error'] = assemble_moffles(linkers,
-			'ERROR', default['cat'], mof_name=default['name'])
-		moffles_from_name['err_cpp_error'] = assemble_moffles(['*'], 'NA',
-			None, mof_name=default['name'])
+		# Define sources of error when the program exits with errors.
+		# Without these definitions, the validator would return a generic
+		# class of error, e.g. "err_topology", instead of actually indicating
+		# the root cause from program error or timeout.
+		mofid_from_name['err_timeout'] = assemble_mofid(
+			fragments, 'TIMEOUT', default['cat'], mof_name=default['name'])
+		mofid_from_name['err_systre_error'] = assemble_mofid(
+			fragments, 'ERROR', default['cat'], mof_name=default['name'])
+		mofid_from_name['err_cpp_error'] = assemble_mofid(
+			['*'], 'NA', None, mof_name=default['name'])
+		mofid_from_name['err_no_mof'] = assemble_mofid(
+			['*'], 'NA', 'no_mof', mof_name=default['name'])
 
 
-		# Run transformations on the generated MOFFLES from CIF or smi database, if applicable (e.g. GA hMOFs)
-		test_moffles = self.transform_moffles(generated_moffles)
-		if test_moffles != generated_moffles:
+		# Run transformations on the generated MOFid from CIF or smi database, if applicable (e.g. GA hMOFs)
+		test_mofid = self.transform_mofid(generated_mofid)
+		if test_mofid != generated_mofid:
 			generation_type += "_transformed"
 
-		if test_moffles is None and generated_moffles is not None:
-			comparison = self.compare_multi_moffles(moffles_from_name,
-				generated_moffles, ['from_name', generation_type])
+		if test_mofid is None and generated_mofid is not None:
+			comparison = self.compare_multi_mofid(mofid_from_name,
+				generated_mofid, ['from_name', generation_type])
 			comparison['errors'] = ['err_missing_transform']
 			comparison['match'] = False
 		else:
-			# Calculate the MOFFLES derived from the CIF structure itself
-			comparison = self.compare_multi_moffles(moffles_from_name,
-				test_moffles, ['from_name', generation_type])
+			# Calculate the MOFid derived from the CIF structure itself
+			comparison = self.compare_multi_mofid(mofid_from_name,
+				test_mofid, ['from_name', generation_type])
 
 		if start_time is None:
 			comparison['time'] = 0
 		else:
 			comparison['time'] = time.time() - start_time
+		if mofkey is not None:
+			comparison['mofkey_from_cif'] = mofkey
 		comparison['name_parser'] = self.__class__.__name__
 		return comparison
 
-	def compare_multi_moffles(self, multi_moffles1, moffles2, names=None):
-		# Allow multiple reference MOFFLES for comparison against the extracted version
+	def compare_multi_mofid(self, multi_mofid1, mofid2, names=None):
+		# Allow multiple reference MOFids for comparison against the extracted version
 		# to account for known issues in either the naming or reference material (ambiguities, etc)
 
-		if (py2 and type(multi_moffles1) in [str, unicode]) or (not py2 and type(multi_moffles1) is str):
-			return compare_moffles(multi_moffles1, moffles2, names)
+		if (py2 and type(multi_mofid1) in [str, unicode]) or (not py2 and type(multi_mofid1) is str):
+			return compare_mofids(multi_mofid1, mofid2, names)
 
-		assert type(multi_moffles1) == dict  # Else, let's handle multiple references
-		assert 'default' in multi_moffles1
-		default_comparison = compare_moffles(multi_moffles1['default'],
-			moffles2, names)
-		if EXPORT_CODES and '_codes' in multi_moffles1:
-			default_comparison['_codes'] = multi_moffles1['_codes']
+		assert type(multi_mofid1) == dict  # Else, let's handle multiple references
+		assert 'default' in multi_mofid1
+		default_comparison = compare_mofids(multi_mofid1['default'],
+			mofid2, names)
+		if EXPORT_CODES and '_codes' in multi_mofid1:
+			default_comparison['_codes'] = multi_mofid1['_codes']
 		if default_comparison['match']:
 			return default_comparison
 
-		for test in multi_moffles1.keys():
+		for test in multi_mofid1.keys():
 			if test in ['default', '_codes']:
 				continue
-			test_moffles = multi_moffles1[test]
-			test_comparison = compare_moffles(test_moffles, moffles2, names)
+			test_mofid = multi_mofid1[test]
+			test_comparison = compare_mofids(test_mofid, mofid2, names)
 			if test_comparison['match']:
 				test_comparison['match'] = False  # Should it be reported as a match if we know the source of error?
 				test_comparison['errors'] = [test]
-				if EXPORT_CODES and '_codes' in multi_moffles1:
-					test_comparison['_codes'] = multi_moffles1['_codes']
+				if EXPORT_CODES and '_codes' in multi_mofid1:
+					test_comparison['_codes'] = multi_mofid1['_codes']
 				return test_comparison
 
 		return default_comparison  # No special cases apply
@@ -317,11 +339,11 @@ class KnownMOFs(MOFCompare):
 		self.load_components()
 
 	def parse_filename(self, mof_path):
-		# Extract basename of the MOF.  expected_moffles will convert it to the reference moffles string
+		# Extract basename of the MOF.  expected_mofid will convert it to the reference MOFid string
 		return basename(mof_path)
 
-	def expected_moffles(self, cif_path):
-		# What is the expected MOFFLES based on the information in a MOF's filename?
+	def expected_mofid(self, cif_path):
+		# What is the expected MOFid based on the information in a MOF's filename?
 		mof_name = self.parse_filename(cif_path)
 		if mof_name in self.mof_db:
 			return self.mof_db[mof_name]
@@ -355,37 +377,38 @@ class GAMOFs(MOFCompare):
 
 		return codes
 
-	def transform_moffles(self, moffles):
+	def transform_mofid(self, mofid):
 		# De-functionalize MOFids read from CIFs or a database.
 		# This will allow easy comparison between the linker skeletons found and expected.
-		if moffles is None:
+		if mofid is None:
 			return None
 
-		cif_path = parse_moffles(moffles)['name']
+		cif_path = parse_mofid(mofid)['name']
 		codes = self.parse_filename(cif_path)
 		fg = codes['functionalization']
 
 		if fg == "0":
-			return moffles
+			return mofid
 		if fg not in self.mof_db["functionalization"]:
 			return None  # Raises a transform error
 
-		[sbus, fancy_name] = moffles.split()
+		fragments = mofid.split()[0]
+		fancy_name = " ".join(mofid.split()[1:])
 		pattern = self.mof_db["functionalization"][fg]
-		if not openbabel_contains(sbus, pattern):
+		if not openbabel_contains(fragments, pattern):
 			return None  # will raise a transform error in the output
 
-		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in sbus.split('.')]
-		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart SBUs into multiple parts
+		skeletons = [openbabel_replace(x, pattern, '[#1:1]') for x in fragments.split('.')]
+		skeletons = '.'.join(skeletons).split('.')  # Handle transformations that split apart building blocks into multiple parts
 		skeletons = list(set(skeletons))  # Only keep unique backbones if they have different functionalization patterns
 		if '' in skeletons:  # null linker from defunctionalization on a lone functional group
 			skeletons.remove('')
 		skeletons.sort()
 
-		return ' '.join(['.'.join(skeletons), fancy_name])  # Reconstruct the defunctionalized MOFFLES
+		return ' '.join(['.'.join(skeletons), fancy_name])  # Reconstruct the defunctionalized MOFid
 
-	def expected_moffles(self, cif_path):
-		# What is the expected MOFFLES based on the information in a MOF's filename?
+	def expected_mofid(self, cif_path):
+		# What is the expected MOFid based on the information in a MOF's filename?
 		codes = self.parse_filename(cif_path)
 		code_key = {
 			'nodes': 'nodes',
@@ -401,11 +424,12 @@ class GAMOFs(MOFCompare):
 			is_component_defined.extend([codes[key] in self.mof_db[code_key[key]]])
 
 		topology = self._topology_from_gene(codes)
+		codes['default_gene_topology'] = topology
 		cat = codes['cat']
 
 		if not any(False, is_component_defined):  # Everything is defined.  Why didn't I use Python's built-in `all`?  Test this later.
-			sbus = []
-			sbu_codes = ['nodes', 'linker1', 'linker2']  # Functionalization handled in transform_moffles
+			sbus = []  # more rigorously, MOF building blocks
+			sbu_codes = ['nodes', 'linker1', 'linker2']  # Functionalization handled in transform_mofid
 			n_components = []  # Potentially inconsistent ordering of paddlewheel pillars
 			n_orig = []  # Pillar molecule before transformation
 			for part in sbu_codes:
@@ -414,8 +438,9 @@ class GAMOFs(MOFCompare):
 					if smiles not in sbus:
 						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions for pillared paddlewheels
-				if (part in ["linker1", "linker2"] and codes['nodes'] 
-					in ["1", "2"] and topology == "pcu"):
+				if (part in ["linker1", "linker2"] and
+					codes['nodes'] in ["1", "2"] and topology == "pcu"
+					):
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
 					if n_smi not in n_components:
@@ -425,40 +450,51 @@ class GAMOFs(MOFCompare):
 				sbus.append(n_components[0])
 			sbus.sort()
 
-			moffles_options = dict()
-			moffles_options['default'] = assemble_moffles(sbus, topology, cat,
-			mof_name=codes['name'])
+			mofid_options = dict()
+			mofid_options['default'] = assemble_mofid(
+				sbus, topology, cat, mof_name=codes['name'])
 
+			# Flagging common cases when the generated MOF does not match the idealized recipe,
+			# for example when the bottom-up algorithm is missing a connection.
 			if topology == 'fcu':  # Zr nodes do not always form **fcu** topology, even when linker1==linker2
-				# TODO: Will we have to somehow add the benzoic acid agent to the **pcu** MOFs above?
-				moffles_options['Zr_mof_not_fcu'] = assemble_moffles(sbus,
-					'pcu', cat, mof_name=codes['name'])
+				# Note: if we change the handling of bound modulators, we will have to add
+				# benzoic acid to these **pcu** MOF nodes
+				mofid_options['Zr_mof_not_fcu'] = assemble_mofid(
+					sbus, 'pcu', cat, mof_name=codes['name'])
 			if codes['nodes'] == '4':  # Some Zr hMOFs have four linkers replaced by benzoic acid
-				moffles_options['Zr_mof_as_hex'] = assemble_moffles(sbus,
-					'hex', cat, mof_name=codes['name'])
+				mofid_options['Zr_mof_as_hex'] = assemble_mofid(
+					sbus, 'hex', cat, mof_name=codes['name'])
 				if topology == 'pcu':
-					moffles_options['Zr_mof_pcu_as_fcu'] = assemble_moffles(
+					mofid_options['Zr_mof_pcu_as_fcu'] = assemble_mofid(
 						sbus, 'fcu', cat, mof_name=codes['name'])
 			if topology == 'rna':  # Some large V nodes are geometrically disconnected
 				v_sbus = copy.deepcopy(sbus)
 				v_sbus.append('[O-]C(=O)c1ccccc1')
 				v_sbus.sort()
-				moffles_options['V_incomplete_linker'] = assemble_moffles(
+				mofid_options['V_incomplete_linker'] = assemble_mofid(
 					v_sbus, 'ERROR', cat, mof_name=codes['name'])
 			if len(n_components) == 2:
+				# Ambiguities arise when there is both a linker1 and linker2
+				# because of the combinations between N/carboxylate and L1/L2
+				# in pcu paddlewheel MOFs with pillars.
 				for i, smi in enumerate(n_components):
+					# Both L1 and L2, plus N-pillar i (unknown which one beforehand)
 					n_sbus = copy.deepcopy(sbus)
 					n_sbus.append(smi)
 					n_sbus.sort()
-					moffles_options['unk_pillar' + str(i+1)] = assemble_moffles(
+					mofid_options['unk_pillar' + str(i+1)] = assemble_mofid(
 						n_sbus, 'pcu', cat, mof_name=codes['name'])
 
+					# Replacing linker i from a carboxylate to a pillar
 					n_sbus.remove(n_orig[i])
 					n_sbus.sort()
-					moffles_options['replaced_pillar' + str(i+1)] = assemble_moffles(
+					mofid_options['replaced_pillar' + str(i+1)] = assemble_mofid(
 						n_sbus, 'pcu', cat, mof_name=codes['name'])
 
-			return moffles_options
+			if EXPORT_CODES:
+				mofid_options['_codes'] = codes
+
+			return mofid_options
 		else:
 			return None
 
@@ -544,8 +580,8 @@ class TobaccoMOFs(MOFCompare):
 
 		return codes
 
-	def expected_moffles(self, cif_path):
-		# What is the expected MOFFLES based on the information in a MOF's filename?
+	def expected_mofid(self, cif_path):
+		# What is the expected MOFid based on the information in a MOF's filename?
 		codes = self.parse_filename(cif_path)
 		# Currently skipping B-containing sym_13_mc_12 and sym_16_mc_6
 		# sym_24_mc_13 will be incompatible with our current decomposition scheme
@@ -563,8 +599,8 @@ class TobaccoMOFs(MOFCompare):
 			else:
 				node2 = self.mof_db['nodes'][codes['nodes'][1]]
 			linker = self.mof_db['linkers'][codes['linker']]
-			linkers = self.assemble_linkers(node1, node2, linker)
-			linkers.sort()
+			fragments = self.assemble_smiles(node1, node2, linker)
+			fragments.sort()
 
 			topology = codes['topology']
 			if topology.startswith('test.'):
@@ -573,24 +609,24 @@ class TobaccoMOFs(MOFCompare):
 				topology = topology[0:3]  # Remove binary designation
 			cat = "0"  # All ToBaCCo MOFs are uncatenated
 
-			moffles_options = dict()
+			mofid_options = dict()
 
-			# Generate a reference MOFFLES based on SBU composition
-			moffles_options['default'] = assemble_moffles(linkers, topology,
-				cat, mof_name=codes['name'])
+			# Generate a reference MOFid based on SBU composition
+			mofid_options['default'] = assemble_mofid(
+				fragments, topology, cat, mof_name=codes['name'])
 			# Known classes of issues go here
 			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
-				moffles_options['stp_from_tpt'] = assemble_moffles(linkers,
-					"stp", cat, mof_name=codes['name'])
+				mofid_options['stp_from_tpt'] = assemble_mofid(
+					fragments, "stp", cat, mof_name=codes['name'])
 
 			if EXPORT_CODES:
-				moffles_options['_codes'] = codes
+				mofid_options['_codes'] = codes
 
-			return moffles_options
+			return mofid_options
 		else:
 			return None
 
-	def assemble_linkers(self, node1, node2, linker):
+	def assemble_smiles(self, node1, node2, linker):
 		# Assemble the expected nodes and linkers based on the designated compositions in the database,
 		# plus transformations to join "sticky ends" together (using an [Lr] pseudo atom).
 		# Returns a list of the SMILES components
@@ -636,7 +672,7 @@ class AutoCompare:
 		self.ga = GAMOFs()
 		self.tobacco = TobaccoMOFs()
 		# Maybe also a NullMOFs class eventually, which is just a calculator sans comparisons?
-		self.recalculate = recalculate  # Should MOFFLES be recalculated even if known?
+		self.recalculate = recalculate  # Should MOFid be recalculated even if known?
 
 	def test_cif(self, cif_path):
 		# Dispatch to the class corresponding to the source of the input CIF
@@ -646,18 +682,18 @@ class AutoCompare:
 			return None
 		return parser.test_cif(cif_path)
 
-	def test_moffles(self, moffles):
-		assert 'f1' in moffles and 'F1' in moffles
-		parser = self._choose_parser(parse_moffles(moffles)['name'])
+	def test_mofid(self, mofid):
+		assert 'MOFid' in mofid
+		parser = self._choose_parser(parse_mofid(mofid)['name'])
 		if parser is None:
 			return None
-		return parser.test_moffles(moffles)
+		return parser.test_mofid(mofid)
 
 	def test_auto(self, spec):
-		# Automatically test a MOF spec, given either as a CIF filename or MOFFLES string
+		# Automatically test a MOF spec, given either as a CIF filename or MOFid string
 		# See also the implementation in MOFCompare
-		if 'f1' in spec and 'F1' in spec:
-			return self.test_moffles(spec)
+		if 'MOFid' in spec:
+			return self.test_mofid(spec)
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
 		else:
@@ -694,8 +730,11 @@ if __name__ == "__main__":
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
-	elif len(args) == 1 and (args[0].endswith('.txt') or
-		args[0].endswith('.smi') or args[0].endswith('.out')):
+	elif len(args) == 1 and (
+		args[0].endswith('.txt') or
+		args[0].endswith('.smi') or
+		args[0].endswith('.out')
+		):
 		input_type = "MOFid line"
 		with open(args[0], "r") as f:
 			inputs = f.readlines()
@@ -704,23 +743,26 @@ if __name__ == "__main__":
 		input_type = "Auto"
 		inputs = args
 
-	moffles_results = []
+	mofid_results = []
 	for num_cif, curr_input in enumerate(inputs):
 		display_input = curr_input
 		if input_type == "MOFid line":
-			display_input = curr_input.split(".F1.")[1]
+			if len(curr_input.split(";")) == 1:
+				display_input = curr_input
+			else:
+				display_input = ";".join(curr_input.split(";")[1:])
 		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of",
 			str(len(inputs)), ":", display_input]) + "\n")
 		if input_type == "CIF":
 			result = comparer.test_cif(curr_input)
 		elif input_type == "MOFid line":
-			result = comparer.test_moffles(curr_input)
+			result = comparer.test_mofid(curr_input)
 		else:
 			result = comparer.test_auto(curr_input)
 		if result is not None:
-			moffles_results.append(result)
+			mofid_results.append(result)
 
-	results_summary = summarize(moffles_results)
+	results_summary = summarize(mofid_results)
 	json.dump(results_summary, sys.stdout, indent=4)
 	num_mofs = results_summary['errors']['total_cifs']
 	num_errors = num_mofs - results_summary['errors']['error_types']['success']

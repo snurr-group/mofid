@@ -18,19 +18,20 @@
 #include <openbabel/generic.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obiter.h>
+#include <openbabel/elements.h>
 
 
 namespace OpenBabel
 {
 
 
-std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
+std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds) {
 	// Write a list of unique SMILES for a set of fragments
 	// TODO: consider stripping out extraneous tabs, etc, here or elsewhere in the code.
 	std::stringstream written;
 	std::set<std::string> unique_smiles;
 	for (std::vector<OBMol>::iterator it = fragments.begin(); it != fragments.end(); ++it) {
-		unique_smiles.insert(getSMILES(*it, obconv));  // only adds unique values in a set
+		unique_smiles.insert(getSMILES(*it, obconv, only_single_bonds));  // only adds unique values in a set
 	}
 	for (std::set<std::string>::iterator i2 = unique_smiles.begin(); i2 != unique_smiles.end(); ++i2) {
 		written << *i2;
@@ -40,12 +41,24 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv) {
 }
 
 
-std::string getSMILES(OBMol fragment, OBConversion obconv) {
-	// Prints SMILES based on OBConversion parameters
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
+	// Resets a fragment's bonding/location before format conversion
+	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders
 	OBMol canon = fragment;
 	resetBonds(&canon);
+	if (only_single_bonds) {
+		FOR_BONDS_OF_MOL(b, canon) {
+			b->SetBondOrder(1);
+		}
+	}
 	unwrapFragmentMol(&canon);
 	return obconv.WriteString(&canon);
+}
+
+
+std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
+	// Prints SMILES based on OBConversion parameters
+	return exportNormalizedMol(fragment, obconv, only_single_bonds);
 }
 
 
@@ -382,21 +395,23 @@ std::string Deconstructor::GetMOFInfo() {
 	// Print out the SMILES for nodes and linkers, and the detected catenation
 	std::stringstream analysis;
 
+	const bool export_single_bonds = true;  // Using single bonds instead of bond orders for nodes
+
 	VirtualMol node_export = simplified_net.GetAtomsOfRole("node");
 	// Handle node and node_bridge separately to match old test SMILES
 	node_export = simplified_net.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
-	analysis << writeFragments(node_mol.Separate(), obconv);
+	analysis << writeFragments(node_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol node_bridge_export = simplified_net.GetAtomsOfRole("node bridge");
 	node_bridge_export = simplified_net.PseudoToOrig(node_bridge_export);
 	OBMol node_bridge_mol = node_bridge_export.ToOBMol();
-	analysis << writeFragments(node_bridge_mol.Separate(), obconv);
+	analysis << writeFragments(node_bridge_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
 	linker_export = simplified_net.PseudoToOrig(linker_export);
 	OBMol linker_mol = linker_export.ToOBMol();
-	analysis << writeFragments(linker_mol.Separate(), obconv);
+	analysis << writeFragments(linker_mol.Separate(), obconv, !export_single_bonds);
 
 	analysis << GetCatenationInfo(CheckCatenation());
 	return analysis.str();
@@ -452,6 +467,111 @@ void MOFidDeconstructor::PostSimplification() {
 			}
 		}
 	}
+}
+
+
+std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
+	// Convert PsuedoAtoms in the simplified net to their unique InChI(key) values
+	// This code will strip the protonation state off of the InChIKey
+
+	std::vector<std::string> unique_inchi;
+	if (format != "inchi" && format != "inchikey") {
+		obErrorLog.ThrowError(__FUNCTION__, "Unexpected format flag", obError);
+		return unique_inchi;
+	}
+
+	OBConversion conv;
+	conv.SetOutFormat(format.c_str());
+	conv.AddOption("X", OBConversion::OUTOPTIONS, "SNon");  // ignoring stereochemistry, at least for now
+	conv.AddOption("w");  // reduce verbosity about InChI behavior:
+	// 'Omitted undefined stereo', 'Charges were rearranged', 'Proton(s) added/removed', 'Metal was disconnected'
+	// See https://openbabel.org/docs/dev/FileFormats/InChI_format.html for more information.
+
+	OBMol pa_mol = simplified_net.PseudoToOrig(pa).ToOBMol();
+	std::vector<OBMol> fragments = pa_mol.Separate();
+	for (std::vector<OBMol>::iterator frag=fragments.begin(); frag!=fragments.end(); ++frag) {
+		std::string frag_inchi = exportNormalizedMol(*frag, conv);
+		const std::string ob_newline = "\n";
+		if (format == "inchikey") {
+			if (frag_inchi.length() != (27 + ob_newline.size())) {
+				obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
+				continue;
+			}
+			frag_inchi = frag_inchi.substr(0, 25);  // 14 + 1 + 10 (minus the -protonation flag and \n)
+		}
+
+		if (!inVector<std::string>(frag_inchi, unique_inchi)) {
+			unique_inchi.push_back(frag_inchi);
+		}
+	}
+	std::sort(unique_inchi.begin(), unique_inchi.end());  // sort alphabetically
+
+	return unique_inchi;
+}
+
+
+std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
+	// Print out the detected MOFkey, optionally with the topology field.
+	// This method is implemented in MOFidDeconstructor instead of the others, because the
+	// organic building blocks must be intact (e.g. including carboxylates) to properly
+	// calculate the MOFkey.
+	std::stringstream mofkey;
+	mofkey << "MOFkey-" << MOFKEY_VERSION;  // MOFkey format signature
+
+	if (!topology.empty()) {
+		mofkey << MOFKEY_SEP << topology;
+	}
+
+	// Get unique metal atoms from the nodes
+	std::vector<int> unique_elements;
+	VirtualMol full_node_export = simplified_net.GetAtomsOfRole("node");
+	full_node_export.AddVirtualMol(simplified_net.GetAtomsOfRole("node bridge"));
+	full_node_export = simplified_net.PseudoToOrig(full_node_export);
+	AtomSet node_set = full_node_export.GetAtoms();
+	for (AtomSet::iterator it=node_set.begin(); it!=node_set.end(); ++it) {
+		int it_element = (*it)->GetAtomicNum();
+		if (isMetal(*it) && !inVector<int>(it_element, unique_elements)) {
+			unique_elements.push_back(it_element);
+		}
+	}
+	if (unique_elements.size() == 0) {
+		mofkey << MOFKEY_SEP << MOFKEY_NO_METALS;
+	} else {
+		std::sort(unique_elements.begin(), unique_elements.end());  // sort by atomic number
+		bool first_element = true;
+		for (std::vector<int>::iterator element=unique_elements.begin(); element!=unique_elements.end(); ++element) {
+			if (first_element) {
+				mofkey << MOFKEY_SEP;
+			} else {
+				mofkey << MOFKEY_METAL_DELIM;
+			}
+			mofkey << OBElements::GetSymbol(*element);
+		}
+	}
+
+	// Then, write unique InChIKeys (sans protonation state)
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	std::vector<std::string> unique_ikeys = PAsToUniqueInChIs(linker_export, "inchikey");
+	if (unique_ikeys.size() == 0) {
+		unique_ikeys.push_back(MOFKEY_NO_LINKERS);
+	}
+	for (std::vector<std::string>::iterator it=unique_ikeys.begin(); it!=unique_ikeys.end(); ++it) {
+		mofkey << MOFKEY_SEP << *it;
+	}
+
+	return mofkey.str();
+}
+
+
+std::string MOFidDeconstructor::GetLinkerInChIs() {
+	// Get unique, sorted InChI's for linkers in a MOF, delimited by newlines
+	std::stringstream inchis;
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	std::vector<std::string> unique_inchis = PAsToUniqueInChIs(linker_export, "inchi");
+	for (std::vector<std::string>::iterator it=unique_inchis.begin(); it!=unique_inchis.end(); ++it) {
+		inchis << *it;  // don't need a std::endl, because Open Babel adds it by default to the export
+	}
+	return inchis.str();
 }
 
 

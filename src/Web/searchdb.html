@@ -1239,7 +1239,7 @@
         };
 
         var parseMOFid = function(mofid) {
-          // Converted from extract_moffles.py:parse_moffles
+          // Converted from run_mofid.py:parse_mofid
           var components = mofid.split(/\t| /);
           if (components.length == 1) {
             throw 'Attempted to parse invalid MOFid ' + mofid;
