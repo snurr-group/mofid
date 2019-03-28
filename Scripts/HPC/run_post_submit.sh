@@ -24,6 +24,23 @@ cat out_core_cif{1..5}.smi > "$SUMMARY_DIR/core.smi"
 cp out_ga.smi "$SUMMARY_DIR/ga.smi"
 
 
+# Also copy MOFid, MOFkey, and linker stats
+cat Output_core_cif{1..5}/folder_mofid.smi > "$SUMMARY_DIR/core_mofid.smi"
+cat Output_tob_cif{1..5}/folder_mofid.smi > "$SUMMARY_DIR/tob_mofid.smi"
+cp Output_ga/folder_mofid.smi "$SUMMARY_DIR/ga_mofid.smi"
+copy_folder_tsv() {
+	# Copies files named folder_SUFFIX.tsv for core/tob/ga
+	# Use the `tail -q` flag to avoid extra filename headers in the output
+	suffix_name=$1
+	head -n 1 Output_core_cif1/folder_${suffix_name}.tsv > "$SUMMARY_DIR/core_${suffix_name}.tsv"
+	tail -q -n +2 Output_core_cif{1..5}/folder_${suffix_name}.tsv >> "$SUMMARY_DIR/core_${suffix_name}.tsv"
+	head -n 1 Output_tob_cif1/folder_${suffix_name}.tsv > "$SUMMARY_DIR/tob_${suffix_name}.tsv"
+	tail -q -n +2 Output_tob_cif{1..5}/folder_${suffix_name}.tsv >> "$SUMMARY_DIR/tob_${suffix_name}.tsv"
+	cp Output_ga/folder_${suffix_name}.tsv "$SUMMARY_DIR/ga_${suffix_name}.tsv"
+}
+copy_folder_tsv "mofkey"
+copy_folder_tsv "linker_stats"
+
 mv Output_*/ "$ORIG_OUTPUTS"
 mv err_*.txt "$ORIG_OUTPUTS"
 mv pbs_out_*.txt "$ORIG_OUTPUTS"
