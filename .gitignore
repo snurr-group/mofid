@@ -2,6 +2,8 @@
 Data/
 !README.md
 Test/
+build/
+dist/
 Output/
 Output_*/
 TableOutput/

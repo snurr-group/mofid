@@ -11,6 +11,7 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 
 import sys, os
 import re
+from mofid.paths import openbabel_path, bin_path
 # Ensure that subprocess32 is installed if running Py2
 if sys.version_info[0] < 3:
 	try:
@@ -30,10 +31,9 @@ def runcmd(cmd_list, timeout=None):
 
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
-python_path = os.path.dirname(__file__)
-os.environ['BABEL_DATADIR'] = os.path.join(python_path,'..','openbabel','data')  # directory with native EOL
-TSFM_BIN = os.path.join(python_path,'..','bin','tsfm_smiles')
-OBABEL_BIN = os.path.join(python_path,'..','openbabel','build','bin','obabel')
+os.environ['BABEL_DATADIR'] = os.path.join(openbabel_path,'data')  # directory with native EOL
+TSFM_BIN = os.path.join(bin_path,'tsfm_smiles')
+OBABEL_BIN = os.path.join(openbabel_path,'build','bin','obabel')
 
 def quote(smiles_str):
 	# Prepares SMILES strings for Open Babel command line calls.

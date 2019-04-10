@@ -23,14 +23,14 @@ from mofid.cpp_cheminformatics import (ob_normalize, openbabel_replace,
 from mofid.id_constructor import assemble_mofid, parse_mofid
 from mofid.smiles_diff import multi_smiles_diff as diff
 from mofid.run_mofid import cif2mofid
+from mofid.paths import resources_path, data_path
 
 # Locations of important files, relative to the Python source code
-GA_DB = os.path.join('..','Resources','ga_hmof_info.json')
-TOBACCO_DB = os.path.join('..','Resources','tobacco_info.json')
-KNOWN_DB = os.path.join('..','Resources','known_mof_info.json')
-python_path = os.path.dirname(__file__)
-KNOWN_DEFAULT_CIFS = os.path.join('..','Resources','TestCIFs')
-TOBACCO_DEFAULT_CIFS = os.path.join('..','Data','tobacco_L_12','quick')
+GA_DB = os.path.join(resources_path,'ga_hmof_info.json')
+TOBACCO_DB = os.path.join(resources_path,'tobacco_info.json')
+KNOWN_DB = os.path.join(resources_path,'known_mof_info.json')
+KNOWN_DEFAULT_CIFS = os.path.join(resources_path,'TestCIFs')
+TOBACCO_DEFAULT_CIFS = os.path.join(data_path,'tobacco_L_12','quick')
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
 EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a '_codes' field in the output JSON?
@@ -337,7 +337,7 @@ class KnownMOFs(MOFCompare):
 	# Minimal class which doesn't have to do much work to scour the database of known MOFs.
 	# Excellent as a integration test for my code, i.e. did my changes cause anything else to obviously break?
 	def __init__(self):
-		self.db_file = os.path.join(python_path,KNOWN_DB)
+		self.db_file = KNOWN_DB
 		self.load_components()
 
 	def parse_filename(self, mof_path):
@@ -358,7 +358,7 @@ class GAMOFs(MOFCompare):
 	# Gene-based reduced WLLFHS hMOF database in Greg and Diego's 2016 paper
 	# Ref: https://doi.org/10.1126/sciadv.1600909
 	def __init__(self):
-		self.db_file = os.path.join(python_path,GA_DB)
+		self.db_file = GA_DB
 		self.load_components()
 
 	def parse_filename(self, hmof_path):
@@ -554,7 +554,7 @@ class GAMOFs(MOFCompare):
 
 class TobaccoMOFs(MOFCompare):
 	def __init__(self):
-		self.db_file = os.path.join(python_path,TOBACCO_DB)
+		self.db_file = TOBACCO_DB
 		self.load_components()
 
 	def parse_filename(self, tobacco_path):
@@ -726,7 +726,7 @@ if __name__ == '__main__':
 	input_type = 'CIF'
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs
-		inputs = glob.glob(os.path.join(python_path,NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
+		inputs = glob.glob(NO_ARG_CIFS + '/*.[Cc][Ii][Ff]')
 		comparer = KnownMOFs()
 	elif len(args) == 1 and args[0].endswith('/'):
 		# Run a whole directory if specified as a single argument with an ending slash

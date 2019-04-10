@@ -1,0 +1,5 @@
+mofid_path = r'C:\Users\asros\OneDrive\Git Programs\mofid'
+bin_path = r'C:\Users\asros\OneDrive\Git Programs\mofid\bin'
+openbabel_path = r'C:\Users\asros\OneDrive\Git Programs\mofid\openbabel'
+resources_path = r'C:\Users\asros\OneDrive\Git Programs\mofid\Resources'
+data_path = r'C:\Users\asros\OneDrive\Git Programs\mofid\Data'

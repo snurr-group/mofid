@@ -10,6 +10,7 @@ to wrap it up as a formated string.
 
 import sys
 import os
+from mofid.paths import resources_path, bin_path
 if sys.version_info[0] < 3:
 	try:
 		import subprocess32 as subprocess
@@ -31,13 +32,12 @@ except EnvironmentError:
 	raise AssertionError('You must have Java in your path!')
 
 # Some default paths
-python_path = os.path.dirname(__file__)
-GAVROG_LOC = os.path.join(python_path,'..','Resources','Systre-1.2.0-beta2.jar')
+GAVROG_LOC = os.path.join(resources_path,'Systre-1.2.0-beta2.jar')
 JAVA_LOC = 'java'
-RCSR_PATH = os.path.join(python_path,'..','Resources','RCSRnets.arc')
+RCSR_PATH = os.path.join(resources_path,'RCSRnets.arc')
 
 SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
-SBU_BIN = os.path.join(python_path,'..','bin','sbu')
+SBU_BIN = os.path.join(bin_path,'sbu')
 
 # Can update the RCSR version at http://rcsr.anu.edu.au/systre
 SYSTRE_CMD_LIST = [

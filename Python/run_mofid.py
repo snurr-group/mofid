@@ -13,9 +13,11 @@ DEFAULT_OUTPUT_PATH = 'Output'
 def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 	# Assemble the MOFid string from all of its pieces.
 	# Also export the MOFkey in an output dict for convenience.
+	cif_path = os.path.abspath(cif_path)
+	output_path = os.path.abspath(output_path)
+
 	fragments, cat, base_mofkey = extract_fragments(cif_path,
 		output_path)
-
 	if cat is not None:
 		sn_topology = extract_topology(os.path.join(output_path,
 			'SingleNode','topology.cgd'))
@@ -47,7 +49,7 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 		'cat' : parsed['cat'],
 		'cifname' : parsed['name']
 	}
-
+	
 	with open(os.path.join(output_path, 'python_mofid.txt'), 'w') as f:
 		f.write(identifiers['mofid'] + '\n')
 	with open(os.path.join(output_path, 'python_mofkey.txt'), 'w') as f:

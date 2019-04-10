@@ -7,11 +7,10 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 """
 
 import os
-
+from mofid.paths import openbabel_path
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
-python_path = os.path.dirname(__file__)
-os.environ['BABEL_DATADIR'] = os.path.join(python_path,'..','openbabel','data')  # directory with native EOL
+os.environ['BABEL_DATADIR'] = os.path.join(openbabel_path,'data')  # directory with native EOL
 import pybel  # Read SMILES to calculate molecular formulas, run SMARTS-based OBChemTsfm, etc.
 
 def ob_normalize(smiles):
