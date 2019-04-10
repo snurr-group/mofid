@@ -7,17 +7,24 @@ be a useful diagnostic after running bin/sbu.exe or Python/run_mofid.py
 """
 
 import sys
-from run_mofid import subprocess, SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
+import os
+from id_constructor import SYSTRE_CMD_LIST
+if sys.version_info[0] < 3:
+	try:
+		import subprocess32 as subprocess
+	except:
+		raise AssertionError('You must install subprocess32 if running Python2')
+else:
+	import subprocess
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
 	args = sys.argv[1:]
 	if len(args) > 1:
-		raise SyntaxError("Usage: python rerun_systre.py optional_path.cgd")
+		raise SyntaxError('Usage: python rerun_systre.py optional_path.cgd')
 	if len(args) == 1:
 		cgd_path = args[0]
 	else:
-		cgd_path = DEFAULT_SYSTRE_CGD
+		cgd_path = os.path.join('Output','SingleNode','topology.gcd')
 	
 	# Run Systre without a timeout
 	cmd_list = SYSTRE_CMD_LIST + [cgd_path]

@@ -9,17 +9,17 @@ where the primary key in all the tables is the name.
 
 import os, sys
 import copy
-from run_mofid import parse_mofid
+from id_constructor import parse_mofid
 
 
-def dict_to_delim(to_export, filename, delim="\t"):
-	with open(filename, "w") as f:
+def dict_to_delim(to_export, filename, delim='\t'):
+	with open(filename, 'w') as f:
 		for key in to_export:
 			if type(to_export[key]) is list:
 				for j in to_export[key]:
-					f.write(key + delim + str(j) + "\n")
+					f.write(key + delim + str(j) + '\n')
 			else:
-				f.write(key + delim + str(to_export[key]) + "\n")
+				f.write(key + delim + str(to_export[key]) + '\n')
 
 
 class MOFExporter:
@@ -35,8 +35,8 @@ class MOFExporter:
 				name = parsed['name']
 				del parsed['name']
 				parsed['smiles_part'] = parsed['smiles'].split('.')
-				parsed['base_topology'] = parsed['topology'].split(",")[0]
-				parsed['extra_topology'] = ",".join(parsed['topology'].split(",")[1:])  # '' if empty
+				parsed['base_topology'] = parsed['topology'].split(',')[0]
+				parsed['extra_topology'] = ','.join(parsed['topology'].split(',')[1:])  # '' if empty
 				self.tables[name] = copy.deepcopy(parsed)
 				self.datatypes = parsed.keys()
 		return self
@@ -58,14 +58,14 @@ class MOFExporter:
 
 		tidy_output = self._tidy_tables()
 		for key in tidy_output:
-			dict_to_delim(tidy_output[key], folder + "/" + key + ".tsv", delim="\t")
+			dict_to_delim(tidy_output[key], folder + '/' + key + '.tsv', delim='\t')
 
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError("Extract info from a list of MOFid strings.  Only a single .smi filename expected.")
+		raise SyntaxError('Extract info from a list of MOFid strings.  Only a single .smi filename expected.')
 
 	input_smi = args[0]
 	MOFExporter().parse(input_smi).write('TableOutput')

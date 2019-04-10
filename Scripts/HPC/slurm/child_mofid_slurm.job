@@ -14,7 +14,7 @@ module purge
 module load python
 module load git
 
-echo $PBS_JOBID > "jobid_$OUTPUT_DIR"
+echo $SLURM_JOB_ID > "jobid_$OUTPUT_DIR"
 
 #OUTPUT_DIR="Output/"
 #OUTPUT_DIR="Output_$CIFOUTLABEL_$CIFDIR/"

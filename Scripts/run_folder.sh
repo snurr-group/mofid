@@ -1,7 +1,7 @@
 #!/bin/bash
 # Runs the Python MOFid analysis on a directory of CIFs
 #
-# Outputs the a MOFids in the .smi SMILES format to stdout and any logging
+# Outputs the MOFids in the .smi SMILES format to stdout and any logging
 # info, such as warnings from sbu.exe or the current progress, to stderr.
 #
 # The intermediate OUTPUT_DIR is temporary and overwritten by each MOF,

@@ -3,7 +3,7 @@ Calculate the expected MOF components from filename and compare against MOFid
 
 Use the CSD criteria (no bonds to metals) in my modified OpenBabel code and
 sbu.cpp to decompose MOFs into fragments.  Compare actual fragments from
-ToBACCo or GA hMOF structures against their "recipe."
+ToBACCo or GA hMOF structures against their 'recipe.'
 
 See comments in summarize, GAMOFs/TobaccoMOFs.expected_mofid,
 MOFCompare._test_generated, and smiles_diff.py for documentation on the error
@@ -12,26 +12,28 @@ classes (and other warnings) reported in the json output from this script.
 @author: Ben Bucior
 """
 
-import os, sys
+import os
+import sys
 import glob
 import json
 import time
 import copy
-from cpp_cheminformatics import (path_to_resource, ob_normalize,
-	openbabel_replace, openbabel_contains)
-from run_mofid import cif2mofid, assemble_mofid, parse_mofid
+from cpp_cheminformatics import (ob_normalize, openbabel_replace,
+	openbabel_contains)
+from id_constructor import assemble_mofid, parse_mofid
 from smiles_diff import multi_smiles_diff as diff
+from run_mofid import cif2mofid
 
 # Locations of important files, relative to the Python source code
-GA_DB = "../Resources/ga_hmof_info.json"
-TOBACCO_DB = "../Resources/tobacco_info.json"
-KNOWN_DB = "../Resources/known_mof_info.json"
-
-KNOWN_DEFAULT_CIFS = "../Resources/TestCIFs"
-TOBACCO_DEFAULT_CIFS = "../Data/tobacco_L_12/quick"
+GA_DB = os.path.join('..','Resources','ga_hmof_info.json')
+TOBACCO_DB = os.path.join('..','Resources','tobacco_info.json')
+KNOWN_DB = os.path.join('..','Resources','known_mof_info.json')
+python_path = os.path.dirname(__file__)
+KNOWN_DEFAULT_CIFS = os.path.join('..','Resources','TestCIFs')
+TOBACCO_DEFAULT_CIFS = os.path.join('..','Data','tobacco_L_12','quick')
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
-EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a "_codes" field in the output JSON?
+EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a '_codes' field in the output JSON?
 if sys.version_info[0] < 3:
 	py2 = True
 else:
@@ -58,7 +60,7 @@ def _get_first_atom(smiles):
 	elif smiles[0] in ['c', 'b', 'n', 'o', 's', 'p']:  # Aromatic
 		return smiles[0]
 	elif not smiles[0].isupper():  # Numbers, parentheses, etc.
-		raise ValueError("Unexpected beginning to SMILES string")
+		raise ValueError('Unexpected beginning to SMILES string')
 
 	if smiles[1].islower():  # e.g. Cu
 		return smiles[0:2]
@@ -66,13 +68,13 @@ def _get_first_atom(smiles):
 		return smiles[0]
 
 def extend_molecule(base, extension, connection_start=20, pseudo_atom='[Lr]'):
-	# Extends "base" SMILES by "extension" at pseudo atom sites.
+	# Extends 'base' SMILES by 'extension' at pseudo atom sites.
 	# Implemented through appending dot-separated components, which are linked together
 	# through ring IDs.  Starting with %20 will be large enough for most ring systems.
 	if pseudo_atom not in base or pseudo_atom not in extension:
-		raise ValueError("Pseudo atom not found in SMILES!")
+		raise ValueError('Pseudo atom not found in SMILES!')
 	if connection_start < 10 or connection_start > 90:
-		raise ValueError("Invalid connection numbers.  Must be two-digit with buffer!")
+		raise ValueError('Invalid connection numbers.  Must be two-digit with buffer!')
 
 	base_parts = base.split(pseudo_atom)
 	assert len(base_parts) > 1
@@ -129,8 +131,8 @@ def compare_mofids(mofid1, mofid2, names=None):
 		if parsed[1][key] == expected:
 			comparison[key] = expected
 			continue
-		elif key == "topology":  # Handling multiple, alternate topological definitions
-			other_topologies = parsed[1][key].split(",")
+		elif key == 'topology':  # Handling multiple, alternate topological definitions
+			other_topologies = parsed[1][key].split(',')
 			matched_topology = False
 			for topology in other_topologies:
 				if topology == expected:  # If any of them match
@@ -138,23 +140,23 @@ def compare_mofids(mofid1, mofid2, names=None):
 					matched_topology = True
 			if matched_topology:
 				continue
-		# Else, it's a mismatch, so report an error as "err_<KEY TYPE>",
-		# e.g. "err_topology"
+		# Else, it's a mismatch, so report an error as 'err_<KEY TYPE>',
+		# e.g. 'err_topology'
 		comparison[key] = False
 		comparison['match'] = False
-		comparison['errors'].append("err_" + key)
+		comparison['errors'].append('err_' + key)
 
 	# Deeper investigation of SMILES-type errors
-	if "err_smiles" in comparison['errors']:
-		comparison['errors'].remove("err_smiles")
+	if 'err_smiles' in comparison['errors']:
+		comparison['errors'].remove('err_smiles')
 		for err in diff(parsed[0]['smiles'], parsed[1]['smiles']):
-			comparison['errors'].append("err_" + err)
+			comparison['errors'].append('err_' + err)
 
 	return comparison
 
 def summarize(results):
 	# Summarize the error classes for MOFid results.
-	# "error_types" from the header of the .json output are defined below
+	# 'error_types' from the header of the .json output are defined below
 	# in the main for loop.
 	summarized = {'mofs': results, 'errors': dict()}
 	error_types = {'err_topology': 0, 'err_smiles': 0, 'two': 0, 'three_plus': 0, 'success': 0, 'undefined': 0}
@@ -170,7 +172,7 @@ def summarize(results):
 			error_types['three_plus'] += 1
 		elif len(match['errors']) == 1:
 			# Other classes of known issue with MOFid generation and/or naming
-			# scheme are copied verbatim, e.g. "err_"* from the
+			# scheme are copied verbatim, e.g. 'err_'* from the
 			# `compare_mofids` function directly before this one.
 			known_issue = match['errors'][0]
 			if known_issue not in error_types:
@@ -191,13 +193,13 @@ class MOFCompare:
 	def __init__(self):
 		self.db_file = None
 		# self.load_components()  # Used in subclasses
-		raise UserWarning("MOF parsing only (partially) implemented for GA hMOFs and ToBACCo")
+		raise UserWarning('MOF parsing only (partially) implemented for GA hMOFs and ToBACCo')
 
 	def load_components(self, db_file = None):
 		# Load node and linker compositions from a saved JSON definition (to keep this file cleaner)
 		if db_file is None:
 			db_file = self.db_file
-		with open(db_file, "r") as inp:
+		with open(db_file, 'r') as inp:
 			mof_db = json.load(inp)
 		self.mof_db = mof_db
 		return None
@@ -207,10 +209,10 @@ class MOFCompare:
 		# Then, convert to a big svg with
 		# obabel linkers.can -O linkers.svg -xe -xC
 		# Note: this function and the json file will be deprecated by the metal+linker
-		# split paradigm suggested at group meeting ("molecule subtraction")
-		linkers = db_dict["linkers"]
+		# split paradigm suggested at group meeting ('molecule subtraction')
+		linkers = db_dict['linkers']
 		for id in linkers:
-			print(linkers[id] + " " + id)
+			print(linkers[id] + ' ' + id)
 
 	def transform_mofid(self, mofid):
 		# Transforms the raw MOFid read into a script.
@@ -225,25 +227,25 @@ class MOFCompare:
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
 		else:
-			raise ValueError("Unknown specification for testing: " + spec)
+			raise ValueError('Unknown specification for testing: ' + spec)
 
 	def test_mofid(self, mofid):
 		# Test a generated MOFid string against the expectation based on the CIF filename
 		start = time.time()
 		cif_path = parse_mofid(mofid)['name']
-		return self._test_generated(cif_path, mofid, start, "from_mofid")
+		return self._test_generated(cif_path, mofid, start, 'from_mofid')
 
 	def test_cif(self, cif_path):
 		# Compares an arbitrary CIF file against its expected specification
 		# Returns a formatted JSON string with the result
 		start = time.time()
-		auto_ids = cif2mofid(cif_path)
+		auto_ids = cif2mofid(cif_path=cif_path)
 		return self._test_generated(cif_path, auto_ids['mofid'],
-			start, "from_cif", auto_ids['mofkey'])
+			start, 'from_cif', auto_ids['mofkey'])
 
 	def _test_generated(self,
 		cif_path, generated_mofid,
-		start_time = None, generation_type = "from_generated",
+		start_time = None, generation_type = 'from_generated',
 		mofkey = None
 		):
 		# Compares an arbitrary MOFid string against the value generated,
@@ -263,7 +265,7 @@ class MOFCompare:
 
 		# Define sources of error when the program exits with errors.
 		# Without these definitions, the validator would return a generic
-		# class of error, e.g. "err_topology", instead of actually indicating
+		# class of error, e.g. 'err_topology', instead of actually indicating
 		# the root cause from program error or timeout.
 		mofid_from_name['err_timeout'] = assemble_mofid(
 			fragments, 'TIMEOUT', default['cat'], mof_name=default['name'])
@@ -278,7 +280,7 @@ class MOFCompare:
 		# Run transformations on the generated MOFid from CIF or smi database, if applicable (e.g. GA hMOFs)
 		test_mofid = self.transform_mofid(generated_mofid)
 		if test_mofid != generated_mofid:
-			generation_type += "_transformed"
+			generation_type += '_transformed'
 
 		if test_mofid is None and generated_mofid is not None:
 			comparison = self.compare_multi_mofid(mofid_from_name,
@@ -335,7 +337,7 @@ class KnownMOFs(MOFCompare):
 	# Minimal class which doesn't have to do much work to scour the database of known MOFs.
 	# Excellent as a integration test for my code, i.e. did my changes cause anything else to obviously break?
 	def __init__(self):
-		self.db_file = path_to_resource(KNOWN_DB)
+		self.db_file = os.path.join(python_path,KNOWN_DB)
 		self.load_components()
 
 	def parse_filename(self, mof_path):
@@ -356,7 +358,7 @@ class GAMOFs(MOFCompare):
 	# Gene-based reduced WLLFHS hMOF database in Greg and Diego's 2016 paper
 	# Ref: https://doi.org/10.1126/sciadv.1600909
 	def __init__(self):
-		self.db_file = path_to_resource(GA_DB)
+		self.db_file = os.path.join(python_path,GA_DB)
 		self.load_components()
 
 	def parse_filename(self, hmof_path):
@@ -364,16 +366,16 @@ class GAMOFs(MOFCompare):
 		codes = dict()
 		mof_name = basename(hmof_path)  # Get the basename without file extension
 
-		parts = mof_name.split("_")
+		parts = mof_name.split('_')
 		assert len(parts) == 8  # hypoMOF + number + 6 chromosomes
-		codes["name"] = mof_name
-		codes["num"] = parts[1]
-		codes["max_cat"] = parts[2]
-		codes["cat"] = parts[3]
-		codes["nodes"] = parts[4]
-		codes["linker1"] = parts[5]
-		codes["linker2"] = parts[6]
-		codes["functionalization"] = parts[7]
+		codes['name'] = mof_name
+		codes['num'] = parts[1]
+		codes['max_cat'] = parts[2]
+		codes['cat'] = parts[3]
+		codes['nodes'] = parts[4]
+		codes['linker1'] = parts[5]
+		codes['linker2'] = parts[6]
+		codes['functionalization'] = parts[7]
 
 		return codes
 
@@ -387,14 +389,14 @@ class GAMOFs(MOFCompare):
 		codes = self.parse_filename(cif_path)
 		fg = codes['functionalization']
 
-		if fg == "0":
+		if fg == '0':
 			return mofid
-		if fg not in self.mof_db["functionalization"]:
+		if fg not in self.mof_db['functionalization']:
 			return None  # Raises a transform error
 
 		fragments = mofid.split()[0]
-		fancy_name = " ".join(mofid.split()[1:])
-		pattern = self.mof_db["functionalization"][fg]
+		fancy_name = ' '.join(mofid.split()[1:])
+		pattern = self.mof_db['functionalization'][fg]
 		if not openbabel_contains(fragments, pattern):
 			return None  # will raise a transform error in the output
 
@@ -438,8 +440,8 @@ class GAMOFs(MOFCompare):
 					if smiles not in sbus:
 						sbus.append(smiles)
 				# Also generate the nitrogen-terminated versions for pillared paddlewheels
-				if (part in ["linker1", "linker2"] and
-					codes['nodes'] in ["1", "2"] and topology == "pcu"
+				if (part in ['linker1', 'linker2'] and
+					codes['nodes'] in ['1', '2'] and topology == 'pcu'
 					):
 					assert len(full_smiles) == 1
 					n_smi = self._carboxylate_to_nitrogen(full_smiles[0])
@@ -508,32 +510,32 @@ class GAMOFs(MOFCompare):
 		tetrahedral4 = range(34, 38)  # tetrahedral tetratopic linkers
 		planar4 = [38, 39]  # planar tetratopic linkers
 
-		nodes = int(genes["nodes"])
-		linker1 = int(genes["linker1"])
-		linker2 = int(genes["linker2"])
+		nodes = int(genes['nodes'])
+		linker1 = int(genes['linker1'])
+		linker2 = int(genes['linker2'])
 
 		if nodes == zn4o:  # Zn4O nodes
-			return "pcu"
+			return 'pcu'
 		elif nodes in paddlewheels and linker1 < 30 and linker2 < 30:  # Paddlewheels with ditopic linkers
-			return "pcu"
+			return 'pcu'
 		elif nodes == zr_node and linker1 != linker2:  # Zr nodes and two different linkers
-			return "pcu"
+			return 'pcu'
 
 		elif nodes == v_node:  # Vanadium nodes
-			return "rna"  # **sra** in the table, but the **rna** representation is more consistent with the ID scheme
+			return 'rna'  # **sra** in the table, but the **rna** representation is more consistent with the ID scheme
 		elif nodes == zr_node and linker1 == linker2:  # Zr nodes and one type of linker
-			return "fcu"
+			return 'fcu'
 
 		elif linker1 in tritopic and linker2 in tritopic:
-			return "tbo"
+			return 'tbo'
 		elif linker1 in tetrahedral4 and linker2 in tetrahedral4:
-			return "dia"
+			return 'dia'
 		elif linker1 in planar4 and linker2 in planar4:
-			return "nbo"
+			return 'nbo'
 
 		else:
-			raise ValueError("Undefined topology for " + genes["name"])
-			return "UNK"
+			raise ValueError('Undefined topology for ' + genes['name'])
+			return 'UNK'
 
 	def _carboxylate_to_nitrogen(self, linker_smiles):
 		# Transforms carboxylate linkers to their nitrogen-terminated versions
@@ -552,30 +554,30 @@ class GAMOFs(MOFCompare):
 
 class TobaccoMOFs(MOFCompare):
 	def __init__(self):
-		self.db_file = path_to_resource(TOBACCO_DB)
+		self.db_file = os.path.join(python_path,TOBACCO_DB)
 		self.load_components()
 
 	def parse_filename(self, tobacco_path):
 		# Extract ToBACCo recipes from the filename
-		# Format: topology_sym_x_node_type_sym_x_node2_type_L_linkernum.cif ("_" for empty linker)
+		# Format: topology_sym_x_node_type_sym_x_node2_type_L_linkernum.cif ('_' for empty linker)
 		# Can we parse this using ToBACCo's own code??
-		codes = {"name": None, "nodes": [], "linker": None, "topology": None}
+		codes = {'name': None, 'nodes': [], 'linker': None, 'topology': None}
 		mof_info = basename(tobacco_path)  # Get the basename without file extension
 		codes['name'] = mof_info
 
-		parsed = mof_info.split("_", 1)
+		parsed = mof_info.split('_', 1)
 		codes['topology'] = parsed[0]
 		mof_info = parsed[1]
 
-		while "sym_" in mof_info:
-			parsed = mof_info.split("_")
-			codes['nodes'].append("_".join(parsed[0:4]))
-			mof_info = "_".join(parsed[4:])
+		while 'sym_' in mof_info:
+			parsed = mof_info.split('_')
+			codes['nodes'].append('_'.join(parsed[0:4]))
+			mof_info = '_'.join(parsed[4:])
 
 		# Not sure why bcs, etc., have an extra underscore in the topology.
-		mof_info = mof_info.strip("_")
-		if mof_info == "":
-			mof_info = "L__"
+		mof_info = mof_info.strip('_')
+		if mof_info == '':
+			mof_info = 'L__'
 		codes['linker'] = mof_info
 
 		return codes
@@ -591,7 +593,7 @@ class TobaccoMOFs(MOFCompare):
 		if (not any(False, [x in self.mof_db['nodes'] for x in 
 			codes['nodes']])) and (codes['linker'] in self.mof_db['linkers']):
 			# Skip structures with tricky nodes (undefined in the table for now)
-			# Apply "sticky ends" to node/linker definitions
+			# Apply 'sticky ends' to node/linker definitions
 			assert len(codes['nodes']) in [1,2]
 			node1 = self.mof_db['nodes'][codes['nodes'][0]]
 			if len(codes['nodes']) == 1:
@@ -607,7 +609,7 @@ class TobaccoMOFs(MOFCompare):
 				topology = topology[5:]
 			if len(topology) == 4 and topology.endswith('b'):
 				topology = topology[0:3]  # Remove binary designation
-			cat = "0"  # All ToBaCCo MOFs are uncatenated
+			cat = '0'  # All ToBaCCo MOFs are uncatenated
 
 			mofid_options = dict()
 
@@ -615,9 +617,9 @@ class TobaccoMOFs(MOFCompare):
 			mofid_options['default'] = assemble_mofid(
 				fragments, topology, cat, mof_name=codes['name'])
 			# Known classes of issues go here
-			if topology == "tpt":  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
+			if topology == 'tpt':  # Systre analysis finds an **stp** net for ToBaCCo MOFs with the **tpt** template
 				mofid_options['stp_from_tpt'] = assemble_mofid(
-					fragments, "stp", cat, mof_name=codes['name'])
+					fragments, 'stp', cat, mof_name=codes['name'])
 
 			if EXPORT_CODES:
 				mofid_options['_codes'] = codes
@@ -628,7 +630,7 @@ class TobaccoMOFs(MOFCompare):
 
 	def assemble_smiles(self, node1, node2, linker):
 		# Assemble the expected nodes and linkers based on the designated compositions in the database,
-		# plus transformations to join "sticky ends" together (using an [Lr] pseudo atom).
+		# plus transformations to join 'sticky ends' together (using an [Lr] pseudo atom).
 		# Returns a list of the SMILES components
 		smiles = []
 		sticky_ends = []
@@ -642,19 +644,19 @@ class TobaccoMOFs(MOFCompare):
 						smiles.append(part)
 
 		if linker.count('[Lr]') != 2:
-			raise ValueError("Linker must contain two sticky ends")
+			raise ValueError('Linker must contain two sticky ends')
 		if len(sticky_ends) != 2:
-			raise ValueError("Both nodes must contain sticky end(s)")
+			raise ValueError('Both nodes must contain sticky end(s)')
 		# Ensure the second component only has to react once in both transformations (node1 + linker, intermediate + node2)
 		if sticky_ends[1].count('[Lr]') > 1:
 			sticky_ends = [sticky_ends[1], sticky_ends[0]]
 		if sticky_ends[1].count('[Lr]') != 1:
-			raise ValueError("Both nodes cannot contain multiple sticky ends")
+			raise ValueError('Both nodes cannot contain multiple sticky ends')
 
 		# React all of the sticky ends.  Temporarily make the linker reactive only on one end, then extend in a second step.
 		mod_linker = linker.replace('[Lr]', '[No]').replace('[No]', '[Lr]', 1)  # sub the second [Lr] with [No]
 		intermediate = ob_normalize(extend_molecule(sticky_ends[0], mod_linker))
-		intermediate = intermediate.replace('[No]', '[Lr]')  # "Reactivate" the second sticky end of the linker
+		intermediate = intermediate.replace('[No]', '[Lr]')  # 'Reactivate' the second sticky end of the linker
 		organic = ob_normalize(extend_molecule(intermediate, sticky_ends[1]))
 
 		smiles.append(organic)
@@ -697,36 +699,36 @@ class AutoCompare:
 		elif os.path.exists(spec):
 			return self.test_cif(spec)
 		else:
-			raise ValueError("Unknown specification for testing: " + spec)
+			raise ValueError('Unknown specification for testing: ' + spec)
 
 	def _choose_parser(self, cif_name):
 		# Determine the appropriate MOFCompare class based on a MOF's name
 		if (not self.recalculate) and (cif_name in self.precalculated):
-			mof_log("...using precompiled table of known MOFs\n")
+			mof_log('...using precompiled table of known MOFs\n')
 			return self.known
-		elif "hypotheticalmof_" in cif_name.lower() or "hmof_" in cif_name.lower():
+		elif 'hypotheticalmof_' in cif_name.lower() or 'hmof_' in cif_name.lower():
 			# Underscore suffix prevents false positives in structures named optimized_hmof1.cif, etc.
-			if "_i_" in cif_name.lower():
-				raise ValueError("Wilmer 2012 hypothetical MOF format no longer supported.  See updated GA format to run validations.")
+			if '_i_' in cif_name.lower():
+				raise ValueError('Wilmer 2012 hypothetical MOF format no longer supported.  See updated GA format to run validations.')
 			else:
-				mof_log("...parsing file with rules for GA hypothetical MOFs\n")
+				mof_log('...parsing file with rules for GA hypothetical MOFs\n')
 				return self.ga
-		elif "_sym_" in cif_name:
-			mof_log("...parsing file with rules for ToBACCo MOFs\n")
+		elif '_sym_' in cif_name:
+			mof_log('...parsing file with rules for ToBACCo MOFs\n')
 			return self.tobacco
 		else:
-			mof_log("...unable to find a suitable rule automatically\n")
+			mof_log('...unable to find a suitable rule automatically\n')
 			return None
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	comparer = AutoCompare()  # By default, guess the MOF type by filename
-	input_type = "CIF"
+	input_type = 'CIF'
 	args = sys.argv[1:]
 	if len(args) == 0:  # validation testing against reference MOFs
-		inputs = glob.glob(path_to_resource(NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
+		inputs = glob.glob(os.path.join(python_path,NO_ARG_CIFS) + '/*.[Cc][Ii][Ff]')
 		comparer = KnownMOFs()
-	elif len(args) == 1 and args[0].endswith("/"):
+	elif len(args) == 1 and args[0].endswith('/'):
 		# Run a whole directory if specified as a single argument with an ending slash
 		inputs = glob.glob(args[0] + '*.[Cc][Ii][Ff]')
 		comparer = AutoCompare(True)  # Do not use database of known MOFs
@@ -735,27 +737,27 @@ if __name__ == "__main__":
 		args[0].endswith('.smi') or
 		args[0].endswith('.out')
 		):
-		input_type = "MOFid line"
-		with open(args[0], "r") as f:
+		input_type = 'MOFid line'
+		with open(args[0], 'r') as f:
 			inputs = f.readlines()
-			inputs = [x.rstrip("\n") for x in inputs]
+			inputs = [x.rstrip('\n') for x in inputs]
 	else:
-		input_type = "Auto"
+		input_type = 'Auto'
 		inputs = args
 
 	mofid_results = []
 	for num_cif, curr_input in enumerate(inputs):
 		display_input = curr_input
-		if input_type == "MOFid line":
-			if len(curr_input.split(";")) == 1:
+		if input_type == 'MOFid line':
+			if len(curr_input.split(';')) == 1:
 				display_input = curr_input
 			else:
-				display_input = ";".join(curr_input.split(";")[1:])
-		mof_log(" ".join(["Found", input_type, str(num_cif+1), "of",
-			str(len(inputs)), ":", display_input]) + "\n")
-		if input_type == "CIF":
+				display_input = ';'.join(curr_input.split(';')[1:])
+		mof_log(' '.join(['Found', input_type, str(num_cif+1), 'of',
+			str(len(inputs)), ':', display_input]) + '\n')
+		if input_type == 'CIF':
 			result = comparer.test_cif(curr_input)
-		elif input_type == "MOFid line":
+		elif input_type == 'MOFid line':
 			result = comparer.test_mofid(curr_input)
 		else:
 			result = comparer.test_auto(curr_input)
@@ -766,5 +768,5 @@ if __name__ == "__main__":
 	json.dump(results_summary, sys.stdout, indent=4)
 	num_mofs = results_summary['errors']['total_cifs']
 	num_errors = num_mofs - results_summary['errors']['error_types']['success']
-	mof_log(" ".join(["\nResults:", str(num_errors), "errors in", str(num_mofs), "MOFs\n"]))
+	mof_log(' '.join(['\nResults:', str(num_errors), 'errors in', str(num_mofs), 'MOFs\n']))
 	sys.exit(num_errors)
