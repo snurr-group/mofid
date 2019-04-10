@@ -16,11 +16,10 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 2. Run `python set_paths.py; pip install .` in the base `/mofid` directory.
 
 ## Usage
-In a Python script, the user simply has to call the `run_mofid.cif2mofid(cif_path,output_path='Output')` function. The first argument is required and is the path to the MOF CIF. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to `/Output` if not specified. An example is shown below.
+In a Python script, the user simply has to call the `run_mofid.cif2mofid(cif_path,output_path='Output')` function. The first argument is required and is the path to the MOF CIF. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to `/Output` if not specified. An example of how to call MOFid is shown below.
 ```python
 from mofid.run_mofid import cif2mofid
-cif_path = 'path/to/my/mof.cif'
-output_path = 'Output'
-mofid = cif2mofid(cif_path,output_path)
+cif_path = '/path/to/my/mof.cif'
+mofid = cif2mofid(cif_path)
 ```
-The output of `run_mofid.cif2mofid` is a dictinoary containing six entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
+The output of the `mofid.cif2mofid` function is a dictionary containing six entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
