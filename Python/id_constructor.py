@@ -11,7 +11,6 @@ to wrap it up as a formated string.
 import sys
 import os
 from mofid.paths import resources_path, bin_path
-from mofid.run_mofid import DEFAULT_OUTPUT_PATH
 
 if sys.version_info[0] < 3:
 	try:
@@ -37,7 +36,7 @@ except EnvironmentError:
 GAVROG_LOC = os.path.join(resources_path,'Systre-1.2.0-beta2.jar')
 JAVA_LOC = 'java'
 RCSR_PATH = os.path.join(resources_path,'RCSRnets.arc')
-DEFAULT_SYSTRE_CGD = os.path.join(DEFAULT_OUTPUT_PATH,'SingleNode','topology.gcd')
+DEFAULT_SYSTRE_CGD = os.path.join('Output','SingleNode','topology.gcd')
 SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_BIN = os.path.join(bin_path,'sbu')
 
