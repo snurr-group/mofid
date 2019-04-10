@@ -23,14 +23,14 @@ from mofid.cpp_cheminformatics import (ob_normalize, openbabel_replace,
 from mofid.id_constructor import assemble_mofid, parse_mofid
 from mofid.smiles_diff import multi_smiles_diff as diff
 from mofid.run_mofid import cif2mofid
-from mofid.paths import resources_path, data_path
+from mofid.paths import resources_path, mofid_path
 
 # Locations of important files, relative to the Python source code
 GA_DB = os.path.join(resources_path,'ga_hmof_info.json')
 TOBACCO_DB = os.path.join(resources_path,'tobacco_info.json')
 KNOWN_DB = os.path.join(resources_path,'known_mof_info.json')
 KNOWN_DEFAULT_CIFS = os.path.join(resources_path,'TestCIFs')
-TOBACCO_DEFAULT_CIFS = os.path.join(data_path,'tobacco_L_12','quick')
+TOBACCO_DEFAULT_CIFS = os.path.join(mofid_path,'Data','tobacco_L_12','quick')
 NO_ARG_CIFS = KNOWN_DEFAULT_CIFS  # KnownMOFs() comparisons are used if no args are specified.  See arg parsing of main
 PRINT_CURRENT_MOF = True
 EXPORT_CODES = True  # Should the read linker/cat/etc. codes from the filename be reported to a '_codes' field in the output JSON?

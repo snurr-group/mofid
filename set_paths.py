@@ -5,7 +5,7 @@ mofidpy_path = os.path.join(mofid_path,'Python')
 bin_path = os.path.join(mofid_path,'bin')
 openbabel_path = os.path.join(mofid_path,'openbabel')
 resources_path = os.path.join(mofid_path,'Resources')
-data_path = os.path.join(mofid_path,'Data')
+
 for p in [mofid_path,mofidpy_path,bin_path,openbabel_path,resources_path]:
 	if not os.path.exists(p):
 		raise ValueError('No directory '+p)
