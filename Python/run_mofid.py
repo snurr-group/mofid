@@ -1,8 +1,8 @@
-'''
+"""
 Parent module for obtaining MOFid data for a single .cif
 
 @author: Ben Bucior
-'''
+"""
 
 import sys
 import os
