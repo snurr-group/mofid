@@ -13,13 +13,13 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 
 ## Installation
 1. Run `make init` in the base `/mofid` directory.
-2. Run `python setup.py install` in the base `/mofid` directory.
+2. Run `pip install .` in the base `/mofid` directory.
 3. Run `make test` to verify that everything is set up correctly. Some warning messages are expected and normal because the test suite includes some non-MOF structures. At the end, the test code will report the number of mismatches, which should be zero (except for a known issue with ZIFs on some computers).
 
 ## Usage
 In a Python script, the user simply has to call the `run_mofid.cif2mofid(cif_path,output_path='Output')` function. The first argument is required and is the path to the MOF CIF. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to `/Output` if not specified. An example is shown below.
 ```python
-from run_mofid import cif2mofid
+from mofid.run_mofid import cif2mofid
 cif_path = 'path/to/my/mof.cif'
 output_path = 'Output'
 mofid = cif2mofid(cif_path,output_path)

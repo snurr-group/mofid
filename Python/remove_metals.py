@@ -9,7 +9,7 @@ including organic linkers (no metals).
 """
 
 import sys
-import extract_metals
+import mofid.extract_metals as extract_metals
 
 def contains_metal(smiles):
 	# Does a SMILES entry contain a metal anywhere?

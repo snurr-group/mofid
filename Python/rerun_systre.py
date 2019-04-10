@@ -8,7 +8,7 @@ be a useful diagnostic after running bin/sbu.exe or Python/run_mofid.py
 
 import sys
 import os
-from id_constructor import SYSTRE_CMD_LIST
+from mofid.id_constructor import SYSTRE_CMD_LIST
 if sys.version_info[0] < 3:
 	try:
 		import subprocess32 as subprocess

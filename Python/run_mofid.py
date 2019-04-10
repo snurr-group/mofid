@@ -6,7 +6,7 @@ Parent module for obtaining MOFid data for a single .cif
 
 import sys
 import os
-from id_constructor import (extract_fragments, extract_topology,
+from mofid.id_constructor import (extract_fragments, extract_topology,
 	assemble_mofkey, assemble_mofid, parse_mofid)
 DEFAULT_OUTPUT_PATH = 'Output'
 

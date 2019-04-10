@@ -10,7 +10,7 @@ and single_smiles_diff for documentation on the reported error classifications.
 
 import sys
 import re
-from cpp_cheminformatics import (ob_normalize, openbabel_replace,
+from mofid.cpp_cheminformatics import (ob_normalize, openbabel_replace,
 	openbabel_formula, openbabel_GetSpacedFormula)
 
 # Define priority order for differences between SMILES.

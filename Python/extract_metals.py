@@ -7,7 +7,7 @@ Based on remove_metals.py, but with the purpose of saving the metal compositions
 """
 
 import sys
-import old_cheminformatics
+import mofid.old_cheminformatics as old_cheminformatics
 
 def usage():
 	print('Usage: python extract_metals.py smiles.tsv > smiles_metals.tsv')

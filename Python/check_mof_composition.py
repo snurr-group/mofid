@@ -18,11 +18,11 @@ import glob
 import json
 import time
 import copy
-from cpp_cheminformatics import (ob_normalize, openbabel_replace,
+from mofid.cpp_cheminformatics import (ob_normalize, openbabel_replace,
 	openbabel_contains)
-from id_constructor import assemble_mofid, parse_mofid
-from smiles_diff import multi_smiles_diff as diff
-from run_mofid import cif2mofid
+from mofid.id_constructor import assemble_mofid, parse_mofid
+from mofid.smiles_diff import multi_smiles_diff as diff
+from mofid.run_mofid import cif2mofid
 
 # Locations of important files, relative to the Python source code
 GA_DB = os.path.join('..','Resources','ga_hmof_info.json')
