@@ -29,3 +29,4 @@ openbabel/eminstall/
 openbabel/embuild/
 embin/
 *.stackdump
+Python/paths\.py
