@@ -7,8 +7,7 @@ be a useful diagnostic after running bin/sbu.exe or Python/run_mofid.py
 """
 
 import sys
-import os
-from mofid.id_constructor import SYSTRE_CMD_LIST
+from mofid.id_constructor import SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
 if sys.version_info[0] < 3:
 	try:
 		import subprocess32 as subprocess
@@ -24,7 +23,7 @@ if __name__ == '__main__':
 	if len(args) == 1:
 		cgd_path = args[0]
 	else:
-		cgd_path = os.path.join('Output','SingleNode','topology.gcd')
+		cgd_path = DEFAULT_SYSTRE_CGD
 	
 	# Run Systre without a timeout
 	cmd_list = SYSTRE_CMD_LIST + [cgd_path]

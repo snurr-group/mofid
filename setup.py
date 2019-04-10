@@ -8,5 +8,5 @@ setup(name='MOFid',
       packages=['mofid',],
       package_dir = {'mofid':'Python'},
       license='GNU',
-      install_requires=['subprocess32;python_version<"3.0"']
+      install_requires=['subprocess32>="3.5.0";python_version<"3.0"']
      )
