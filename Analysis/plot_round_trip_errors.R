@@ -214,12 +214,12 @@ if (RUN_ERROR_FLOWS) {
   tobacco_errs %>% filter(err_type=="Two errors")
   # Looking into the linkers, nothing particularly stands out from SB's
   understand_tobacco %>% filter(err_type=="linker_single_bonds") %>% summary
-  # But 564/841 of the bond order problems are these 4-N rings
+  # But 564/841 of the bond order problems are these 4-N rings (Tetrazines)
   understand_tobacco %>% filter(err_type=="linker_bond_orders") %>% summary
   understand_tobacco <- understand_tobacco %>% 
     mutate(err_cause = ifelse(
       err_type=="linker_bond_orders" & as.logical(L_4n_ring),
-      "4-N ring", err_cause
+      "Tetrazine", err_cause
     ))
   # Interestingly, all of the "formula" errors are L_8,9,10, which have big rings next to a phenyl.
   understand_tobacco %>% filter(err_type=="formula") %>% summary
@@ -263,7 +263,7 @@ if (RUN_ERROR_FLOWS) {
   understand_ga <- understand_ga %>% 
     mutate(err_cause = ifelse(
       err_type == "linker_bond_orders" & (code.linker1==27 | code.linker2==27),
-      "4-N ring", err_cause
+      "Tetrazine", err_cause
     ))
   # Formula errors?  Weirdly enough, the first linker is always either L_6 or L_27
   understand_ga %>% filter(err_type=="formula") %>% summary()
@@ -277,7 +277,7 @@ if (RUN_ERROR_FLOWS) {
     )) %>% 
     mutate(err_cause = ifelse(
       err_type == "formula" & (code.linker1==27),
-      "4-N ring", err_cause
+      "Tetrazine", err_cause
     ))
   # Nonplanar carboxylates: all of the planar 4-c nodular "linkers" have this problem
   understand_ga %>% filter(err_type=="nonplanar_carboxylate") %>% summary()
