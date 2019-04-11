@@ -16,16 +16,16 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda info -a
   - conda create -q -n py2 python=2.7
-  - source activate py2
-  - pip install --user subprocess32
-  - source deactivate py2
 
 before_script:
   - make init
+  - python set_paths.py
+  - pip install .
+  - source activate py2
+  - pip install .
+  - source deactivate py2
 
 script:
-  - make bin/sbu
-
   #py3 test
   - make test
 

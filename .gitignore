@@ -2,6 +2,8 @@
 Data/
 !README.md
 Test/
+build/
+dist/
 Output/
 Output_*/
 TableOutput/
@@ -26,5 +28,5 @@ emsdk_set_env.bat
 openbabel/eminstall/
 openbabel/embuild/
 embin/
-results.smi
-log.txt
+*.stackdump
+Python/paths\.py

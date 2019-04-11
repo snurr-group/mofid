@@ -7,13 +7,19 @@ be a useful diagnostic after running bin/sbu.exe or Python/run_mofid.py
 """
 
 import sys
-from run_mofid import subprocess, SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
+from mofid.id_constructor import SYSTRE_CMD_LIST, DEFAULT_SYSTRE_CGD
+if sys.version_info[0] < 3:
+	try:
+		import subprocess32 as subprocess
+	except:
+		raise AssertionError('You must install subprocess32 if running Python2')
+else:
+	import subprocess
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
 	args = sys.argv[1:]
 	if len(args) > 1:
-		raise SyntaxError("Usage: python rerun_systre.py optional_path.cgd")
+		raise SyntaxError('Usage: python rerun_systre.py optional_path.cgd')
 	if len(args) == 1:
 		cgd_path = args[0]
 	else:

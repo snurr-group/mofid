@@ -9,7 +9,7 @@ including organic linkers (no metals).
 """
 
 import sys
-import extract_metals
+import mofid.extract_metals as extract_metals
 
 def contains_metal(smiles):
 	# Does a SMILES entry contain a metal anywhere?
@@ -19,22 +19,22 @@ def contains_metal(smiles):
 		return False
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	args = sys.argv[1:]
 	if len(args) != 1:
-		raise SyntaxError("Usage: python remove_metals.py smiles_part.tsv > smiles_nonmetals.tsv")
+		raise SyntaxError('Usage: python remove_metals.py smiles_part.tsv > smiles_nonmetals.tsv')
 	
-	with open(args[0], "r") as f:
+	with open(args[0], 'r') as f:
 		tsv_data = f.readlines()
-		tsv_data = [x.rstrip("\n") for x in tsv_data]
+		tsv_data = [x.rstrip('\n') for x in tsv_data]
 	
 	tsv_header = False
 	if tsv_header:
 		print(tsv_data.pop(0))
 	
 	for line in tsv_data:
-		smiles = line.split("\t")[1]
-		if not (smiles=="*" or contains_metal(smiles)):
+		smiles = line.split('\t')[1]
+		if not (smiles=='*' or contains_metal(smiles)):
 			print(line)
 	
 # On the output file, an interesting bash or SQL test you can run is

@@ -11,6 +11,7 @@ Loads Open Babel, pybel, and applicable normalization wrappers
 
 import sys, os
 import re
+from mofid.paths import openbabel_path, bin_path
 # Ensure that subprocess32 is installed if running Py2
 if sys.version_info[0] < 3:
 	try:
@@ -19,11 +20,6 @@ if sys.version_info[0] < 3:
 		raise AssertionError('You must install subprocess if running Python2')
 else:
 	import subprocess
-
-def path_to_resource(resource):
-	# Get the path to resources, such as the MOF DB's or C++ code, without resorting to hardcoded paths
-	python_path = os.path.dirname(__file__)
-	return os.path.join(python_path, resource)
 
 def runcmd(cmd_list, timeout=None):
 	if timeout is None:
@@ -35,28 +31,28 @@ def runcmd(cmd_list, timeout=None):
 
 # Set up local Open Babel data environment before importing the libraries.
 # CIF and other SMILES work is handled by the bin/sbu binary, called as a subprocess
-os.environ["BABEL_DATADIR"] = path_to_resource("../openbabel/data")  # directory with native EOL
-TSFM_BIN = path_to_resource("../bin/tsfm_smiles")
-OBABEL_BIN = path_to_resource("../openbabel/build/bin/obabel")
+os.environ['BABEL_DATADIR'] = os.path.join(openbabel_path,'data')  # directory with native EOL
+TSFM_BIN = os.path.join(bin_path,'tsfm_smiles')
+OBABEL_BIN = os.path.join(openbabel_path,'build','bin','obabel')
 
 def quote(smiles_str):
 	# Prepares SMILES strings for Open Babel command line calls.
 	# Formerly wrapped strings within single (non-parseable) quotes, which is necessary in Bash to
 	# avoid globbing/expansion but apparently not for Python's subprocess calls.  The quotes were
 	# being literally passed as part of the SMILES in Linux, resulting in parsing failures.
-	#return "'" + smiles_str + "'"
+	#return ''' + smiles_str + '''
 	return smiles_str
 
 def in_smiles(smiles_str):
 	# Adds necessary quotes and Open Babel input notation for SMILES strings
-	return "-:" + quote(smiles_str)
+	return '-:' + quote(smiles_str)
 
 def ob_normalize(smiles):
 	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(smiles), "-xi", "-ocan"])
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(smiles), '-xi', '-ocan'])
 	cpp_output = cpp_run.stdout
-	if (cpp_run.stderr != "1 molecule converted\n"):
-		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
+	if (cpp_run.stderr != '1 molecule converted\n'):
+		sys.stderr.write(cpp_run.stderr + '\n')  # Re-fowarding obabel errors
 	return cpp_output.rstrip()
 
 def openbabel_replace(mol_smiles, query, replacement):
@@ -71,31 +67,31 @@ def openbabel_replace(mol_smiles, query, replacement):
 
 def openbabel_contains(mol_smiles, query):
 	# Checks if a molecule (including multi-fragment contains a SMARTS match
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "-s", quote(query),
-		"-xi", "-ocan"])
-	if (cpp_run.stderr == "1 molecule converted\n"):
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), '-s', quote(query),
+		'-xi', '-ocan'])
+	if (cpp_run.stderr == '1 molecule converted\n'):
 		return True
-	elif (cpp_run.stderr == "0 molecules converted\n"):
+	elif (cpp_run.stderr == '0 molecules converted\n'):
 		return False
 	else:
-		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
+		sys.stderr.write(cpp_run.stderr + '\n')  # Re-fowarding obabel errors
 		return False
 
 def openbabel_formula(mol_smiles):
 	# Extracts a molecular formula without relying on the pybel module
 	# The .txt format prints the title: https://openbabel.org/docs/dev/FileFormats/Title_format.html
 	# Note: it looks like the various --append options are in descriptors/filters.cpp, etc.
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), "--append",
-		"FORMULA", "-otxt"])
+	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), '--append',
+		'FORMULA', '-otxt'])
 	cpp_output = cpp_run.stdout
-	if (cpp_run.stderr != "1 molecule converted\n"):
-		sys.stderr.write(cpp_run.stderr + "\n")  # Re-fowarding obabel errors
+	if (cpp_run.stderr != '1 molecule converted\n'):
+		sys.stderr.write(cpp_run.stderr + '\n')  # Re-fowarding obabel errors
 	return cpp_output.rstrip()
 
-def openbabel_GetSpacedFormula(mol_smiles, delim=" "):
+def openbabel_GetSpacedFormula(mol_smiles, delim=' '):
 	# Re-implements part of OpenBabel's GetSpacedFormula method
 	consolidated_formula = openbabel_formula(mol_smiles)
-	split_formula = re.findall(r"[A-Z][a-z]?|d*", consolidated_formula)
-	if split_formula[-1] == "":
+	split_formula = re.findall(r'[A-Z][a-z]?|d*', consolidated_formula)
+	if split_formula[-1] == '':
 		split_formula.pop()
 	return delim.join(split_formula)
