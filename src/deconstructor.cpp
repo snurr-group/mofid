@@ -475,13 +475,20 @@ std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, co
 	// This code will strip the protonation state off of the InChIKey
 
 	std::vector<std::string> unique_inchi;
-	if (format != "inchi" && format != "inchikey") {
+	std::string conv_format;
+	bool truncate_inchikey = false;
+	if (format == "truncated inchikey") {
+		conv_format = "inchikey";
+		truncate_inchikey = true;
+	} else if (format == "inchi" || format == "inchikey") {
+		conv_format = format;
+	} else {
 		obErrorLog.ThrowError(__FUNCTION__, "Unexpected format flag", obError);
 		return unique_inchi;
 	}
 
 	OBConversion conv;
-	conv.SetOutFormat(format.c_str());
+	conv.SetOutFormat(conv_format.c_str());
 	conv.AddOption("X", OBConversion::OUTOPTIONS, "SNon");  // ignoring stereochemistry, at least for now
 	conv.AddOption("w");  // reduce verbosity about InChI behavior:
 	// 'Omitted undefined stereo', 'Charges were rearranged', 'Proton(s) added/removed', 'Metal was disconnected'
@@ -492,12 +499,20 @@ std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, co
 	for (std::vector<OBMol>::iterator frag=fragments.begin(); frag!=fragments.end(); ++frag) {
 		std::string frag_inchi = exportNormalizedMol(*frag, conv);
 		const std::string ob_newline = "\n";
-		if (format == "inchikey") {
-			if (frag_inchi.length() != (27 + ob_newline.size())) {
+		if (conv_format == "inchikey") {
+			if (frag_inchi.length() != (27 + ob_newline.size())) {  // 14 + 1 + 10 + 1 + 1 + \n
 				obErrorLog.ThrowError(__FUNCTION__, "Unexpected length for InChIKey", obError);
 				continue;
 			}
-			frag_inchi = frag_inchi.substr(0, 25);  // 14 + 1 + 10 (minus the -protonation flag and \n)
+			if (truncate_inchikey) {
+				// We only need the first connectivity layer if excluding stereo, isotopes, etc.
+				// Per the [InChI technical FAQ](https://www.inchi-trust.org/technical-faq-2/),
+				// the empty Standard InChIKey is InChIKey=MOSFIJXAXDLOML-UHFFFAOYSA-N.
+				// For typical MOFs without stereo, the second layer matches "UHFFFAOYSA".
+				frag_inchi = frag_inchi.substr(0, 14);
+			} else {
+				frag_inchi = frag_inchi.substr(0, 27);  // only stripping the final \n
+			}
 		}
 
 		if (!inVector<std::string>(frag_inchi, unique_inchi)) {
@@ -549,9 +564,9 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 		}
 	}
 
-	// Then, write unique InChIKeys (sans protonation state)
+	// Then, write unique truncated InChIKeys (sans unnecessary layers)
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
-	std::vector<std::string> unique_ikeys = PAsToUniqueInChIs(linker_export, "inchikey");
+	std::vector<std::string> unique_ikeys = PAsToUniqueInChIs(linker_export, "truncated inchikey");
 	if (unique_ikeys.size() == 0) {
 		unique_ikeys.push_back(MOFKEY_NO_LINKERS);
 	}
@@ -572,6 +587,60 @@ std::string MOFidDeconstructor::GetLinkerInChIs() {
 		inchis << *it;  // don't need a std::endl, because Open Babel adds it by default to the export
 	}
 	return inchis.str();
+}
+
+
+std::string MOFidDeconstructor::GetLinkerStats(std::string sep) {
+	// Get detailed stats about the linkers in a MOF, such as connectivity
+	// and the SMILES-reduced InChIkey mapping
+
+	std::stringstream output;
+	std::vector<std::string> ikeys;
+	std::map<std::string, std::string> ikey_to_inchi;
+	std::map<std::string, std::string> ikey_to_truncated;
+	std::map<std::string, std::string> ikey_to_smiles;
+	std::map<std::string, std::string> ikey_to_smiles_skeleton;
+	std::map<std::string, int> ikey_to_conn;
+	std::map<std::string, int> ikey_to_uc_count;
+
+	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
+	AtomSet linker_set = linker_export.GetAtoms();
+	for (AtomSet::iterator pa=linker_set.begin(); pa!=linker_set.end(); ++pa) {
+		VirtualMol pa_vmol = VirtualMol(*pa);
+		std::vector<std::string> pa_ikey_list = PAsToUniqueInChIs(pa_vmol, "inchikey");
+		if (pa_ikey_list.size() != 1) {
+			obErrorLog.ThrowError(__FUNCTION__, "Failed to calculate an InChIkey!", obWarning);
+			continue;  // not updating the stats for this particular PA
+		}
+		std::string pa_ikey = pa_ikey_list[0];
+
+		if (inVector<std::string>(pa_ikey, ikeys)) {
+			++ikey_to_uc_count[pa_ikey];
+		} else {
+			ikeys.push_back(pa_ikey);
+			ikey_to_uc_count[pa_ikey] = 1;
+		}
+
+		ikey_to_inchi[pa_ikey] = rtrimWhiteSpace(PAsToUniqueInChIs(pa_vmol, "inchi")[0]);
+		ikey_to_truncated[pa_ikey] = rtrimWhiteSpace(PAsToUniqueInChIs(pa_vmol, "truncated inchikey")[0]);
+		OBMol orig_linker = simplified_net.PseudoToOrig(pa_vmol).ToOBMol();
+		const bool skeleton_flag = true;
+		ikey_to_smiles[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, !skeleton_flag));
+		ikey_to_smiles_skeleton[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, skeleton_flag));
+		ikey_to_conn[pa_ikey] = (*pa)->GetValence();
+	}
+
+	for (std::vector<std::string>::iterator it=ikeys.begin(); it!=ikeys.end(); ++it) {
+		output << *it
+			<< sep << ikey_to_conn[*it]
+			<< sep << ikey_to_uc_count[*it]
+			<< sep << ikey_to_inchi[*it]
+			<< sep << ikey_to_truncated[*it]
+			<< sep << ikey_to_smiles[*it]
+			<< sep << ikey_to_smiles_skeleton[*it]
+			<< std::endl;
+	}
+	return output.str();
 }
 
 

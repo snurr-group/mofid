@@ -10,15 +10,8 @@
 # - GA MOFs: success, replaced_pillarX, or unk_pillarX.  That means the MOF is either an exact match or
 #   ambiguous results from primary vs. secondary linker for carboxylate vs. pyridine pillar.
 #
-# Thinking about these results for a new analysis, generate two types of figures:
-# 1. For the main text, draw a Sankey/alluvial diagram showing flow of BB's vs. error types
-#    See also https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html
-# 2. For the SI, consider using heatmaps, and possibly a sum over different error types
-#    This might not be necessary -- TBD.
-#
-# If I need treemaps later, consider library(treemapify) and this layout:
-# https://support.office.com/en-us/article/create-a-treemap-chart-in-office-dfe86d28-a610-4ef5-9b30-362d5c624b68
-
+# Thinking about these results, the figure we need to generate is a simple bar graph showing
+# the rates of success and different types of failures, along with common causes.
 
 source('Analysis/R-Utilities/parse_json_results.R')
 
@@ -28,6 +21,9 @@ library(cowplot)
 library(viridis)
 library(ggalluvial)
 library(purrr)
+library(forcats)
+library(RColorBrewer)
+library(assertthat)
 
 
 ### DATA IMPORT ###
@@ -57,7 +53,7 @@ tobacco_errs <- tobacco_errs %>%
   mutate(nodes.on = ifelse(is.na(nodes.on), "None", nodes.on)) %>% 
   mutate(nodes.mc = df_extract_on(code.nodes, "_mc_")) %>% 
   mutate(mc1 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 1)), nodes.mc)) %>% 
-  mutate(mc2 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 2)), NA))
+  mutate(mc2 = ifelse(nodes.mc=="Multiple", unlist(df_get_mc(code.nodes, 2)), "None"))
 
 
 ### INTERPRET ERRORS ###
@@ -131,61 +127,86 @@ ga_errs <- ga_errs %>%
 
 ### UNDERSTANDING ERROR FLOWS ###
 
-# TODO: consider defining classes of nodes/linkers if we use that information
+tobacco_errs$err_type %>% unique
+colnames(tobacco_errs)
 
-RUN_ERROR_FLOWS <- TRUE
+# Define common classes of ToBaCCo linkers
+tob_L_categories <- tibble(
+  code.linker = 1:47,  # adding the "L_" prefix below
+  L_4n_ring = logical(47),  # defaults to FALSE
+  L_triple_bond = logical(47),
+  L_double_bond = logical(47),
+  L_N_N_double = logical(47)
+)
+tob_L_categories[c(13, 26, 30, 35, 42, 44, 45), "L_4n_ring"] <- TRUE
+tob_L_categories[c(3, 16, 19, 20, 27, 31:35, 37, 38, 41, 42, 46, 47), "L_triple_bond"] <- TRUE
+tob_L_categories[c(2, 14, 15, 29, 30, 39), "L_double_bond"] <- TRUE
+tob_L_categories[c(1, 40), "L_N_N_double"] <- TRUE
+tob_L_categories <- tob_L_categories %>% mutate(code.linker = paste0("L_", code.linker))
+
+understand_tobacco <- tobacco_errs %>%
+  select(nodes.mc, nodes.on, code.linker, code.topology, cat, err_type, mc1, mc2) %>% 
+  left_join(tob_L_categories, by="code.linker") %>% 
+  mutate_all(funs(factor))  # set as factor so we can easily run summaries
+
+ga_errs$err_type %>% unique
+colnames(ga_errs)
+understand_ga <- ga_errs %>%
+  select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
+  #left_join(tob_L_categories, by="code.linker") %>% 
+  mutate_all(funs(factor))  # set as factor so we can easily run summaries
+
+
+# Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
+# followed by "see text/SI for discussion of classes of error". (specific examples of visualized CIFs)
+# We just need to reorganize the bars, add percentages, and possibly color the bars by success vs.
+# node incompatibility and other common sources of error, etc.
+  
+# Now let's dig into this data more closely
+# For the figure in the paper, recall that my goal is to clearly show why these errors occur.
+# We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
+RUN_ERROR_FLOWS <- TRUE  # warning: disabling will also disable attribution notation
+understand_tobacco <- understand_tobacco %>% mutate(err_cause = NA)
+understand_ga <- understand_ga %>% mutate(err_cause = NA)
 if (RUN_ERROR_FLOWS) {
   # There are two ways we can think about diagnosing the errors in the code
   # 1. Going from errors to their cause (this block)
   # 2. Going from patterns in the heatmap (e.g. certain linkers) back to types of error
   # Both approaches could be informative, but let's start with #1 here.
   
-  tobacco_errs$err_type %>% unique
-  colnames(tobacco_errs)
-  
-  # Define common classes of ToBaCCo linkers
-  tob_L_categories <- tibble(
-    code.linker = 1:47,  # adding the "L_" prefix below
-    L_4n_ring = logical(47),  # defaults to FALSE
-    L_triple_bond = logical(47),
-    L_double_bond = logical(47),
-    L_N_N_double = logical(47)
-  )
-  tob_L_categories[c(13, 26, 30, 35, 42, 44, 45), "L_4n_ring"] <- TRUE
-  tob_L_categories[c(3, 16, 19, 20, 27, 31:35, 37, 38, 41, 42, 46, 47), "L_triple_bond"] <- TRUE
-  tob_L_categories[c(2, 14, 15, 29, 30, 39), "L_double_bond"] <- TRUE
-  tob_L_categories[c(1, 40), "L_N_N_double"] <- TRUE
-  tob_L_categories <- tob_L_categories %>% mutate(code.linker = paste0("L_", code.linker))
-  
-  understand_tobacco <- tobacco_errs %>%
-    select(nodes.mc, nodes.on, code.linker, code.topology, cat, err_type, mc1, mc2) %>% 
-    left_join(tob_L_categories, by="code.linker") %>% 
-    mutate_all(funs(factor))  # set as factor so we can easily run summaries
-  
+  # By category:
   # Trivial example summary for tpt vs. stp:
   understand_tobacco %>% filter(err_type=="Definition mismatch") %>% summary()
-  # Now let's dig into this data more closely
-  # For the figure in the paper, recall that my goal is to clearly show why these errors occur.
-  # We don't necessarily need all the detail, so an "Other" column is perfectly acceptable.
-  understand_tobacco %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
-  # Honestly, after the analysis below, I think a bar graph might be the clearest way to make our point,
-  # followed by "see text/SI for discussion of classes of error".  We just need to reorganize the bars,
-  # add percentages, and possibly color the bars by success vs. node incompatibility and other common
-  # sources of error, etc.
-  #
-  # Then again, Sankey (or a heatmap) could also clearly show the relationship between a few causes
-  # and their many effects. Ask Randy and Andrew for their opinion.
-  
-  # By category:
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(err_type=="Definition mismatch" & code.topology=="tpt", "stp-tpt mixup", err_cause))
   # Most of the topological errors are sym_4_mc_1 (tetrahedral zinc).  Same with crashes
   understand_tobacco %>% filter(err_type=="topology") %>% summary()
   understand_tobacco %>% filter(err_type=="Crash") %>% summary()
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("topology", "Crash") & mc1=="sym_4_mc_1",
+      "sym_4_mc_1", err_cause
+      ))
   # nodes errors are mostly sym_8_mc_7.  When including results from mc1/2, it's 273/282
   understand_tobacco %>% filter(err_type=="node_single_bonds") %>% summary()
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="node_single_bonds" & (mc1=="sym_8_mc_7" | mc2=="sym_8_mc_7"),
+      "sym_8_mc_7", err_cause
+      ))
   # "Many errors" is largely L_29 (strangely a benzene with double bonds coming off it)
   # Ah, and again sym_8_mc_7 problems propagating back to other sources of error 
   understand_tobacco %>% filter(err_type=="Many errors") %>% summary()
   tobacco_errs %>% filter(err_type=="Many errors" & code.linker=="L_29")
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("Many errors", "Two errors") & code.linker=="L_29",
+      "L_29", err_cause
+    )) %>% 
+    mutate(err_cause = ifelse(
+      err_type %in% c("Many errors", "Two errors") & (mc1=="sym_8_mc_7" | mc2=="sym_8_mc_7"),
+      "sym_8_mc_7", err_cause
+    ))
   # TODO: Based on "two errors" and the common problems with sym_8_mc_7, let's make a new class of error
   # aggregating node and linker BO problems.
   # But again, half of the errors are sym_8_mc_7.
@@ -193,119 +214,197 @@ if (RUN_ERROR_FLOWS) {
   tobacco_errs %>% filter(err_type=="Two errors")
   # Looking into the linkers, nothing particularly stands out from SB's
   understand_tobacco %>% filter(err_type=="linker_single_bonds") %>% summary
-  # But 564/841 of the bond order problems are these 4-N rings
+  # But 564/841 of the bond order problems are these 4-N rings (Tetrazines)
   understand_tobacco %>% filter(err_type=="linker_bond_orders") %>% summary
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="linker_bond_orders" & as.logical(L_4n_ring),
+      "Tetrazine", err_cause
+    ))
   # Interestingly, all of the "formula" errors are L_8,9,10, which have big rings next to a phenyl.
   understand_tobacco %>% filter(err_type=="formula") %>% summary
+  understand_tobacco <- understand_tobacco %>% 
+    mutate(err_cause = ifelse(
+      err_type=="formula" & code.linker %in% c("L_8", "L_9", "L_10"),
+      "Overlapping rings", err_cause
+    ))
   
-  # Now repeating for the GA MOFs
-  
-  ga_errs$err_type %>% unique
-  colnames(ga_errs)
-  understand_ga <- ga_errs %>%
-    select(code.nodes, code.linker1, code.linker2, cat, err_type) %>% 
-    #left_join(tob_L_categories, by="code.linker") %>% 
-    mutate_all(funs(factor))  # set as factor so we can easily run summaries
-  
-  understand_ga %>% ggplot(aes(err_type)) + geom_bar() + coord_flip()
+  ### Now repeating for the GA MOFs ###
   
   # From the bar graph, crashes are the most important to address.
   # Interestingly, 101/129 are short L_0,1,2 secondary linkers
   understand_ga %>% filter(err_type=="Crash") %>% summary()
+  short_ga <- c(0,1,2)
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "Crash" & (code.linker1 %in% short_ga | code.linker2 %in% short_ga),
+      "Short linker (0-3)", err_cause
+    ))
+  understand_ga %>% filter(err_type=="Crash") %>% filter(!(code.linker1 %in% short_ga) & !(code.linker2 %in% short_ga)) %>% summary()
   # All of the definition mismatches are from Zr MOFs
   understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "Definition mismatch" & code.nodes == 4,
+      "Zr coordination", err_cause
+    ))
   # Many of the "two error" cases are the definition mismatch plus something else
-  understand_ga %>% filter(err_type=="Definition mismatch") %>% summary()
+  understand_ga %>% filter(err_type=="Two errors") %>% summary()
   ga_errs %>% filter(err_type=="Two errors")
   # Most of the single bonds errors are the gigantic L_4 linker
   understand_ga %>% filter(err_type=="linker_single_bonds") %>% summary()
-  # 7/15 of the linker_bond_orders errors are the 4N linker L_27
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "linker_single_bonds" & (code.linker1==4 | code.linker2==4),
+      "Bulky L_4", err_cause
+    ))
+  # 32/51 of the linker_bond_orders errors are the 4N linker L_27
   understand_ga %>% filter(err_type=="linker_bond_orders") %>% summary()
-  understand_ga %>% filter(err_type=="linker_bond_orders") %>%
-    filter(code.linker1==37 | code.linker2==37) %>% nrow
-  # Overall, only 260 non-successes in this DB, including the definition mismatches
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "linker_bond_orders" & (code.linker1==27 | code.linker2==27),
+      "Tetrazine", err_cause
+    ))
+  # Formula errors?  Weirdly enough, the first linker is always either L_6 or L_27
+  understand_ga %>% filter(err_type=="formula") %>% summary()
+  #library(readr)
+  #ga_errs %>% filter(err_type=="formula") %>% select(from_mofid) %>% write_delim("test.smi", col_names=FALSE, delim="|")
+  # Even weirder, there is not a single correct 6/14 combo
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "formula" & (code.linker1==6 | code.linker2==14),
+      "L_6/L_14 combo", err_cause
+    )) %>% 
+    mutate(err_cause = ifelse(
+      err_type == "formula" & (code.linker1==27),
+      "Tetrazine", err_cause
+    ))
+  # Nonplanar carboxylates: all of the planar 4-c nodular "linkers" have this problem
+  understand_ga %>% filter(err_type=="nonplanar_carboxylate") %>% summary()
+  understand_ga <- understand_ga %>% 
+    mutate(err_cause = ifelse(
+      err_type == "nonplanar_carboxylate" & (code.linker1 %in% c(38,39)),
+      "Planar 4-c 'linker'", err_cause
+    ))
+  # Overall, only 389 non-successes in this DB, including the definition mismatches
   understand_ga %>% filter(err_type!="Success") %>% nrow
+  
+  
+  
+  understand_tobacco <- understand_tobacco %>% mutate(err_cause = ifelse(is.na(err_cause), "Other", err_cause))
+  understand_ga <- understand_ga %>% mutate(err_cause = ifelse(is.na(err_cause), "Other", err_cause))
   
 }  # endif(RUN_ERROR_FLOWS)
 
 
 ### PLOTS FOR MAIN TEXT ###
 
-# TODO: implement figure for the paper, whether it's Sankey, a heatmap, or a simple filled bar chart
+error_code_translator <- tribble(
+  ~err_type, ~err_plot,
+  "Crash", "Program error",
+  "linker_bond_orders", "Wrong bond orders",
+  "linker_single_bonds", "Linker bonding",
+  "node_single_bonds", "Node bonding",
+  "Two errors", "Multiple errors",
+  "Many errors", "Multiple errors",
+  "topology", "Different topology",
+  "formula", "Missing/extra atoms",
+  "no_mof", "No MOF found",
+  "nonplanar_carboxylate", "Nonplanar carboxylate",
+  "Definition mismatch", "Misleading definition"
+)
 
-# Initial overall structure for the diagram
-sankey_tobacco <-
-  tobacco_errs %>%
-  filter(err_type != "Success") %>%
-  group_by(err_type, nodes.on, err_qty) %>%
-  summarize(err_n = n()) %>%
-  #ggplot(aes(y=1, axis1=linker, axis2=nodes.on, axis3=err_qty)) +
-  ggplot(aes(y=err_n, axis1=err_type, axis2=nodes.on, axis3=err_qty)) +
-  geom_alluvium(aes(fill=err_type)) +
-  geom_stratum(width=1/6, color="grey") +
-  guides(fill=FALSE) +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Error class", "on", "Num errs"), expand = c(.05, .05))
-cowplot::save_plot("Analysis/Figures/sankey_tobacco.png", sankey_tobacco, base_aspect_ratio=2.0)
-
-sankey_ga <-
-  ga_errs %>%
-  filter(err_type != "Success") %>%  # Report % success as a number
-  group_by(err_type, code.nodes, code.linker1) %>%
-  summarize(err_n = n()) %>%
-  #ggplot(aes(y=1, axis1=linker, axis2=nodes.on, axis3=err_qty)) +
-  ggplot(aes(y=err_n, axis1=err_type, axis2=code.nodes, axis3=code.linker1)) +
-  geom_alluvium(aes(fill=err_type)) +
-  geom_stratum(width=1/6, color="grey") +
-  guides(fill=FALSE) +
-  geom_label(stat = "stratum", label.strata = TRUE) +
-  scale_x_discrete(limits = c("Error class", "Metal node", "L1"), expand = c(.05, .05))
-cowplot::save_plot("Analysis/Figures/sankey_ga.png", sankey_ga, base_aspect_ratio=2.0)
-
-# TODO: consider the networkD3::sankeyNetwork layout, instead
-# https://www.r-graph-gallery.com/323-sankey-diagram-with-the-networkd3-library/
-# Would need to revamp the figure by running a series of steps to convert the data frame, if we went that route
-# Maybe also river plot as an alternative: https://stackoverflow.com/questions/9968433/sankey-diagrams-in-r
-# That package seems a bit cleaner if you don't need interactivity
-# At any rate, I'll need to semi-manually calculate flows/my story instead of relying on ggplot.
-# The format for makeRiver is a dataframe with N1, N2, Value.
-
-# Idea: the purpose of the Sankey diagram will be error attribution, to complement the heatmaps
-# TODO: rephrase the "success" of the heatmaps for the GA MOFs - and notate properly wihtin the text
-# Also, maybe then it could be a 2-part figure for both GA/ToBaCCo.  A heatmap with overall sucess, then Sankey to drill down.
+# Make error colors consistent between the two plots
+all_err_causes <- 
+  c(unique(understand_ga$err_cause), unique(understand_tobacco$err_cause)) %>% 
+  unique() %>% 
+  factor() %>% 
+  levels()
+# WARNING: the labels will break if more levels are added/removed, so let's add an assertion right here:
+assert_that(length(all_err_causes) == 12)
+err_colors_mapped <- brewer.pal(12, "Set3")
+names(err_colors_mapped) <- all_err_causes
+understand_ga <- understand_ga %>%
+  mutate(err_cause = factor(err_cause, levels = all_err_causes)) %>% 
+  mutate(err_cause = fct_drop(fct_infreq(err_cause)))
+understand_tobacco <- understand_tobacco %>%
+  mutate(err_cause = factor(err_cause, levels = all_err_causes)) %>% 
+  mutate(err_cause = fct_drop(fct_infreq(err_cause)))
+tobacco_err_names <- levels(understand_tobacco$err_cause)
+tobacco_err_colors <- err_colors_mapped[tobacco_err_names]
+ga_err_names <- levels(understand_ga$err_cause)
+ga_err_colors <- err_colors_mapped[ga_err_names]
 
 
-### PLOTS FOR SI ###
+# Top bar for the overall success rate
+plot_successes <- function(x, db_name) {
+  num_mofs <- nrow(x)
+  x %>% 
+    mutate(success = ifelse(err_type=="Success", "Match", "Mismatch"), fake="MOFs") %>% 
+    mutate(success = factor(success, levels=c("Mismatch", "Match"))) %>% 
+    group_by(success, fake) %>% 
+    summarize(success_rate = n()) %>% 
+    mutate(match_label = paste0(success_rate, "\n", success)) %>% 
+    ggplot(aes(x=fake, y=success_rate, fill=success, label=match_label)) +
+    geom_col() +
+    coord_flip() +
+    theme_nothing() +
+    geom_text(position=position_stack(vjust=0.5)) +  # thanks to https://stackoverflow.com/questions/6644997/showing-data-values-on-stacked-bar-chart-in-ggplot2
+    ggtitle(paste(nrow(x), db_name, "in test set")) +
+    theme(plot.title=element_text())
+}
 
-# TODO: consider breaking up the diagram into more specific classes of error?
-# Honestly, these plots might become irrelevant if the Sankey diagram has sufficient information.
+plot_curve_brace <- function(direction=1) {
+  # Set direction of the sigmoid to +1 or -1 for upside down
+  seq(0.0, 1.0, 0.001) %>% 
+    data.frame(x=., y=sapply(., function(x) {direction*log((x)/(1-x))})) %>% 
+    ggplot(aes(x, y)) +
+    geom_point(color="#f8756d") +
+    theme_nothing()
+}
 
-tobacco_heatmap <- 
-  tobacco_errs %>% 
-  group_by(linker, nodes.on) %>% 
-  summarize(num_successes = sum(match), num_total = n()) %>%
-  mutate(success_rate = num_successes / num_total) %>% 
-  mutate(Linker = factor(linker, levels=c("_", 1:50))) %>% 
-  ggplot(aes(Linker, nodes.on)) +
-  geom_tile(aes(fill=success_rate)) +
-  # scale_fill_viridis() +
-  guides(fill=FALSE) +
-  scale_x_discrete(breaks=c(1, seq(5, 47, 5)), drop=FALSE)
-cowplot::save_plot("Analysis/Figures/si_recipe_tobacco.png", tobacco_heatmap)
+p_errors_tob <-
+  understand_tobacco %>% 
+  filter(err_type != "Success") %>% 
+  left_join(error_code_translator, by="err_type") %>% 
+  ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
+  geom_bar() +
+  scale_y_continuous(position = "right") +
+  scale_fill_manual(values=tobacco_err_colors, breaks=tobacco_err_names) +
+  coord_flip() +
+  labs(x = NULL, y = NULL, fill = "Likely cause") +
+  theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
 
-# And repeat for catenated, non-functionalized ("parent") GA hMOFs
-ga_heatmap <- 
-  ga_errs %>% 
-  group_by(code.linker1, code.linker2, code.nodes) %>% 
-  summarize(num_successes = sum(match), num_total = n()) %>%
-  mutate(success_rate = num_successes / num_total) %>% 
-  mutate(Linker1 = factor(code.linker1, levels=0:39)) %>% 
-  mutate(Linker2 = factor(code.linker2, levels=0:39)) %>% 
-  ggplot(aes(Linker1, Linker2)) +
-  geom_tile(aes(fill=success_rate)) +
-  guides(fill=FALSE) +
-  facet_grid(code.nodes~.) +
-  scale_x_discrete(drop=FALSE) +
-  scale_y_discrete(drop=FALSE)
-cowplot::save_plot("Analysis/Figures/si_recipe_ga.png", ga_heatmap)
+p_errors_ga <-
+  understand_ga %>% 
+  filter(err_type != "Success") %>% 
+  left_join(error_code_translator, by="err_type") %>% 
+  ggplot(aes(fct_rev(fct_infreq(err_plot)), fill=err_cause)) +
+  geom_bar() +
+  scale_y_continuous(position = "right") +
+  scale_fill_manual(values=ga_err_colors, breaks=ga_err_names) +
+  coord_flip() +
+  labs(x = NULL, y = NULL, fill = "Likely cause") +
+  theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom"))
+
+default_subfig_labels <- paste0("(", letters, ")")
+plot_grid(
+  # Adjust these brace locations as necessary for aesthetics:
+  ggdraw() +
+    draw_plot(plot_successes(understand_ga, "GA hMOFs"), y=0.8, height=0.2) +
+    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.90) +
+    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.95, width=0.05) +
+    draw_plot(p_errors_ga, y=0.0, height=0.75),
+  ggdraw() +
+    draw_plot(plot_successes(understand_tobacco, "ToBaCCo MOFs"), y=0.8, height=0.2) +
+    draw_plot(plot_curve_brace(1), y=0.74, height=0.07, x=0.0, width=0.80) +
+    draw_plot(plot_curve_brace(-1), y=0.74, height=0.07, x=0.90, width=0.10) +
+    draw_plot(p_errors_tob, y=0.0, height=0.75),
+  nrow = 2,
+  labels = default_subfig_labels, label_size=14, hjust=0, vjust=1
+  ) %>% 
+  cowplot::save_plot(
+    "Analysis/Figures/roundtrip.png", .,
+    base_aspect_ratio=1.5, nrow = 2
+  )
 

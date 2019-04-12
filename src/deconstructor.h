@@ -113,6 +113,7 @@ public:
 	virtual ~MOFidDeconstructor() {};
 	std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
 	std::string GetLinkerInChIs();
+	std::string GetLinkerStats(std::string sep="\t");
 };
 
 

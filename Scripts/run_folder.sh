@@ -22,10 +22,16 @@ OUTPUT_COPY="${OUTPUT_DIR}/results_part.txt"
 mkdir -p "${OUTPUT_DIR}"
 PYTHON_MOFID="${OUTPUT_DIR}/python_mofid.txt"
 PYTHON_MOFKEY="${OUTPUT_DIR}/python_mofkey.txt"
+
 COPY_MOFID="${OUTPUT_DIR}/folder_mofid.smi"
 COPY_MOFKEY="${OUTPUT_DIR}/folder_mofkey.tsv"
-rm -f "${COPY_MOFID}" "${COPY_MOFKEY}"
+
+SRC_LINKER_STATS="${OUTPUT_DIR}/NoSBU/linker_stats.txt"
+COPY_LINKER_STATS="${OUTPUT_DIR}/folder_linker_stats.tsv"
+
+rm -f "${COPY_MOFID}"
 echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
+echo -e "filename\tinchikey\tconnections_nosbu_net\tuc_count\tinchi\ttruncated_inchikey\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
 
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
 git rev-parse --verify HEAD 1>&2
@@ -45,6 +51,10 @@ do
 	cat "${PYTHON_MOFID}" >> "${COPY_MOFID}"
 	echo -e "$(basename "$i")\t$(tr -d '\n' < "${PYTHON_MOFKEY}")" >> "${COPY_MOFKEY}"
 	rm -f "${PYTHON_MOFID}" "${PYTHON_MOFKEY}"
+	
+	# Also parse the linker stats (deleting blank lines, first)
+	sed -e '/^$/d' "${SRC_LINKER_STATS}" | sed -e 's/^/'"$(basename "$i")"'\t/' >> "${COPY_LINKER_STATS}"
+	rm -f "${SRC_LINKER_STATS}"
 done
 
 echo "----------------------------" 1>&2

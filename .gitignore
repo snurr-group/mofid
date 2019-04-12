@@ -19,6 +19,7 @@ Summary/
 Notebooks/
 .idea/
 .codelite/
+.vscode/ipch/
 bin/
 !openbabel/data/
 ob_changes.patch
