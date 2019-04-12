@@ -20,9 +20,9 @@ install:
 before_script:
   - make init
   - python set_paths.py
-  - pip install .
+  - pip install --user -e .
   - source activate py2
-  - pip install .
+  - pip install --user -e .
   - source deactivate py2
 
 script:
