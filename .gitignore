@@ -31,4 +31,4 @@ openbabel/embuild/
 embin/
 *.stackdump
 Python/paths\.py
-MOFid.egg-info/
+*.egg-info/
