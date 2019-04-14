@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='MOFid',
+setup(name='mofid',
       description='A system for rapid identification and analysis of metal-organic frameworks',
       author='Benjamin J. Bucior',
       url='https://github.com/snurr-group/mofid', 
