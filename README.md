@@ -13,7 +13,7 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 
 ## Installation
 1. Run `make init` in the base `/mofid` directory.
-2. Run `python set_paths.py; pip install --user -e .` in the base `/mofid` directory.  If using anaconda, [we recommend omitting](https://www.anaconda.com/using-pip-in-a-conda-environment/) the `--user` flag.
+2. Run `python set_paths.py; pip install .` in the base `/mofid` directory.  If you encounter permissions errors (typically not with anaconda), you may need to run `pip install --user .`
 
 ## Usage
 In a Python script, the user simply has to call the `run_mofid.cif2mofid(cif_path,output_path='Output')` function. The first argument is required and is the path to the MOF CIF. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to `/Output` if not specified. An example of how to call MOFid is shown below.
