@@ -68,9 +68,9 @@ set(ops
   ops/changecell.cpp
   ops/delpolarh.cpp
   ops/delnonpolarh.cpp
+  ops/energy.cpp
   ops/gen2D.cpp
   ops/fillUC.cpp
-  ops/forcefield.cpp
   ops/gen3d.cpp
   ops/largest.cpp
   ops/loader.cpp

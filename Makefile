@@ -1,4 +1,4 @@
-.PHONY: all backup test diff ob_changes.patch init eclipse web init-web html one exe btc
+.PHONY: all backup test diff ob_changes.patch init eclipse web init-web github-web html one exe btc
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -77,7 +77,7 @@ init-web:
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB"; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1"; \
 	mkdir kekule; \
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip
@@ -89,6 +89,15 @@ openbabel/embuild/obabel.js:
 	emmake make install
 
 web: embin/sbu.js html
+
+github-web: web
+	cp embin/sbu* ../web-mofid; \
+	cp embin/searchdb* ../web-mofid; \
+	cp -r embin/kekule/ ../web-mofid; \
+	# TODO: should consider index.html, web-mofid:.gitignore, etc.
+	# Copied the compiled website from mofid:/embin/ to web-mofid:/
+	# Commit and push the changes in the web-mofid repo to update
+	# the live website on Github.
 
 html: src/Web/*.html
 	cp $^ embin/
