@@ -7,6 +7,7 @@
 
 #include <string>
 #include <sstream>
+#include <ostream>
 #include <queue>
 #include <stack>
 #include <set>
@@ -24,6 +25,7 @@
 namespace OpenBabel
 {
 
+std::set<std::string> LOGGED_ERRORS;  // global variable to keep track of reported errors in exportNormalizedMol
 
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds) {
 	// Write a list of unique SMILES for a set of fragments
@@ -41,9 +43,22 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bo
 }
 
 
-std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds, bool unique_errors) {
 	// Resets a fragment's bonding/location before format conversion
-	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders
+	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders.
+
+	// If unique_errors is set (enabled by default), only report a unique error message once per executable.
+	// Otherwise, some MOFs flood the error log with warnings about aromatic bonds (raised by
+	// PerceiveBondOrders within resetBonds) or unexpected valences in the InChI converter.
+
+	std::stringstream redirected_errors;
+	std::ostream* orig_err_stream = NULL;
+	if (unique_errors) {
+		orig_err_stream = obErrorLog.GetOutputStream();
+		obErrorLog.SetOutputStream(&redirected_errors);
+	}
+
+	// A block of actual, non-error work:
 	OBMol canon = fragment;
 	resetBonds(&canon);
 	if (only_single_bonds) {
@@ -52,7 +67,21 @@ std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_s
 		}
 	}
 	unwrapFragmentMol(&canon);
-	return obconv.WriteString(&canon);
+	std::string output_string = obconv.WriteString(&canon);
+
+	if (unique_errors) {
+		obErrorLog.SetOutputStream(orig_err_stream);  // restore the original error stream
+		std::set<std::string> errors = getUniqueErrors(redirected_errors.str());
+		for (std::set<std::string>::iterator it=errors.begin(); it!=errors.end(); ++it) {
+			std::string err = *it;
+			if (LOGGED_ERRORS.find(err) == LOGGED_ERRORS.end()) {
+				LOGGED_ERRORS.insert(err);
+				*orig_err_stream << err;  // re-raise the error, per the mechanism from oberror.cpp
+			}
+		}
+	}
+
+	return output_string;
 }
 
 
@@ -61,6 +90,37 @@ std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bond
 	return exportNormalizedMol(fragment, obconv, only_single_bonds);
 }
 
+
+std::set<std::string> getUniqueErrors(const std::string lines_of_errors) {
+	// Extract unique blocks from a string of errors
+
+	std::set<std::string> unique_errors;
+	if (lines_of_errors.length() == 0) { return unique_errors; }
+
+	std::stringstream input_lines;
+	input_lines << lines_of_errors;
+
+	// Parse the first line and check the error format
+	std::string first_line;
+	std::getline(input_lines, first_line);
+	if (first_line.find("====") != 0) {
+		obErrorLog.ThrowError(__FUNCTION__, "Error log did not begin with ==== delimiter", obError);
+		return unique_errors;
+	}
+
+	std::string curr_line;
+	std::stringstream curr_block;
+	curr_block << first_line << std::endl;  // initialize with the first line
+	while (std::getline(input_lines, curr_line)) {
+		if (curr_line.find("====") == 0) {  // new header line and block
+			unique_errors.insert(curr_block.str());
+			curr_block.clear();
+		}
+		curr_block << curr_line << std::endl;
+	}
+	unique_errors.insert(curr_block.str());  // finish the last block against end of string
+	return unique_errors;
+}
 
 
 Deconstructor::Deconstructor(OBMol* orig_mof) : simplified_net(orig_mof) {
