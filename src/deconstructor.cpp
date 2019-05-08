@@ -531,11 +531,6 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 	// organic building blocks must be intact (e.g. including carboxylates) to properly
 	// calculate the MOFkey.
 	std::stringstream mofkey;
-	mofkey << "MOFkey-" << MOFKEY_VERSION;  // MOFkey format signature
-
-	if (!topology.empty()) {
-		mofkey << MOFKEY_SEP << topology;
-	}
 
 	// Get unique metal atoms from the nodes
 	std::vector<int> unique_elements;
@@ -550,14 +545,12 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 		}
 	}
 	if (unique_elements.size() == 0) {
-		mofkey << MOFKEY_SEP << MOFKEY_NO_METALS;
+		mofkey << MOFKEY_NO_METALS;
 	} else {
 		std::sort(unique_elements.begin(), unique_elements.end());  // sort by atomic number
 		bool first_element = true;
 		for (std::vector<int>::iterator element=unique_elements.begin(); element!=unique_elements.end(); ++element) {
-			if (first_element) {
-				mofkey << MOFKEY_SEP;
-			} else {
+			if (!first_element) {
 				mofkey << MOFKEY_METAL_DELIM;
 			}
 			mofkey << OBElements::GetSymbol(*element);
@@ -572,6 +565,12 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 	}
 	for (std::vector<std::string>::iterator it=unique_ikeys.begin(); it!=unique_ikeys.end(); ++it) {
 		mofkey << MOFKEY_SEP << *it;
+	}
+
+	// Add the MOFkey format signature, and topology if available
+	mofkey << MOFKEY_SEP << "MOFkey-" << MOFKEY_VERSION;
+	if (!topology.empty()) {
+		mofkey << MOFKEY_SEP << topology;
 	}
 
 	return mofkey.str();

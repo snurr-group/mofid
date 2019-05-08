@@ -149,7 +149,7 @@ def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE'):
 
 def assemble_mofkey(base_mofkey, base_topology):
 	# Add a topology to an existing MOFkey
-	return base_mofkey.replace('MOFkey-v1.', 'MOFkey-v1.' + base_topology + '.')
+	return base_mofkey.replace('MOFkey-v1', 'MOFkey-v1.' + base_topology)
 
 def parse_mofid(mofid):
 	# Deconstruct a MOFid string into its pieces
