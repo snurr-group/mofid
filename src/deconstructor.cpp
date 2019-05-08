@@ -445,16 +445,16 @@ void Deconstructor::WriteAtomsOfRole(const std::string &simplified_role, const s
 
 
 
-MOFidDeconstructor::MOFidDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
-	// Note: MOFidDeconstructor would call the default constructor for Deconstructor,
+MetalOxoDeconstructor::MetalOxoDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
+	// Note: MetalOxoDeconstructor would call the default constructor for Deconstructor,
 	// not Deconstructor(orig_mof) unless specified above.
 	// See also https://www.learncpp.com/cpp-tutorial/114-constructors-and-initialization-of-derived-classes/
 
-	// Could initialize MOFidDeconstructor variables, etc., here
+	// Could initialize MetalOxoDeconstructor variables, etc., here
 }
 
 
-void MOFidDeconstructor::PostSimplification() {
+void MetalOxoDeconstructor::PostSimplification() {
 	// Split 4-coordinated linkers into 3+3 by convention for MIL-47, etc.
 	// This code was only necessary in the original MOFid deconstruction algorithm and will
 	// be automatically handled in the single/all-node deconstruction algorithms.
@@ -470,7 +470,7 @@ void MOFidDeconstructor::PostSimplification() {
 }
 
 
-std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
+std::vector<std::string> MetalOxoDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
 	// Convert PsuedoAtoms in the simplified net to their unique InChI(key) values
 	// This code will strip the protonation state off of the InChIKey
 
@@ -525,9 +525,9 @@ std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, co
 }
 
 
-std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
+std::string MetalOxoDeconstructor::GetMOFkey(const std::string &topology) {
 	// Print out the detected MOFkey, optionally with the topology field.
-	// This method is implemented in MOFidDeconstructor instead of the others, because the
+	// This method is implemented in MetalOxoDeconstructor instead of the others, because the
 	// organic building blocks must be intact (e.g. including carboxylates) to properly
 	// calculate the MOFkey.
 	std::stringstream mofkey;
@@ -577,7 +577,7 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 }
 
 
-std::string MOFidDeconstructor::GetLinkerInChIs() {
+std::string MetalOxoDeconstructor::GetLinkerInChIs() {
 	// Get unique, sorted InChI's for linkers in a MOF, delimited by newlines
 	std::stringstream inchis;
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
@@ -589,7 +589,7 @@ std::string MOFidDeconstructor::GetLinkerInChIs() {
 }
 
 
-std::string MOFidDeconstructor::GetLinkerStats(std::string sep) {
+std::string MetalOxoDeconstructor::GetLinkerStats(std::string sep) {
 	// Get detailed stats about the linkers in a MOF, such as connectivity
 	// and the SMILES-reduced InChIkey mapping
 

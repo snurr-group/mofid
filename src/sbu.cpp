@@ -110,7 +110,7 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	writeCIF(&orig_mol, output_dir + "/orig_mol.cif");
 	write_string(filename, output_dir + "/mol_name.txt");
 
-	MOFidDeconstructor simplifier(&orig_mol);
+	MetalOxoDeconstructor simplifier(&orig_mol);
 	std::string no_sbu_dir = output_dir + NO_SBU_SUFFIX;
 	simplifier.SetOutputDir(no_sbu_dir);
 	simplifier.SimplifyMOF();

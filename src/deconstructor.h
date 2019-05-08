@@ -25,7 +25,7 @@ class OBMol;
 // Constants:
 // Default directory for CIF/Systre outputs.  Also used in Python/run_mofid.py and bin/sbu
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
-const std::string NO_SBU_SUFFIX = "/NoSBU";  // base MOFidDeconstructor class
+const std::string NO_SBU_SUFFIX = "/MetalOxo";
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
@@ -101,7 +101,7 @@ public:
 };
 
 
-class MOFidDeconstructor : public Deconstructor {
+class MetalOxoDeconstructor : public Deconstructor {
 // The original MOFid algorithm and implementation of Deconstructor (originally in sbu.cpp).
 // Converts 4-c linkers in MIL-47, etc., to 2 x 3-c.
 protected:
@@ -109,8 +109,8 @@ protected:
 	std::vector<std::string> PAsToUniqueInChIs(VirtualMol pa, const std::string &format);
 
 public:
-	MOFidDeconstructor(OBMol* orig_mof = NULL);
-	virtual ~MOFidDeconstructor() {};
+	MetalOxoDeconstructor(OBMol* orig_mof = NULL);
+	virtual ~MetalOxoDeconstructor() {};
 	std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
 	std::string GetLinkerInChIs();
 	std::string GetLinkerStats(std::string sep="\t");

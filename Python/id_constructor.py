@@ -78,7 +78,7 @@ def extract_fragments(mof_path,output_path):
 	base_mofkey = None
 	if not cpp_run.returncode:  # If it's a successful run
 		mofkey_loc = os.path.join(
-			output_path, 'NoSBU', 'mofkey_no_topology.txt')
+			output_path, 'MetalOxo', 'mofkey_no_topology.txt')
 		with open(mofkey_loc) as f:
 			base_mofkey = f.read().rstrip()  # ending newlines, etc.
 
