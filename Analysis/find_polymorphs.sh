@@ -19,7 +19,7 @@ sqlite3 <<EMBEDDED_SQL_HEREDOC
 CREATE TABLE polymorphic AS
 	SELECT smiles, COUNT(DISTINCT topology) AS qty, GROUP_CONCAT(DISTINCT topology) AS topologies
 	FROM mofs
-	WHERE topology NOT IN ('ERROR', 'NEW', 'NA', 'MISMATCH', 'TIMEOUT')
+	WHERE topology NOT IN ('ERROR', 'NEW', 'NA', 'MISMATCH', 'TIMEOUT', 'UNKNOWN')
 	GROUP BY smiles
 	HAVING qty > 1
 	ORDER BY qty DESC;

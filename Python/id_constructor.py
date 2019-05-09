@@ -117,7 +117,7 @@ def extract_topology(mof_path):
 		elif line == 'Structure is new for this run.':
 			# This line is only printed if new to both versions of the RCSR database:
 			# a copy saved in the .jar file and an updated version in Resources/RCSRnets.arc
-			topologies.append('NEW')
+			topologies.append('UNKNOWN')
 		elif line == 'Structure already seen in this run.':
 			repeat_line = True
 		elif 'Processing component ' in line:
