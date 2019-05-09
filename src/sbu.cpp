@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 		output_dir = std::string(argv[2]);
 	}
 	try_mkdir(output_dir);
-	try_mkdir(output_dir + NO_SBU_SUFFIX);
+	try_mkdir(output_dir + METAL_OXO_SUFFIX);
 	try_mkdir(output_dir + SINGLE_NODE_SUFFIX);
 	try_mkdir(output_dir + ALL_NODE_SUFFIX);
 
@@ -111,13 +111,13 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	write_string(filename, output_dir + "/mol_name.txt");
 
 	MetalOxoDeconstructor simplifier(&orig_mol);
-	std::string no_sbu_dir = output_dir + NO_SBU_SUFFIX;
-	simplifier.SetOutputDir(no_sbu_dir);
+	std::string metal_oxo_dir = output_dir + METAL_OXO_SUFFIX;
+	simplifier.SetOutputDir(metal_oxo_dir);
 	simplifier.SimplifyMOF();
 	simplifier.WriteCIFs();
-	write_string(simplifier.GetMOFkey(), no_sbu_dir + "/mofkey_no_topology.txt");
-	write_string(simplifier.GetLinkerInChIs(), no_sbu_dir + "/inchi_linkers.txt");
-	write_string(simplifier.GetLinkerStats(), no_sbu_dir + "/linker_stats.txt");
+	write_string(simplifier.GetMOFkey(), metal_oxo_dir + "/mofkey_no_topology.txt");
+	write_string(simplifier.GetLinkerInChIs(), metal_oxo_dir + "/inchi_linkers.txt");
+	write_string(simplifier.GetLinkerStats(), metal_oxo_dir + "/linker_stats.txt");
 
 	SingleNodeDeconstructor sn_simplify(&orig_mol);
 	sn_simplify.SetOutputDir(output_dir + SINGLE_NODE_SUFFIX);

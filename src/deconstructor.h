@@ -25,7 +25,7 @@ class OBMol;
 // Constants:
 // Default directory for CIF/Systre outputs.  Also used in Python/run_mofid.py and bin/sbu
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
-const std::string NO_SBU_SUFFIX = "/MetalOxo";
+const std::string METAL_OXO_SUFFIX = "/MetalOxo";
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
