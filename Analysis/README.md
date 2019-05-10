@@ -14,7 +14,8 @@ Analysis scripts to generate figures and stats for the manuscript
 	2. TODO: Still need to implement find_duplicate_mofids.sh and similar for database_overlaps, but consider whether we do this analysis via sqlite3, how to encode group numbers/parent database (like Barthel et al.?), etc.
 4. Open the `mofid.Rproj` file in RStudio, then run analysis scripts to generate validation figures.
 	1. `Analysis/plot_round_trip_errors.R` parses the validator .json output to find a percent success/match rate for the MOFid code vs. structure recipe, as well as figures showing the composition.
-5. TODO: other scripts in this directory for analysis
+5. `cd Figures/Polymorphs && ../../find_polymorphs.sh combined_table.tsv out_with_names.tsv out_summary.tsv`
+6. TODO ADD THE REST OF THE STEPS AND/OR GENERATE A run_all.sh SCRIPT
 
 
 ## Other comments
