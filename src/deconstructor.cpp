@@ -704,6 +704,54 @@ std::string MetalOxoDeconstructor::GetLinkerStats(std::string sep) {
 
 
 
+void StandardIsolatedDeconstructor::DetectInitialNodesAndLinkers() {
+	// Break apart the MOF into isolated metal atoms + linkers as everything else
+	// Based on the base class's Deconstructor::DetectInitialNodesAndLinkers()
+	FOR_ATOMS_OF_MOL(a, *parent_molp) {
+		VirtualMol a_orig(&*a);
+		VirtualMol a_pseudo = simplified_net.OrigToPseudo(a_orig);
+		if (isMetal(&*a)) {
+			simplified_net.SetRoleToAtoms("node", a_pseudo);
+		} else {
+			simplified_net.SetRoleToAtoms("linker", a_pseudo);  // simplified later in CollapseLinkers()
+		}
+	}
+}
+
+
+bool StandardIsolatedDeconstructor::CollapseNodes() {
+	// Nothing to do: all metal atoms are already isolated species, and we do not want to combine them
+	// Return false since we're not doing anything with rod-like MOFs
+	return false;
+}
+
+
+void StandardIsolatedDeconstructor::SimplifyTopology() {
+	// Simplify the topological net adjacency matrix
+
+	int simplifications = 0;
+	do {
+		simplifications = 0;
+
+		// Check for duplicate connector sites, like the base SimplifyTopology() implementation
+		simplifications += simplified_net.SimplifyAxB();
+
+		// Simplify the adjacency matrix by outright deleting 0-c and 1-c sites
+		AtomSet base_pas = simplified_net.GetAtoms(false).GetAtoms();
+		for (AtomSet::iterator it=base_pas.begin(); it!=base_pas.end(); ++it) {
+			if ((*it)->GetValence() == 1) {
+				simplified_net.DeleteAtomAndConns(*it, "deleted 1-c site");
+				++simplifications;
+			} else if ((*it)->GetValence() == 0) {
+				simplified_net.DeleteAtomAndConns(*it, "deleted 0-c site");
+				++simplifications;
+			}
+		}
+	} while(simplifications);  // repeat until self-consistent
+}
+
+
+
 SingleNodeDeconstructor::SingleNodeDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
 }
 

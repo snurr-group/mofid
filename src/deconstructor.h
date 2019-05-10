@@ -26,6 +26,7 @@ class OBMol;
 // Default directory for CIF/Systre outputs.  Also used in Python/run_mofid.py and bin/sbu
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
 const std::string METAL_OXO_SUFFIX = "/MetalOxo";
+const std::string STANDARD_ISOLATED_SUFFIX = "/StandardIsolated";
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
@@ -115,6 +116,20 @@ public:
 	std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
 	std::string GetLinkerInChIs();
 	std::string GetLinkerStats(std::string sep="\t");
+};
+
+
+class StandardIsolatedDeconstructor : public Deconstructor {
+// Same approach as the standard representation in ToposPro, which considers each metal atom
+// as a vertex in the simplified net.  See also 10.1021/cg500498k and 10.1021/acs.cgd.8b00126
+protected:
+	virtual void DetectInitialNodesAndLinkers();  // detect metals as isolated species
+	virtual bool CollapseNodes();  // keeping metal atoms isolated
+	virtual void SimplifyTopology();  // simpler handling of the adjacency matrix
+
+public:
+	StandardIsolatedDeconstructor(OBMol* orig_mof = NULL) : Deconstructor(orig_mof) {};
+	virtual ~StandardIsolatedDeconstructor() {};
 };
 
 

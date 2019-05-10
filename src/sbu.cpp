@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
 	try_mkdir(output_dir + METAL_OXO_SUFFIX);
 	try_mkdir(output_dir + SINGLE_NODE_SUFFIX);
 	try_mkdir(output_dir + ALL_NODE_SUFFIX);
+	try_mkdir(output_dir + STANDARD_ISOLATED_SUFFIX);
 
 	// Set up the babel data directory to use a local copy customized for MOFs
 	// (instead of system-wide Open Babel data)
@@ -128,6 +129,11 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	an_simplify.SetOutputDir(output_dir + ALL_NODE_SUFFIX);
 	an_simplify.SimplifyMOF();
 	an_simplify.WriteCIFs();
+
+	StandardIsolatedDeconstructor std_simplify(&orig_mol);
+	std_simplify.SetOutputDir(output_dir + STANDARD_ISOLATED_SUFFIX);
+	std_simplify.SimplifyMOF();
+	std_simplify.WriteCIFs();
 
 	return simplifier.GetMOFInfo();
 }
