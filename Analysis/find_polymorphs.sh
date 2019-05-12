@@ -22,8 +22,8 @@ UPDATE mofs
 		NULLIF((INSTR(topology, ',')-1), -1),  -- returns the comma position minus 1 if exists, else 0-1=-1
 		LENGTH(topology)  -- else, coalesce and return the full string, because no comma
 		));
-ALTER TABLE mofs
-	RENAME COLUMN topology TO all_topology;
+ALTER TABLE mofs RENAME COLUMN topology TO all_topology;
+ALTER TABLE mofs RENAME COLUMN refcode TO filename;
 
 /*
 -- Spot checking the block above, for debugging
