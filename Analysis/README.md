@@ -11,11 +11,12 @@ Analysis scripts to generate figures and stats for the manuscript
 	2. `Scripts/HPC/run_post_submit_all.sh` to collect results and run the validator.
 3. TODO: probably something with `Python/convert_smi_to_tables.py` and `Scripts/combine_smi_tables.sh`
 	1. The bash scripts require [sqlite3](https://www.sqlite.org/index.html) to be installed and in your path.
-	2. TODO: Still need to implement find_duplicate_mofids.sh and similar for database_overlaps, but consider whether we do this analysis via sqlite3, how to encode group numbers/parent database (like Barthel et al.?), etc.
 4. Open the `mofid.Rproj` file in RStudio, then run analysis scripts to generate validation figures.
 	1. `Analysis/plot_round_trip_errors.R` parses the validator .json output to find a percent success/match rate for the MOFid code vs. structure recipe, as well as figures showing the composition.
 5. `cd Figures/Polymorphs && ../../find_polymorphs.sh combined_table.tsv out_with_names.tsv out_summary.tsv`
-6. TODO ADD THE REST OF THE STEPS AND/OR GENERATE A run_all.sh SCRIPT
+6. `cd Figures/Duplicates && ../../find_duplicates.sh duplicates core_mofkey.tsv duplicates_core_names.tsv duplicates_core_summary.tsv`
+7. `cd Figures/Duplicates && ../../find_duplicates.sh overlap core_mofkey.tsv ga_mofkey.tsv overlap_with_ga_names.tsv overlap_with_ga_summary.tsv && ../../find_duplicates.sh overlap core_mofkey.tsv tob_mofkey.tsv overlap_with_tob_names.tsv overlap_with_tob_summary.tsv && ../../find_duplicates.sh overlap tob_mofkey.tsv ga_mofkey.tsv overlap_tob_and_ga_names.tsv overlap_tob_and_ga_summary.tsv`
+8. TODO ADD THE REST OF THE STEPS AND/OR GENERATE A run_all.sh SCRIPT
 
 
 ## Other comments

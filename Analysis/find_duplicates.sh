@@ -1,20 +1,7 @@
 #!/bin/bash
-# Calculates duplicates within a database based on the MOFid and/or MOFkeys
-# TODO: consider between databases as a new DB_OP argument
+# Runs duplicate-related operations based on the MOFid and/or MOFkeys,
+# either duplicates within a database or the overlap between databases
 
-# TODO: implement a new function for overlap based on this script,
-# and document it as such.  Or, include it as a separate command line argument to this script.
-# Note, for the common MOFs, can I just run an overlap followed by duplicates search?
-# Perhaps the duplicates code should still export two outputs.
-# But in that case, both the left and right would be concatenated in case of duplicates (with additional fields counting the number of duplicates)
-# So in that case, the overlap script would actually form two duplicates databases separately, then join them. (so building out two duplicate detection strings with special L/R field names, then slightly adapting the end step
-
-# And then the find_duplicates.sh script would just be a specialization of find_overlap.sh, with fewer args???
-
-# TODO: make a new DB_OP as the first argument as duplicates OR overlap, and list both usages
-# The initial part will probably be similar.  Just some minor differences in the column aggregation, etc.
-# (just importing two databases, then filtering by an overlap qty???, and reporting qty_left and qty_right?)
-# Also then a probably a new DB_NAME column in the overlap output file?  Or not exporting an explicit file like that?
 
 function build_sql_import() {
 	# Build the $RUN_IMPORT command on a specified input file
@@ -54,6 +41,7 @@ IMPORT_HEREDOC
 function build_sql_duplicates() {
 	# Build the $RUN_DUPLICATES command similar to add_to_import()
 	# Args: build_sql_duplicates orig_table duplicates_table
+	# NOTE: this iteration of the duplicates analysis only deduplicates structures, not filtering out singletons
 	
 	read -r -d '' temp_duplicates <<DUPLICATES_HEREDOC
 -- Note that this query is rather similar to polymorphs, actually
@@ -62,7 +50,7 @@ CREATE TABLE $2 AS
 	FROM $1
 	-- could add a WHERE topology filter here
 	GROUP BY identifier
-	HAVING qty > 1
+	-- HAVING qty > 1  -- doing this post-processing
 	ORDER BY qty DESC;
 DUPLICATES_HEREDOC
 	
@@ -75,6 +63,7 @@ DUPLICATES_HEREDOC
 # Define sqlite3 variables
 RUN_IMPORT=""  # build via add_to_import
 RUN_DUPLICATES=""  # build via add_to_sql_duplicates
+RUN_OUTPUT=""  # define below for overlap vs. duplicates
 
 
 # Parse command line arguments
@@ -89,6 +78,24 @@ then
 	OUTPUT_SUMMARY_FAMILIES="$4"
 	build_sql_import "$INPUT_FILE" mofs
 	build_sql_duplicates mofs duplicates
+	read -r -d '' RUN_OUTPUT <<OUTPUT_HEREDOC
+.headers off
+SELECT "Number of duplicates families:", COUNT(*) FROM duplicates;
+.headers on
+
+.output ${OUTPUT_SUMMARY_FAMILIES}
+SELECT identifier, qty, duplicates
+	FROM duplicates
+	WHERE qty > 1
+	ORDER BY qty DESC, identifier;
+
+.output ${OUTPUT_NAMES_FILE}
+SELECT mofs.filename, duplicates.qty, mofs.identifier
+	FROM duplicates
+	LEFT JOIN mofs on duplicates.identifier = mofs.identifier
+	WHERE duplicates.qty > 1
+	ORDER BY mofs.filename;
+OUTPUT_HEREDOC
 
 elif [ $# -eq 5 ]
 then
@@ -96,7 +103,56 @@ then
 	then
 		echo "Usage: \"overlap\" must be specified as the first argument" 1>&2 && exit
 	fi
-	echo "ERROR: (STUB) Duplicates analysis not yet implemented" 1>&2 && exit
+	INPUT_LEFT="$2"
+	INPUT_RIGHT="$3"
+	OUTPUT_NAMES_FILE="$4"
+	OUTPUT_SUMMARY_FAMILIES="$5"
+	build_sql_import "$INPUT_LEFT" mofs_left
+	build_sql_import "$INPUT_RIGHT" mofs_right
+	build_sql_duplicates mofs_left dup_left
+	build_sql_duplicates mofs_right dup_right
+	read -r -d '' RUN_OUTPUT <<OUTPUT_HEREDOC
+CREATE TABLE overlap AS
+	SELECT
+		dup_left.identifier AS identifier,
+		dup_left.qty AS left_qty,
+		dup_right.qty AS right_qty,
+		dup_left.duplicates AS left_filenames,
+		dup_right.duplicates AS right_filenames
+	FROM dup_left
+	INNER JOIN dup_right
+		ON dup_left.identifier = dup_right.identifier;
+ALTER TABLE overlap ADD COLUMN total_qty INTEGER;
+UPDATE overlap SET total_qty = left_qty + right_qty;
+
+-- SELECT identifier, total_qty, left_qty, right_qty FROM overlap LIMIT 10;
+.headers off
+SELECT "Number of overlap families:", COUNT(*) FROM overlap;
+.headers on
+
+.output ${OUTPUT_SUMMARY_FAMILIES}
+SELECT * FROM overlap ORDER BY total_qty DESC, identifier;
+
+.output ${OUTPUT_NAMES_FILE}
+-- From what I recall, sqlite3 doesn't allow us to actually use CTE's with joins (WITH statements), so just create temporary tables
+CREATE TABLE left_cte AS
+	SELECT
+		"left" AS db,
+		mofs_left.filename AS filename,
+		overlap.identifier AS identifier,
+		left_qty AS db_qty, total_qty
+	FROM overlap
+	LEFT JOIN mofs_left ON overlap.identifier = mofs_left.identifier;
+CREATE TABLE right_cte AS
+	SELECT
+		"right" AS db,
+		mofs_right.filename AS filename,
+		overlap.identifier AS identifier,
+		right_qty AS db_qty, total_qty
+	FROM overlap
+	LEFT JOIN mofs_right ON overlap.identifier = mofs_right.identifier;
+SELECT * FROM left_cte UNION ALL SELECT * FROM right_cte;
+OUTPUT_HEREDOC
 
 else
 	echo "ERROR: incorrect usage." 1>&2
@@ -113,50 +169,7 @@ ${RUN_IMPORT}
 .mode tabs
 .headers on
 
---SELECT * FROM mofs LIMIT 10;
-
 ${RUN_DUPLICATES}
 
-.headers off
-SELECT "Number of duplicates families:", COUNT(*) FROM duplicates;
-.headers on
-
-.output ${OUTPUT_SUMMARY_FAMILIES}
-SELECT identifier, qty, duplicates
-	FROM duplicates
-	ORDER BY qty DESC, identifier;
-
-.output ${OUTPUT_NAMES_FILE}
-SELECT mofs.filename, duplicates.qty, mofs.identifier
-	FROM duplicates
-	LEFT JOIN mofs on duplicates.identifier = mofs.identifier
-	ORDER BY mofs.filename;
-
-/*
--- Old overlap code here:
-.mode tabs
-.headers on
-
-.import CoreTables/combined_table.tsv core
-.import GaTables/combined_table.tsv ga
-
-.headers off
-SELECT "Number of original GA MOFs:", COUNT(*) FROM ga;
-DELETE FROM ga WHERE smiles = '*' OR topology = 'NA';
-SELECT "Number of GA MOFs after removing NA's/*:", COUNT(*) FROM ga;
-SELECT "";
-
-
-CREATE TABLE overlap AS
-	SELECT core.smiles, core.topology FROM
-	(SELECT DISTINCT smiles, topology FROM core) AS core
-	INNER JOIN
-	(SELECT DISTINCT smiles, topology FROM ga) AS ga
-	ON core.smiles = ga.smiles AND core.topology = ga.topology;
-
-
-.output overlap_results.smi
-SELECT * FROM overlap ORDER BY topology, smiles;
-*/
-
+${RUN_OUTPUT}
 EMBEDDED_SQL_HEREDOC
