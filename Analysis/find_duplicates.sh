@@ -16,40 +16,72 @@
 # (just importing two databases, then filtering by an overlap qty???, and reporting qty_left and qty_right?)
 # Also then a probably a new DB_NAME column in the overlap output file?  Or not exporting an explicit file like that?
 
-if [ $# -ne 3 ]
-then
-	echo "ERROR: Usage: Analysis/find_duplicates.sh in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv" 1>&2 && exit
-fi
-INPUT_FILE="$1"
-OUTPUT_NAMES_FILE="$2"
-OUTPUT_SUMMARY_FAMILIES="$3"
-
-# Define sqlite3 commands per filetype using multiline strings
-# https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation
-if [[ $INPUT_FILE == *.smi ]]  # MOFid input data
-then
-	read -r -d '' RUN_IMPORT <<IMPORT_HEREDOC
+function add_to_import() {
+	# Build the RUN_IMPORT command by adding the input file arg to it
+	# WARNING: sqlite3.import will not accept paths containing spaces
+	#
+	# Using multiline strings: https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation
+	if [[ "$1" == *.smi ]]  # MOFid input data
+	then
+		read -r -d '' temp_import <<IMPORT_HEREDOC
 .mode tabs
 .separator ";"
 .headers off
 CREATE TABLE mofs (identifier TEXT, filename TEXT);
-.import ${INPUT_FILE} mofs
+.import $1 mofs
 IMPORT_HEREDOC
-elif [[ $INPUT_FILE == *.tsv ]]  # MOFkey input data
-then
-	read -r -d '' RUN_IMPORT <<IMPORT_HEREDOC
+	elif [[ "$1" == *.tsv ]]  # MOFkey input data
+	then
+		read -r -d '' temp_import <<IMPORT_HEREDOC
 .mode tabs
 .headers on
-.import ${INPUT_FILE} mofs
+.import $1 mofs
 -- Rename TSV column, keeping "filename" the same
 ALTER TABLE mofs RENAME COLUMN mofkey TO identifier;
 IMPORT_HEREDOC
+	else
+		echo "Unknown input data type.  Should be either raw MOFid or MOFkey input data" 1>&2
+		exit 2
+	fi
+	
+	# Build $RUN_IMPORT from the global environment
+	RUN_IMPORT+=$'\n'  # https://stackoverflow.com/questions/3005963/how-can-i-have-a-newline-in-a-string-in-sh
+	RUN_IMPORT+="$temp_import"
+}
+
+
+# Define sqlite3 variables
+RUN_IMPORT=""  # build via add_to_import
+
+
+# Parse command line arguments
+if [ $# -eq 4 ]
+then
+	if [[ "$1" != "duplicates" ]]
+	then
+		echo "Usage: \"duplicates\" must be specified as the first argument" 1>&2 && exit
+	fi
+	INPUT_FILE="$2"
+	OUTPUT_NAMES_FILE="$3"
+	OUTPUT_SUMMARY_FAMILIES="$4"
+	add_to_import "$INPUT_FILE"
+
+elif [ $# -eq 5 ]
+then
+	if [[ "$1" != "overlap" ]]
+	then
+		echo "Usage: \"overlap\" must be specified as the first argument" 1>&2 && exit
+	fi
+	echo "ERROR: (STUB) Duplicates analysis not yet implemented" 1>&2 && exit
+
 else
-	echo "Unknown input data type.  Should be either raw MOFid or MOFkey input data" 1>&2
-	exit 2
+	echo "ERROR: incorrect usage." 1>&2
+	echo "\"duplicates\" or \"overlap\" must be specified as the first argument, e.g." 1>&2
+	echo "Analysis/find_duplicates.sh overlap in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv" 1>&2 && exit
 fi
 
 
+# Run the built SQL query
 sqlite3 <<EMBEDDED_SQL_HEREDOC
 ${RUN_IMPORT}
 
