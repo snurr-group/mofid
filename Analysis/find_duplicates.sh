@@ -1,6 +1,8 @@
 #!/bin/bash
 # Runs duplicate-related operations based on the MOFid and/or MOFkeys,
-# either duplicates within a database or the overlap between databases
+# either duplicates within a database or the overlap between databases.
+# Note: structures with error-like codes are filtered out.
+# See also ./find_polymorphs.sh
 
 
 function validate_input_file() {
@@ -56,11 +58,25 @@ function build_sql_duplicates() {
 	# NOTE: this iteration of the duplicates analysis only deduplicates structures, not filtering out singletons
 	
 	read -r -d '' temp_duplicates <<DUPLICATES_HEREDOC
+-- First filter out (and report) incomplete/error topology codes.
+-- These rules are general for both MOFid-v1 and MOFkey-v1.
+.headers off
+SELECT "Number of filenames imported into table $1:", COUNT(*) FROM $1;
+DELETE FROM $1 WHERE
+		identifier = '' OR
+		identifier LIKE '%-v1.ERROR%' OR
+		identifier LIKE '%-v1.NEW%' OR
+		identifier LIKE '%-v1.NA%' OR
+		identifier LIKE '%-v1.MISMATCH%' OR
+		identifier LIKE '%-v1.TIMEOUT%' OR
+		identifier LIKE '%-v1.UNKNOWN%';
+SELECT "After filtering topologies, number of filenames in table $1:", COUNT(*) FROM $1;
+.headers on
+
 -- Note that this query is rather similar to polymorphs, actually
 CREATE TABLE $2 AS
 	SELECT identifier, COUNT(*) AS qty, GROUP_CONCAT(DISTINCT filename) AS duplicates
 	FROM $1
-	-- could add a WHERE topology filter here
 	GROUP BY identifier
 	-- HAVING qty > 1  -- doing this post-processing
 	ORDER BY qty DESC;
@@ -88,6 +104,7 @@ then
 	INPUT_FILE="$2"
 	OUTPUT_NAMES_FILE="$3"
 	OUTPUT_SUMMARY_FAMILIES="$4"
+	echo "Beginning duplicates calculation on $INPUT_FILE"
 	validate_input_file "$INPUT_FILE"
 	build_sql_import "$INPUT_FILE" mofs
 	build_sql_duplicates mofs duplicates
@@ -120,6 +137,7 @@ then
 	INPUT_RIGHT="$3"
 	OUTPUT_NAMES_FILE="$4"
 	OUTPUT_SUMMARY_FAMILIES="$5"
+	echo "Beginning overlap calculation between $INPUT_LEFT and $INPUT_RIGHT"
 	validate_input_file "$INPUT_LEFT"
 	validate_input_file "$INPUT_RIGHT"
 	build_sql_import "$INPUT_LEFT" mofs_left
@@ -190,3 +208,5 @@ ${RUN_DUPLICATES}
 
 ${RUN_OUTPUT}
 EMBEDDED_SQL_HEREDOC
+
+echo ""  # end with a blank newline
