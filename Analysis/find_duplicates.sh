@@ -3,6 +3,18 @@
 # either duplicates within a database or the overlap between databases
 
 
+function validate_input_file() {
+	# Avoid sqlite3 errors by verifying that input files exist
+	if [ ! -e "$1" ]
+	then
+		echo "Input file $1 does not exist!" 1>&2 && exit
+	fi
+	if [[ "$1" =~ ' ' ]]
+	then
+		echo "Input file \'$1\' cannot contain spaces" 1>&2 && exit
+	fi
+}
+
 function build_sql_import() {
 	# Build the $RUN_IMPORT command on a specified input file
 	# WARNING: sqlite3.import will not accept paths containing spaces
@@ -76,6 +88,7 @@ then
 	INPUT_FILE="$2"
 	OUTPUT_NAMES_FILE="$3"
 	OUTPUT_SUMMARY_FAMILIES="$4"
+	validate_input_file "$INPUT_FILE"
 	build_sql_import "$INPUT_FILE" mofs
 	build_sql_duplicates mofs duplicates
 	read -r -d '' RUN_OUTPUT <<OUTPUT_HEREDOC
@@ -107,6 +120,8 @@ then
 	INPUT_RIGHT="$3"
 	OUTPUT_NAMES_FILE="$4"
 	OUTPUT_SUMMARY_FAMILIES="$5"
+	validate_input_file "$INPUT_LEFT"
+	validate_input_file "$INPUT_RIGHT"
 	build_sql_import "$INPUT_LEFT" mofs_left
 	build_sql_import "$INPUT_RIGHT" mofs_right
 	build_sql_duplicates mofs_left dup_left
@@ -157,7 +172,9 @@ OUTPUT_HEREDOC
 else
 	echo "ERROR: incorrect usage." 1>&2
 	echo "\"duplicates\" or \"overlap\" must be specified as the first argument, e.g." 1>&2
-	echo "Analysis/find_duplicates.sh overlap in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv" 1>&2 && exit
+	echo "Analysis/find_duplicates.sh duplicates in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv" 1>&2
+	echo "Analysis/find_duplicates.sh overlap left_mofkey.tsv_OR_in_mofid.smi right_input out_with_names.tsv out_summary.tsv" 1>&2
+	exit
 fi
 
 
