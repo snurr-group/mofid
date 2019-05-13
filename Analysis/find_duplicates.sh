@@ -16,10 +16,11 @@
 # (just importing two databases, then filtering by an overlap qty???, and reporting qty_left and qty_right?)
 # Also then a probably a new DB_NAME column in the overlap output file?  Or not exporting an explicit file like that?
 
-function add_to_import() {
-	# Build the RUN_IMPORT command by adding the input file arg to it
+function build_sql_import() {
+	# Build the $RUN_IMPORT command on a specified input file
 	# WARNING: sqlite3.import will not accept paths containing spaces
-	#
+	# Usage: build_sql_import input_file.tsv_or_smi sql_table_name
+	
 	# Using multiline strings: https://stackoverflow.com/questions/23929235/multi-line-string-with-extra-space-preserved-indentation
 	if [[ "$1" == *.smi ]]  # MOFid input data
 	then
@@ -27,17 +28,17 @@ function add_to_import() {
 .mode tabs
 .separator ";"
 .headers off
-CREATE TABLE mofs (identifier TEXT, filename TEXT);
-.import $1 mofs
+CREATE TABLE $2 (identifier TEXT, filename TEXT);
+.import $1 $2
 IMPORT_HEREDOC
 	elif [[ "$1" == *.tsv ]]  # MOFkey input data
 	then
 		read -r -d '' temp_import <<IMPORT_HEREDOC
 .mode tabs
 .headers on
-.import $1 mofs
+.import $1 $2
 -- Rename TSV column, keeping "filename" the same
-ALTER TABLE mofs RENAME COLUMN mofkey TO identifier;
+ALTER TABLE $2 RENAME COLUMN mofkey TO identifier;
 IMPORT_HEREDOC
 	else
 		echo "Unknown input data type.  Should be either raw MOFid or MOFkey input data" 1>&2
@@ -50,8 +51,30 @@ IMPORT_HEREDOC
 }
 
 
+function build_sql_duplicates() {
+	# Build the $RUN_DUPLICATES command similar to add_to_import()
+	# Args: build_sql_duplicates orig_table duplicates_table
+	
+	read -r -d '' temp_duplicates <<DUPLICATES_HEREDOC
+-- Note that this query is rather similar to polymorphs, actually
+CREATE TABLE $2 AS
+	SELECT identifier, COUNT(*) AS qty, GROUP_CONCAT(DISTINCT filename) AS duplicates
+	FROM $1
+	-- could add a WHERE topology filter here
+	GROUP BY identifier
+	HAVING qty > 1
+	ORDER BY qty DESC;
+DUPLICATES_HEREDOC
+	
+	# Build $RUN_DUPLICATES from the global environment
+	RUN_DUPLICATES+=$'\n'
+	RUN_DUPLICATES+="$temp_duplicates"
+}
+
+
 # Define sqlite3 variables
 RUN_IMPORT=""  # build via add_to_import
+RUN_DUPLICATES=""  # build via add_to_sql_duplicates
 
 
 # Parse command line arguments
@@ -64,7 +87,8 @@ then
 	INPUT_FILE="$2"
 	OUTPUT_NAMES_FILE="$3"
 	OUTPUT_SUMMARY_FAMILIES="$4"
-	add_to_import "$INPUT_FILE"
+	build_sql_import "$INPUT_FILE" mofs
+	build_sql_duplicates mofs duplicates
 
 elif [ $# -eq 5 ]
 then
@@ -91,14 +115,7 @@ ${RUN_IMPORT}
 
 --SELECT * FROM mofs LIMIT 10;
 
--- Note that this query is rather similar to polymorphs, actually
-CREATE TABLE duplicates AS
-	SELECT identifier, COUNT(*) AS qty, GROUP_CONCAT(DISTINCT filename) AS duplicates
-	FROM mofs
-	-- could add a WHERE topology filter here
-	GROUP BY identifier
-	HAVING qty > 1
-	ORDER BY qty DESC;
+${RUN_DUPLICATES}
 
 .headers off
 SELECT "Number of duplicates families:", COUNT(*) FROM duplicates;
