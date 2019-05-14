@@ -1042,7 +1042,7 @@ void SingleNodeDeconstructor::WriteCIFs() {
 }
 
 
-void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa) {
+OBMol SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa) {
 	// Write out the combined SBU's, including points of extension.
 	// If external_bond_pa is true, also write out pseudoatoms corresponding to the next
 	// external atom connected to the point of extension.
@@ -1123,7 +1123,90 @@ void SingleNodeDeconstructor::WriteSBUs(const std::string &base_filename, bool e
 		formBond(sbu_molp, int_mol_atom, new_conn_atom, 1);
 	}
 
-	writeCIF(sbu_molp, GetOutputPath(base_filename));
+	if (base_filename != WRITESBU_DISABLE_EXPORT) {
+		writeCIF(sbu_molp, GetOutputPath(base_filename));
+	}
+	return *sbu_molp;
+}
+
+
+std::string SingleNodeDeconstructor::GetSBUStats(std::string sep) {
+	// Gets stats about node composition and connectivity like MetalOxoDeconstructor::GetLinkerStats
+	std::stringstream output;
+	// Identification using canonical SMILES from the class obconv (InitOutputFormat)
+	std::vector<std::string> unique_sbus;
+	std::map<std::string, std::string> sbu_to_no_conn;
+	std::map<std::string, std::string> sbu_to_metal;
+	std::map<std::string, std::string> sbu_to_trim_hydrogens;
+	std::map<std::string, int> sbu_to_conn;
+	std::map<std::string, int> sbu_to_num_atoms;
+
+
+	OBMol sbus_with_ext = WriteSBUs(WRITESBU_DISABLE_EXPORT, true, true);
+	std::vector<OBMol> frags = sbus_with_ext.Separate();
+	for (std::vector<OBMol>::iterator frag=frags.begin(); frag!=frags.end(); ++frag) {
+		std::string frag_id = rtrimWhiteSpace(obconv.WriteString(&*frag));
+		if (!inVector<std::string>(frag_id, unique_sbus)) {
+			unique_sbus.push_back(frag_id);
+
+			// Extract external connectors
+			AtomSet sbu_conns;
+			AtomSet sbu_hydrogens;
+			std::vector<int> sbu_metals;  // use a vector instead of a set for sorting
+			int num_conns = 0;
+			FOR_ATOMS_OF_MOL(a, *frag) {
+				if (a->GetAtomicNum() == SBU_EXTERNAL_ELEMENT) {
+					++num_conns;
+					sbu_conns.insert(&*a);
+				} else if (a->GetAtomicNum() == POE_EXTERNAL_ELEMENT) {
+					sbu_conns.insert(&*a);
+				} else if (isMetal(&*a)) {
+					int a_element = a->GetAtomicNum();
+					if (!inVector<int>(a_element, sbu_metals)) {
+						sbu_metals.push_back(a_element);
+					}
+				} else if (a->GetAtomicNum() == 1) {
+					sbu_hydrogens.insert(&*a);
+				}
+			}
+			for (AtomSet::iterator it=sbu_conns.begin(); it!=sbu_conns.end(); ++it) {
+				frag->DeleteAtom(*it);
+			}
+			sbu_to_no_conn[frag_id] = rtrimWhiteSpace(obconv.WriteString(&*frag));
+			sbu_to_conn[frag_id] = num_conns;
+			sbu_to_num_atoms[frag_id] = frag->NumAtoms();
+
+			// Extract unique elements, adapted from MetalOxoDeconstructor::GetMOFkey
+			std::stringstream metal_list;
+			std::sort(sbu_metals.begin(), sbu_metals.end());  // sort by atomic number
+			bool first_element = true;
+			for (std::vector<int>::iterator element=sbu_metals.begin(); element!=sbu_metals.end(); ++element) {
+				if (!first_element) {
+					metal_list << MOFKEY_METAL_DELIM;
+				}
+				metal_list << OBElements::GetSymbol(*element);
+			}
+			sbu_to_metal[frag_id] = metal_list.str();
+
+			// Trim hydrogens from the node SBU
+			for (AtomSet::iterator it=sbu_hydrogens.begin(); it!=sbu_hydrogens.end(); ++it) {
+				frag->DeleteAtom(*it);
+			}
+			sbu_to_trim_hydrogens[frag_id] = rtrimWhiteSpace(obconv.WriteString(&*frag));
+		}
+	}
+
+	for (std::vector<std::string>::iterator it=unique_sbus.begin(); it!=unique_sbus.end(); ++it) {
+		output << *it
+			<< sep << sbu_to_no_conn[*it]
+			<< sep << sbu_to_metal[*it]
+			<< sep << sbu_to_trim_hydrogens[*it]
+			<< sep << sbu_to_conn[*it]
+			<< sep << sbu_to_num_atoms[*it]
+			<< std::endl;
+	}
+
+	return output.str();
 }
 
 

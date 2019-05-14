@@ -28,10 +28,13 @@ COPY_MOFKEY="${OUTPUT_DIR}/folder_mofkey.tsv"
 
 SRC_LINKER_STATS="${OUTPUT_DIR}/MetalOxo/linker_stats.txt"
 COPY_LINKER_STATS="${OUTPUT_DIR}/folder_linker_stats.tsv"
+SRC_SBU_STATS="TODO"
+COPY_SBU_STATS="TODO"
 
 rm -f "${COPY_MOFID}"
 echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
 echo -e "filename\tinchikey\tconnections_metaloxo_net\tuc_count\tinchi\ttruncated_inchikey\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
+# TODO SBU STATS
 
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
 git rev-parse --verify HEAD 1>&2
@@ -52,9 +55,10 @@ do
 	echo -e "$(basename "$i")\t$(tr -d '\n' < "${PYTHON_MOFKEY}")" >> "${COPY_MOFKEY}"
 	rm -f "${PYTHON_MOFID}" "${PYTHON_MOFKEY}"
 	
-	# Also parse the linker stats (deleting blank lines, first)
+	# Also parse the linker and SBU stats (deleting blank lines, first)
 	sed -e '/^$/d' "${SRC_LINKER_STATS}" | sed -e 's/^/'"$(basename "$i")"'\t/' >> "${COPY_LINKER_STATS}"
 	rm -f "${SRC_LINKER_STATS}"
+	# TODO SBU STATS
 done
 
 echo "----------------------------" 1>&2
