@@ -41,8 +41,6 @@ const std::string MOFKEY_NO_LINKERS = "MISSING_LINKERS";
 // PA's to describe points of extension
 const int POE_EXTERNAL_ELEMENT = 118;  // Og
 const int SBU_EXTERNAL_ELEMENT = 117;  // Ts
-// Flag as a CIF placeholder, in cases when we do not want to WriteSBUs to a CIF
-const std::string WRITESBU_DISABLE_EXPORT = "no CIF output";
 
 // Atom type codes used by the MappedMol in AllNodeDeconstructor::TreeDecomposition()
 const int TREE_PA_ELEMENT = 118;  // Og
@@ -143,7 +141,7 @@ class SingleNodeDeconstructor : public Deconstructor {
 protected:
 	virtual void DetectInitialNodesAndLinkers();  // detect nodes as entire SBUs
 	virtual void PostSimplification() {};  // do not inherit the MOFid 4-to-2x3 step
-	OBMol WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa);
+	void WriteSBUs(const std::string &base_filename, bool external_bond_pa, bool external_conn_pa);
 	static std::pair<VirtualMol,VirtualMol> CalculateNonmetalRing(OBAtom* a, OBAtom* b);
 	static VirtualMol GetNonmetalRingSubstituent(OBAtom* src);
 
@@ -151,7 +149,6 @@ public:
 	SingleNodeDeconstructor(OBMol* orig_mof = NULL);
 	virtual ~SingleNodeDeconstructor() {};
 	virtual void WriteCIFs();
-	std::string GetSBUStats(std::string sep="\t");
 };
 
 

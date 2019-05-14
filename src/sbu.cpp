@@ -121,11 +121,9 @@ std::string analyzeMOF(std::string filename, const std::string &output_dir) {
 	write_string(simplifier.GetLinkerStats(), metal_oxo_dir + "/linker_stats.txt");
 
 	SingleNodeDeconstructor sn_simplify(&orig_mol);
-	std::string sn_dir = output_dir + SINGLE_NODE_SUFFIX;
-	sn_simplify.SetOutputDir(sn_dir);
+	sn_simplify.SetOutputDir(output_dir + SINGLE_NODE_SUFFIX);
 	sn_simplify.SimplifyMOF();
 	sn_simplify.WriteCIFs();
-	write_string(sn_simplify.GetSBUStats(), sn_dir + "/sbu_stats.txt");
 
 	AllNodeDeconstructor an_simplify(&orig_mol);
 	an_simplify.SetOutputDir(output_dir + ALL_NODE_SUFFIX);
