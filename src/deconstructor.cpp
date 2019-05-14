@@ -461,19 +461,22 @@ std::string Deconstructor::GetMOFInfo() {
 	// Handle node and node_bridge separately to match old test SMILES
 	node_export = simplified_net.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
+	analysis << "# Nodes:" << std::endl;
 	analysis << writeFragments(node_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol node_bridge_export = simplified_net.GetAtomsOfRole("node bridge");
 	node_bridge_export = simplified_net.PseudoToOrig(node_bridge_export);
 	OBMol node_bridge_mol = node_bridge_export.ToOBMol();
+	// Considered as part of the nodes for purposes of python_smiles_parts.txt, so no subheader
 	analysis << writeFragments(node_bridge_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
 	linker_export = simplified_net.PseudoToOrig(linker_export);
 	OBMol linker_mol = linker_export.ToOBMol();
+	analysis << "# Linkers:" << std::endl;
 	analysis << writeFragments(linker_mol.Separate(), obconv, !export_single_bonds);
 
-	analysis << GetCatenationInfo(CheckCatenation());
+	analysis << "# " << GetCatenationInfo(CheckCatenation());
 	return analysis.str();
 }
 

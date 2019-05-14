@@ -16,8 +16,8 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 	cif_path = os.path.abspath(cif_path)
 	output_path = os.path.abspath(output_path)
 
-	fragments, cat, base_mofkey = extract_fragments(cif_path,
-		output_path)
+	node_fragments, linker_fragments, cat, base_mofkey = extract_fragments(
+		cif_path, output_path)
 	if cat is not None:
 		sn_topology = extract_topology(os.path.join(output_path,
 			'SingleNode','topology.cgd'))
@@ -37,23 +37,35 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 		base_topology = topology.split(',')[0]
 		mofkey = assemble_mofkey(mofkey, base_topology)
 
-	mofid = assemble_mofid(fragments, topology, cat, 
+	all_fragments = []
+	all_fragments.extend(node_fragments)
+	all_fragments.extend(linker_fragments)
+	all_fragments.sort()
+	mofid = assemble_mofid(all_fragments, topology, cat, 
 			mof_name=mof_name)
 	parsed = parse_mofid(mofid)
 
 	identifiers = {
 		'mofid' : mofid,
 		'mofkey' : mofkey,
+		'smiles_nodes' : node_fragments,
+		'smiles_linkers' : linker_fragments,
 		'smiles' : parsed['smiles'],
 		'topology' : parsed['topology'],
 		'cat' : parsed['cat'],
 		'cifname' : parsed['name']
 	}
 	
+	# Write MOFid and MOFkey output to files, as well as node/linker info
 	with open(os.path.join(output_path, 'python_mofid.txt'), 'w') as f:
 		f.write(identifiers['mofid'] + '\n')
 	with open(os.path.join(output_path, 'python_mofkey.txt'), 'w') as f:
 		f.write(identifiers['mofkey'] + '\n')
+	with open(os.path.join(output_path, 'python_smiles_parts.txt'), 'w') as f:
+		for smiles in node_fragments:
+			f.write('node' + '\t' + smiles + '\n')
+		for smiles in linker_fragments:
+			f.write('linker' + '\t' + smiles + '\n')
 
 	return identifiers
 
@@ -69,9 +81,3 @@ if __name__ == '__main__':
 	identifiers = cif2mofid(cif_file, output_path)
 	print(identifiers['mofid'])
 	#print(identifiers['mofkey'])  # but incompatible with the use of stdout in run_folder.sh
-
-	# Write MOFid and MOFkey output to files.
-	with open(os.path.join(output_path, 'python_mofid.txt'), 'w') as f:
-		f.write(identifiers['mofid'] + '\n')
-	with open(os.path.join(output_path, 'python_mofkey.txt'), 'w') as f:
-		f.write(identifiers['mofkey'] + '\n')

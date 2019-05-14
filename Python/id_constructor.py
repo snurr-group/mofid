@@ -65,15 +65,23 @@ def extract_fragments(mof_path,output_path):
 	if cpp_run.returncode:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
 		fragments = ['*']  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
 	else:
-		fragments = cpp_output.strip().split('\n')
-		fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
+		all_fragments = cpp_output.strip().split('\n')
+		all_fragments = [x.strip() for x in all_fragments]  # clean up extra tabs, newlines, etc.
 
 	cat = None
-	if 'simplified net(s)' in fragments[-1]:
-		cat = fragments.pop()[6]  # 'Found x simplified net(s)'
+	if 'simplified net(s)' in all_fragments[-1]:
+		cat = all_fragments.pop()[8]  # '# Found x simplified net(s)'
 		cat = str(int(cat) - 1)
 		if cat == '-1':
 			cat = None
+	
+	# Parse node/linker fragment notation
+	if all_fragments[0] != '# Nodes:':
+		return (None, None, cat, None)
+	all_fragments.pop(0)
+	linker_flag_loc = all_fragments.index('# Linkers:')
+	node_fragments = all_fragments[:linker_flag_loc]
+	linker_fragments = all_fragments[linker_flag_loc+1:]  # could be the empty set
 
 	base_mofkey = None
 	if not cpp_run.returncode:  # If it's a successful run
@@ -82,7 +90,7 @@ def extract_fragments(mof_path,output_path):
 		with open(mofkey_loc) as f:
 			base_mofkey = f.read().rstrip()  # ending newlines, etc.
 
-	return (sorted(fragments), cat, base_mofkey)
+	return (sorted(node_fragments), sorted(linker_fragments), cat, base_mofkey)
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
