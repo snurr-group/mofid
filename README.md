@@ -22,4 +22,4 @@ from mofid.run_mofid import cif2mofid
 cif_path = '/path/to/my/mof.cif'
 mofid = cif2mofid(cif_path)
 ```
-The output of the `mofid.cif2mofid` function is a dictionary containing six entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
+The output of the `mofid.cif2mofid` function is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).

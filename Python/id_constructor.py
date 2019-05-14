@@ -65,24 +65,32 @@ def extract_fragments(mof_path,output_path):
 	if cpp_run.returncode:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
 		fragments = ['*']  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
 	else:
-		fragments = cpp_output.strip().split('\n')
-		fragments = [x.strip() for x in fragments]  # clean up extra tabs, newlines, etc.
+		all_fragments = cpp_output.strip().split('\n')
+		all_fragments = [x.strip() for x in all_fragments]  # clean up extra tabs, newlines, etc.
 
 	cat = None
-	if 'simplified net(s)' in fragments[-1]:
-		cat = fragments.pop()[6]  # 'Found x simplified net(s)'
+	if 'simplified net(s)' in all_fragments[-1]:
+		cat = all_fragments.pop()[8]  # '# Found x simplified net(s)'
 		cat = str(int(cat) - 1)
 		if cat == '-1':
 			cat = None
+	
+	# Parse node/linker fragment notation
+	if all_fragments[0] != '# Nodes:':
+		return (None, None, cat, None)
+	all_fragments.pop(0)
+	linker_flag_loc = all_fragments.index('# Linkers:')
+	node_fragments = all_fragments[:linker_flag_loc]
+	linker_fragments = all_fragments[linker_flag_loc+1:]  # could be the empty set
 
 	base_mofkey = None
 	if not cpp_run.returncode:  # If it's a successful run
 		mofkey_loc = os.path.join(
-			output_path, 'NoSBU', 'mofkey_no_topology.txt')
+			output_path, 'MetalOxo', 'mofkey_no_topology.txt')
 		with open(mofkey_loc) as f:
 			base_mofkey = f.read().rstrip()  # ending newlines, etc.
 
-	return (sorted(fragments), cat, base_mofkey)
+	return (sorted(node_fragments), sorted(linker_fragments), cat, base_mofkey)
 
 def extract_topology(mof_path):
 	# Extract underlying MOF topology using Systre and the output data from my C++ code
@@ -117,7 +125,7 @@ def extract_topology(mof_path):
 		elif line == 'Structure is new for this run.':
 			# This line is only printed if new to both versions of the RCSR database:
 			# a copy saved in the .jar file and an updated version in Resources/RCSRnets.arc
-			topologies.append('NEW')
+			topologies.append('UNKNOWN')
 		elif line == 'Structure already seen in this run.':
 			repeat_line = True
 		elif 'Processing component ' in line:
@@ -149,7 +157,7 @@ def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE'):
 
 def assemble_mofkey(base_mofkey, base_topology):
 	# Add a topology to an existing MOFkey
-	return base_mofkey.replace('MOFkey-v1.', 'MOFkey-v1.' + base_topology + '.')
+	return base_mofkey.replace('MOFkey-v1', 'MOFkey-v1.' + base_topology)
 
 def parse_mofid(mofid):
 	# Deconstruct a MOFid string into its pieces
