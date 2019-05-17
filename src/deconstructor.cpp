@@ -1355,10 +1355,18 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		if (orig_from_pa.size() == 0) {
 			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found a PA without origin atoms during connection labeling", obError);
 		}
+		int num_conn_sites = 0;
 		for (AtomSet::iterator it=orig_from_pa.begin(); it!=orig_from_pa.end(); ++it) {
-			if (connection_points.HasAtom(*it)) {
-				pa->SetAtomicNum(TREE_EXT_CONN);
-			}
+			if (connection_points.HasAtom(*it)) { ++num_conn_sites; }
+		}
+		if (num_conn_sites == 1) {
+			pa->SetAtomicNum(TREE_EXT_CONN);
+		} else if (num_conn_sites > 1) {
+			// Technically, this rule is overly broad and will also classify simple 2-c linkers as
+			// BP's (even if they don't contain an additional internal connection), but it's
+			// otherwise a simple method to detect branch point rings with 2+ external connections
+			// which may also include an internal bond.
+			pa->SetAtomicNum(TREE_BRANCH_POINT);
 		}
 	}
 	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_3_label_conns.cif")); }
@@ -1371,7 +1379,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		simplifications = 0;
 		ConnIntToExt pa_to_1c;
 		FOR_ATOMS_OF_MOL(a, *frag_molp) {
-			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN) {
+			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT) {
 				FOR_NBORS_OF_ATOM(nbor, *a) {  // get the 1 neighbor (inner to fragment)
 					pa_to_1c.insert(AtomPair(&*nbor, &*a));
 				}
