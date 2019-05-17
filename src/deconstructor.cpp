@@ -411,7 +411,7 @@ std::string Deconstructor::GetCatenationInfo(int num_nets) {
 void Deconstructor::SimplifyMOF(bool write_intermediate_cifs) {
 	// Runs a MOF simplfication, optionally writing intermediate CIFs
 
-	if (write_intermediate_cifs) { WriteSimplifiedNet("simplified_test_orig.cif"); }
+	if (write_intermediate_cifs) { WriteSimplifiedNet("test_simplified_orig.cif"); }
 	DetectInitialNodesAndLinkers();
 	CollapseLinkers();
 	if (write_intermediate_cifs) { WriteSimplifiedNet("test_partial.cif"); }

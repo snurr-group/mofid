@@ -36,7 +36,7 @@ except EnvironmentError:
 GAVROG_LOC = os.path.join(resources_path,'Systre-1.2.0-beta2.jar')
 JAVA_LOC = 'java'
 RCSR_PATH = os.path.join(resources_path,'RCSRnets.arc')
-DEFAULT_SYSTRE_CGD = os.path.join('Output','SingleNode','topology.gcd')
+DEFAULT_SYSTRE_CGD = os.path.join('Output','SingleNode','topology.cgd')
 SYSTRE_TIMEOUT = 30  # max time to allow Systre to run (seconds), since it hangs on certain CGD files
 SBU_BIN = os.path.join(bin_path,'sbu')
 
