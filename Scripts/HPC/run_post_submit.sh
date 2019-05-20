@@ -3,7 +3,7 @@
 
 SUMMARY_DIR="Summary/"
 ORIG_OUTPUTS="$SUMMARY_DIR/Data/"
-JOB_SCHEDULER="moab"
+JOB_SCHEDULER="slurm"
 
 
 if [ -d "$SUMMARY_DIR" ]
@@ -45,7 +45,10 @@ mv Output_*/ "$ORIG_OUTPUTS"
 mv err_*.txt "$ORIG_OUTPUTS"
 mv pbs_out_*.txt "$ORIG_OUTPUTS"
 mv out_*.smi "$ORIG_OUTPUTS"
-mv jobid_* "$ORIG_OUTPUTS"
+mv jobid* "$ORIG_OUTPUTS"
+mv slurm-*.out "$ORIG_OUTPUTS"
+mkdir -p "$ORIG_OUTPUTS/Cores"
+mv core.* "$ORIG_OUTPUTS/Cores/"
 
 
 echo "Submitting jobs to validate MOFid's ToBaCCo MOFs and GA hMOFs against their recipes..."
@@ -57,8 +60,13 @@ then
 	sleep 5
 elif [ "$JOB_SCHEDULER" == "slurm" ]
 then
-	echo "slurm not yet supported.  See other scripts for an example for how to adapt moab" 1>&2
-	exit 2
+	export BASE_SMILES=ga
+	export SUMMARY_DIR=${SUMMARY_DIR}
+	sbatch Scripts/HPC/slurm/child_validation.job -J validate-ga -o ${ORIG_OUTPUTS}/pbs_out_ga_validation.txt -e ${ORIG_OUTPUTS}/err_ga_validation.txt
+	sleep 5
+	export BASE_SMILES=tob
+	sbatch Scripts/HPC/slurm/child_validation.job -J validate-tob -o ${ORIG_OUTPUTS}/pbs_out_tob_validation.txt -e ${ORIG_OUTPUTS}/err_tob_validation.txt
+	sleep 5
 else
 	echo "Unknown JOB_SCHEDULER.  Cannot run validation on the output.smi files" 1>&2
 	exit 2

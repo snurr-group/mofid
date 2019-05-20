@@ -10,7 +10,8 @@ TableOutput/
 err_*.txt
 pbs_out_*.txt
 out_*.smi
-jobid_*
+jobid*
+slurm-*.out
 Summary/
 !openbabel/test
 .RData

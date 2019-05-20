@@ -3,7 +3,7 @@
 # Generates output files to post-process with run_post_submit.sh
 # to get MOFid's for CoRE MOF 2019-ASR, ToBaCCo, and a GA hMOF test subset
 
-JOB_SCHEDULER="moab"
+JOB_SCHEDULER="slurm"
 
 echo "Submitting ToBACCo MOFs"
 Scripts/HPC/${JOB_SCHEDULER}/submit_parallel.sh Data/opt_tobacco/split-all/ tob
