@@ -13,7 +13,5 @@
 module purge
 module load python
 
-echo $SLURM_JOB_ID > "jobid_$OUTPUT_DIR"
-
 python Python/check_mof_composition.py ${SUMMARY_DIR}/${BASE_SMILES}.smi > ${SUMMARY_DIR}/${BASE_SMILES}_validation.json
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Call as Scripts/HPC/submit_one.job path_to_cifs short_friendly_job_name
+# Call as Scripts/HPC/slurm/submit_one.job path_to_cifs short_friendly_job_name
 
 dir=$1
 echo "Submitting $dir"
