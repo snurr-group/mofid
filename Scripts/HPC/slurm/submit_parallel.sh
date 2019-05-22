@@ -8,6 +8,6 @@ do
 	export CIFOUTLABEL=$2
 	export OUTPUT_DIR="Output_$2_$dir"
 	export MOFSTDOUT="out_$2_$dir.smi" 
-	sbatch Scripts/HPC/slurm/child_mofid_slurm.job -J id-$2-$dir -o pbs_out_$2_$dir.txt -e err_$2_$dir.txt
+	sbatch -J id-$2-$dir -o pbs_out_$2_$dir.txt -e err_$2_$dir.txt Scripts/HPC/slurm/child_mofid_slurm.job
 	sleep 10
 done

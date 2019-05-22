@@ -40,6 +40,7 @@ copy_folder_tsv() {
 }
 copy_folder_tsv "mofkey"
 copy_folder_tsv "linker_stats"
+copy_folder_tsv "smiles_parts"
 
 mv Output_*/ "$ORIG_OUTPUTS"
 mv err_*.txt "$ORIG_OUTPUTS"
@@ -62,10 +63,10 @@ elif [ "$JOB_SCHEDULER" == "slurm" ]
 then
 	export BASE_SMILES=ga
 	export SUMMARY_DIR=${SUMMARY_DIR}
-	sbatch Scripts/HPC/slurm/child_validation.job -J validate-ga -o ${ORIG_OUTPUTS}/pbs_out_ga_validation.txt -e ${ORIG_OUTPUTS}/err_ga_validation.txt
+	sbatch -J validate-ga -o ${ORIG_OUTPUTS}/pbs_out_ga_validation.txt -e ${ORIG_OUTPUTS}/err_ga_validation.txt Scripts/HPC/slurm/child_validation.job
 	sleep 5
 	export BASE_SMILES=tob
-	sbatch Scripts/HPC/slurm/child_validation.job -J validate-tob -o ${ORIG_OUTPUTS}/pbs_out_tob_validation.txt -e ${ORIG_OUTPUTS}/err_tob_validation.txt
+	sbatch -J validate-tob -o ${ORIG_OUTPUTS}/pbs_out_tob_validation.txt -e ${ORIG_OUTPUTS}/err_tob_validation.txt Scripts/HPC/slurm/child_validation.job
 	sleep 5
 else
 	echo "Unknown JOB_SCHEDULER.  Cannot run validation on the output.smi files" 1>&2
