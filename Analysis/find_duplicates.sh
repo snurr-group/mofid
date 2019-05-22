@@ -69,7 +69,8 @@ DELETE FROM $1 WHERE
 		identifier LIKE '%-v1.NA%' OR
 		identifier LIKE '%-v1.MISMATCH%' OR
 		identifier LIKE '%-v1.TIMEOUT%' OR
-		identifier LIKE '%-v1.UNKNOWN%';
+		identifier LIKE '%-v1.UNKNOWN%' OR
+		identifier LIKE '%MISSING_LINKERS.MOFkey-v1%';
 SELECT "After filtering topologies, number of filenames in table $1:", COUNT(*) FROM $1;
 .headers on
 

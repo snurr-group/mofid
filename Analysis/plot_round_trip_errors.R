@@ -16,6 +16,8 @@
 source('Analysis/R-Utilities/parse_json_results.R')
 
 library(ggplot2)
+library(dplyr)
+library(tidyr)
 library(stringr)
 library(cowplot)
 library(viridis)
@@ -407,4 +409,53 @@ plot_grid(
     "Analysis/Figures/roundtrip.png", .,
     base_aspect_ratio=1.5, nrow = 2
   )
+
+
+# And make a simplified plot with only three categories:
+# Match, mismatch, or other
+# Here, "other" is defined as cases when we can account for the discrepancy stemming from misunderstanding,
+# whereas "mismatch" does not have an assigned cause.
+# TODO: we may need to update these values depending on what we consider vs. exclude from the analysis
+aggregate_ga <-
+  understand_ga %>% 
+  mutate(simple_err =
+           ifelse(err_type=="Success", "Match",
+                  ifelse(err_cause == "Other", "Mismatch", "Other")
+           )
+  )
+aggregate_tob <-
+  understand_tobacco %>% 
+  mutate(simple_err =
+           ifelse(err_type=="Success", "Match",
+                  ifelse(err_cause == "Other", "Mismatch", "Other")
+           )  
+  )
+aggregate_both <- bind_rows(
+  `GA hMOFs` = select(aggregate_ga, simple_err),
+  `ToBaCCo` = select(aggregate_tob, simple_err),
+  .id = "database"
+)
+
+p_aggregate_results <- 
+  aggregate_both %>% 
+  ggplot(aes(database, fill=simple_err)) +
+  geom_bar() +
+  coord_flip() +
+  # http://sape.inf.usi.ch/quick-reference/ggplot2/colour
+  scale_fill_manual(name = NULL, breaks=c("Match", "Mismatch", "Other"), values=c("#2F6CE6", "#A24218", "darkgray")) +
+  theme_cowplot(24) +
+  theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom")) +
+  ylab("Number of MOFs") + xlab(NULL)
+cowplot::save_plot("Analysis/Figures/aggregate_roundtrip.png", p_aggregate_results, base_aspect_ratio=1.5)
+
+# Report values for the database percentages
+aggregate_both %>% 
+  group_by(database, simple_err) %>% 
+  summarize(qty = n()) %>% 
+  spread(simple_err, qty) %>% 
+  mutate(mofs_considered = Match + Mismatch) %>% 
+  mutate(total_mofs = Match + Mismatch + Other) %>% 
+  mutate(percent_match = Match / mofs_considered * 100.0) %>% 
+  mutate(percent_excluded = Other / total_mofs * 100.0)
+
 
