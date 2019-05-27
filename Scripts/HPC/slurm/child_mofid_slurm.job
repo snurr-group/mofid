@@ -12,7 +12,7 @@
 
 module purge
 module load python
-module load git
+#module load git  # Needed earlier for run_folder.sh, but the explicit git dependence has been removed
 
 echo $SLURM_JOB_ID > "jobid_$OUTPUT_DIR"
 

@@ -36,8 +36,14 @@ echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
 echo -e "filename\tinchikey\tconnections_metaloxo_net\tuc_count\tinchi\ttruncated_inchikey\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
 echo -e "filename\tpart\tsmiles" > "${COPY_SMILES_PARTS}"
 
+# Save current git commit to improve traceability
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
-git rev-parse --verify HEAD 1>&2
+# git rev-parse --verify HEAD 1>&2
+# Replace explicit dependence on git with parsing the relevant .git files
+# Thanks to Fordi: https://stackoverflow.com/questions/949314/how-to-retrieve-the-hash-for-the-current-commit-in-git/33133769#33133769 
+HASH="ref: HEAD"; while [[ $HASH == ref\:* ]]; do HASH="$(cat ".git/$(echo $HASH | cut -d \  -f 2)")"; done;
+echo $HASH 1>&2
+
 echo "Writing results to intermediate directory: ${OUTPUT_DIR}" 1>&2
 echo "----------------------------" 1>&2
 echo "Time:" 1>&2
