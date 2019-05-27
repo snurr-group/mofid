@@ -10,6 +10,7 @@ TableOutput/
 err_*.txt
 pbs_out_*.txt
 out_*.smi
+/core.[0-9]*
 jobid*
 slurm-*.out
 Summary/
