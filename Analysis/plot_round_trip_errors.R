@@ -412,24 +412,35 @@ plot_grid(
 
 
 # And make a simplified plot with only three categories:
-# Match, mismatch, or other
-# Here, "other" is defined as cases when we can account for the discrepancy stemming from misunderstanding,
+# Match, mismatch, or excluded
+# Here, we excluded cases when we can account for the discrepancy stemming from misunderstanding,
 # whereas "mismatch" does not have an assigned cause.
-# TODO: we may need to update these values depending on what we consider vs. exclude from the analysis
+# See SI document for the authoritative list of exclusions to include below:
+ga_excluded_linker <- c(0:3, 4)
 aggregate_ga <-
-  understand_ga %>% 
-  mutate(simple_err =
-           ifelse(err_type=="Success", "Match",
-                  ifelse(err_cause == "Other", "Mismatch", "Other")
-           )
-  )
+  ga_errs %>% 
+  mutate(simple_err = ifelse(err_type=="Success", "Match", "Mismatch")) %>% 
+  mutate(simple_err = ifelse(
+    err_type == "Definition mismatch" |
+      (code.linker1 %in% ga_excluded_linker | code.linker2 %in% ga_excluded_linker),
+    "Excluded", simple_err
+    ))
+
+tob_excluded_mc <- c("sym_24_mc_13", "sym_3_mc_0", "sym_16_mc_6", "sym_13_mc_12", "sym_8_mc_7", "sym_8_mc_8")
+tob_excluded_on <- c("sym_3_on_4", "sym_3_on_1")
+tob_excluded_linker <- c(4, 1, 2, 8:10, 18, 13, 26, 30, 42, 44, 45)
 aggregate_tob <-
-  understand_tobacco %>% 
-  mutate(simple_err =
-           ifelse(err_type=="Success", "Match",
-                  ifelse(err_cause == "Other", "Mismatch", "Other")
-           )  
-  )
+  tobacco_errs %>% 
+  mutate(simple_err = ifelse(err_type=="Success", "Match", "Mismatch")) %>% 
+  mutate(simple_err = ifelse(
+    code.topology == "tpt" |
+      (mc1 %in% tob_excluded_mc | mc2 %in% tob_excluded_mc) |
+      nodes.on %in% tob_excluded_on |
+      linker %in% tob_excluded_linker,
+    "Excluded", simple_err
+  ))
+aggregate_tob %>% filter(simple_err=="Excluded") %>% nrow
+
 aggregate_both <- bind_rows(
   `GA hMOFs` = select(aggregate_ga, simple_err),
   `ToBaCCo` = select(aggregate_tob, simple_err),
@@ -442,11 +453,29 @@ p_aggregate_results <-
   geom_bar() +
   coord_flip() +
   # http://sape.inf.usi.ch/quick-reference/ggplot2/colour
-  scale_fill_manual(name = NULL, breaks=c("Match", "Mismatch", "Other"), values=c("#2F6CE6", "#A24218", "darkgray")) +
+  scale_fill_manual(name = NULL, limits=c("Match", "Mismatch", "Excluded"), values=c("#2F6CE6", "#A24218", "darkgray")) +
   theme_cowplot(24) +
   theme(legend.position = c(0.95, 0.05), legend.justification = c("right", "bottom")) +
   ylab("Number of MOFs") + xlab(NULL)
+print(p_aggregate_results)
 cowplot::save_plot("Analysis/Figures/aggregate_roundtrip.png", p_aggregate_results, base_aspect_ratio=1.5)
+
+# One more quick exploration of the error causes for my own purposes
+aggregate_tob %>% 
+  filter(simple_err == "Mismatch") %>% 
+  ggplot(aes(err_type)) +
+  geom_bar() +
+  coord_flip()
+# Since the top two are related to linkers, let's see if there's a common cause
+# I couldn't find anything obvious, at least, except generally mc + on.
+aggregate_tob %>% 
+  filter(simple_err == "Mismatch") %>% 
+  #filter(str_detect(err_type, "^linker_")) %>% 
+  filter(err_type == "linker_single_bonds") %>% 
+  select(linker, nodes.on, mc1, mc2, topology) %>% 
+  mutate_all(funs(factor)) %>%  # trick from above
+  summary
+
 
 # Report values for the database percentages
 aggregate_both %>% 
@@ -454,8 +483,12 @@ aggregate_both %>%
   summarize(qty = n()) %>% 
   spread(simple_err, qty) %>% 
   mutate(mofs_considered = Match + Mismatch) %>% 
-  mutate(total_mofs = Match + Mismatch + Other) %>% 
+  mutate(total_mofs = Match + Mismatch + Excluded) %>% 
   mutate(percent_match = Match / mofs_considered * 100.0) %>% 
-  mutate(percent_excluded = Other / total_mofs * 100.0)
+  mutate(percent_excluded = Excluded / total_mofs * 100.0)
 
+# Report other values used in the discussion
+n_ga_zr <- aggregate_ga %>% filter(err_type == "Definition mismatch") %>% nrow
+n_ga_zr_percent <- n_ga_zr / (aggregate_ga %>% filter(simple_err %in% c("Match", "Mismatch")) %>% nrow) * 100.0
+cat("Number of GA MOFs with Zr mismatch:", n_ga_zr, ",", n_ga_zr_percent, "%")
 
