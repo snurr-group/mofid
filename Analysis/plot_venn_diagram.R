@@ -5,6 +5,7 @@
 library(readr)
 library(dplyr)
 library(tidyr)
+library(testthat)
 
 library(VennDiagram)
 library(cowplot)
@@ -69,9 +70,8 @@ draw.triple.venn(
 
 # What are the identities of these MOFs?
 # e.g. o_core_ga %>% anti_join(o_combined, by="identifier") %>% View
-o_identities <- tribble(
+o_identity_combined <- tribble(  # Overlap between all databases
   ~identifier, ~common_name, ~ref,
-  # Overlap between all databases
   "Cu.QMKYBPDZANOJGF.MOFkey-v1.tbo", "Cu-BTC", "TODO",
   "Zn.KKEYFWRCBNTPAC.MOFkey-v1.pcu", "MOF-5", "TODO",
   "Zn.RXOHFPCZGPKIRD.MOFkey-v1.pcu", "IRMOF-8", "TODO",
@@ -80,15 +80,25 @@ o_identities <- tribble(
   "Zn.ARBAMECCCQZCSR.MOFkey-v1.pcu", "IRMOF-61 (FAHPOV)", "10.1021/jp302356q (orig? 10.1039/C1CE06044A)",
   "Cu.NIJMZBWVSRWZFZ.MOFkey-v1.tbo", "TCM-8", "10.1039/C3CC49829H",
   "Cu.SATWKVZGMWCXOJ.MOFkey-v1.tbo", "DUT-34", "10.1002/chem.201101383",
-  # CoRE - GA
+  "Zn.SBBQDUFLZGOASY.MOFkey-v1.pcu", "(LIHFAK)", "10.1021/ja0700395",
+  "Zn.OTAJGWQCQIEFEV.MOFkey-v1.pcu", "IRMOF-14", "10.1126/science.1067208"
+)
+o_identity_core_ga <- tribble(
+  ~identifier, ~common_name, ~ref,
   "V.KKEYFWRCBNTPAC.MOFkey-v1.rna", "MIL-47", "TODO",
   "Zn.MWVTWFVJZLCBMC.NEQFBGHQPUXOFH.MOFkey-v1.pcu", "BMOF-1-bpdc", "10.1021/ic202683s",
   "Zn.QMKYBPDZANOJGF.MOFkey-v1.tbo", "Zn-HKUST-1", "10.1039/C2CE26115D",
   "V.NEQFBGHQPUXOFH.MOFkey-v1.rna", "VO(BPDC)", "10.1021/ic301338a",
   "Zn.KKEYFWRCBNTPAC.NEQFBGHQPUXOFH.MOFkey-v1.pcu", "SUMOF-4", "10.1039/C2JM15933C",
   "V.RXOHFPCZGPKIRD.MOFkey-v1.rna", "COMOC‐3", "10.1002/ejic.201101099",
-  # ToBaCCo - GA: structures without a corresponding CoRE MOF
-  # CoRE - ToBaCCo
+  "Zn.IBRPEOCBRYYINT.RXOHFPCZGPKIRD.MOFkey-v1.pcu", "Zn2(NDC)2(DPNI)2", "10.1021/ic050452i and 10.1021/cg900735n",
+  "Cu.MWVTWFVJZLCBMC.NEQFBGHQPUXOFH.MOFkey-v1.pcu", "(EDOMAM)", "10.1039/b702176c",
+  "Zn.MGFJDEHFNMWYBD.TXXHDPDFNKHHGW.MOFkey-v1.pcu", "Zn(bpe)(muco)", "10.1002/anie.200905898",
+  "Cu.KKEYFWRCBNTPAC.MGFJDEHFNMWYBD.MOFkey-v1.pcu", "Cu2(dicarboxylate)2(amine)", "10.1126/science.1231451"
+)
+# ToBaCCo - GA: structures without a corresponding CoRE MOF, so no need to identify them
+o_identity_core_tob <- tribble(
+  ~identifier, ~common_name, ~ref,
   "Cu.SATWKVZGMWCXOJ.MOFkey-v1.pto", "MOF-143", "10.1021/ic201376t",
   "Zr.NEQFBGHQPUXOFH.MOFkey-v1.fcu", "UiO-67", "orig, but not in the WIZMAV? 10.1021/ja8057953",
   "Zn.NWYGETXZXGDGKD.MOFkey-v1.pyr", "SNU-77", "10.1002/chem.201003376",
@@ -127,8 +137,6 @@ o_identities <- tribble(
   "Mn.GRYXMEJPMFYXQG.MOFkey-v1.the", "(JEWYAM)", "10.1021/ja0656853",
   "Mn.UBTDCKNMTXZSND.MOFkey-v1.flu", "IMP-16Mn", "10.1039/C4CE00486H",
   "Zn.KMOBUNLHXZTQGA.MOFkey-v1.pyr", "SNU-150", "10.1002/chem.201303086",
-  "Zn.OTAJGWQCQIEFEV.MOFkey-v1.pcu", "IRMOF-14", "10.1126/science.1067208",  # both IRMOF-14 and LIHFAK were in the original hMOFs!!!  Why not in this run?
-  "Zn.SBBQDUFLZGOASY.MOFkey-v1.pcu", "(LIHFAK)", "10.1021/ja0700395",
   "Zn.VEBUOOBGPZWCFE.MOFkey-v1.pyr", "(NAPFUG)", "10.1021/ja043756x",
   "Zr.HVWAJJAMCRZUIQ.MOFkey-v1.ftw", "(MUBZOA)", "10.1002/anie.201406501",
   "Zr.KVQMUHHSWICEIH.MOFkey-v1.fcu", "(XIVTED)", "10.1039/C3CC48275H",
@@ -140,6 +148,18 @@ o_identities <- tribble(
   "Zr.VSFXBCHNPQPWBX.MOFkey-v1.flu", "MOF-841", "10.1021/ja500330a",
   "Zr.WVBWNURTSYQJFE.MOFkey-v1.ftw", "NU-1004", "10.1021/ja512973b",
   "Zr.YROTZTMCXKTYMW.MOFkey-v1.fcu", "(UKIBIB)", "10.1002/chem.201505185"
+)
+# Adding in some validation so we can tell when these numbers change and can update the tables above.
+# Anti-join to remove the inner circle (all three databases) and full join to check for any extra entries
+# in either the identity table (i.e. the MOF was removed) or the overlap table (i.e. a new overlap MOF).
+expect_equal(nrow(o_identity_combined), o_combined %>% full_join(o_identity_combined, by="identifier") %>% nrow)
+expect_equal(
+  nrow(o_identity_core_ga),
+  o_core_ga %>% anti_join(o_combined, by="identifier") %>% full_join(o_identity_core_ga, by="identifier") %>% nrow
+)
+expect_equal(
+  nrow(o_identity_core_tob),
+  o_core_tob %>% anti_join(o_combined, by="identifier") %>% full_join(o_identity_core_tob, by="identifier") %>% nrow
 )
 
 # TODO: considering a table/figure drawing the chemical structures?
