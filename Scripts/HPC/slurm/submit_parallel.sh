@@ -1,5 +1,5 @@
 #!/bin/bash
-# Call as Scripts/HPC/slurm/submit_parallel.job path_to_cifs_parent_dir_of_cifx short_friendly_job_name
+# Call as Scripts/HPC/slurm/submit_parallel.sh path_to_cifs_parent_dir_of_cifx short_friendly_job_name
 
 for dir in cif{1..5}
 do
