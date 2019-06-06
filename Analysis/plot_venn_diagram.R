@@ -16,6 +16,16 @@ read_dup_data <- function(db_description) {
   path <- file.path(DUPLICATES_PATH, paste("overlap", db_description, "summary.tsv", sep="_"))
   read_tsv(path, col_types="ciicci")
 }
+write_tex_table <- function(df, file) {
+  write.table(
+    df, file,
+    #delim = " & "  # write_delim only allows a single character delimiter
+    sep = " & ",
+    eol = " \\\\\n",
+    quote = FALSE,
+    row.names = FALSE
+  )
+}
 
 # Overlap data (between databases)
 o_tob_ga <- read_dup_data("tob_and_ga")
@@ -93,7 +103,7 @@ o_identity_core_ga <- tribble(
   "V.RXOHFPCZGPKIRD.MOFkey-v1.rna", "COMOC‐3", "10.1002/ejic.201101099",
   "Zn.IBRPEOCBRYYINT.RXOHFPCZGPKIRD.MOFkey-v1.pcu", "Zn2(NDC)2(DPNI)", "10.1021/ic050452i and 10.1021/cg900735n",
   "Cu.MWVTWFVJZLCBMC.NEQFBGHQPUXOFH.MOFkey-v1.pcu", "(EDOMAM)", "10.1039/b702176c",
-  "Zn.MGFJDEHFNMWYBD.TXXHDPDFNKHHGW.MOFkey-v1.pcu", "Zn(bpe)(muco)", "10.1002/anie.200905898",
+  "Zn.MGFJDEHFNMWYBD.TXXHDPDFNKHHGW.MOFkey-v1.pcu", NA, "10.1002/anie.200905898",  # Zn(bpe)(muco), false positive
   "Cu.KKEYFWRCBNTPAC.MGFJDEHFNMWYBD.MOFkey-v1.pcu", "Cu2(dicarboxylate)2(amine)", "10.1126/science.1231451"
 )
 # ToBaCCo - GA: structures without a corresponding CoRE MOF, so no need to identify them
@@ -165,4 +175,17 @@ expect_equal(
 # TODO: considering a table/figure drawing the chemical structures?
 # Could have boxes for the different nodes and categorize them that way
 
+# In the meantime, let's take the simpler approach of reporting these data as a table for the SI
+bind_rows(
+  `All three` = o_identity_combined,
+  `CoRE-GA` = o_identity_core_ga,
+  `CoRE-ToB` = o_identity_core_tob,
+  #`ToB-GA` = .,  # we could consider piping ToBaCCo/GA here, but it wouldn't add much for the table
+  .id = "Databases"
+) %>% 
+  mutate(common_name = ifelse(is.na(common_name), "(false positive)", common_name)) %>% 
+  select(Databases, MOFkey = identifier, `Common name` = common_name) %>% 
+  mutate(MOFkey = paste0("\\mof{", MOFkey, "}")) %>% 
+  arrange(Databases, MOFkey) %>% 
+  write_tex_table("Analysis/Figures/Duplicates/overlap_list_for_venn.tex")
 
