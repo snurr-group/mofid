@@ -69,7 +69,8 @@ DELETE FROM $1 WHERE
 		identifier LIKE '%-v1.NA%' OR
 		identifier LIKE '%-v1.MISMATCH%' OR
 		identifier LIKE '%-v1.TIMEOUT%' OR
-		identifier LIKE '%-v1.UNKNOWN%';
+		identifier LIKE '%-v1.UNKNOWN%' OR
+		identifier LIKE '%MISSING_LINKERS.MOFkey-v1%';
 SELECT "After filtering topologies, number of filenames in table $1:", COUNT(*) FROM $1;
 .headers on
 
@@ -95,15 +96,20 @@ RUN_OUTPUT=""  # define below for overlap vs. duplicates
 
 
 # Parse command line arguments
-if [ $# -eq 4 ]
+if [ $# -ne 5 ]
 then
-	if [[ "$1" != "duplicates" ]]
-	then
-		echo "Usage: \"duplicates\" must be specified as the first argument" 1>&2 && exit
-	fi
+	echo "Incorrect usage!  Examples for duplicates and overlap:" 1>&2
+	echo "Analysis/find_duplicates.sh duplicates in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv out_unique_summary_incl_one.tsv" 1>&2
+	echo "Analysis/find_duplicates.sh overlap left_mofkey.tsv_OR_in_mofid.smi right_input out_with_names.tsv out_summary.tsv" 1>&2
+	exit
+fi
+
+if [[ "$1" == "duplicates" ]]
+then
 	INPUT_FILE="$2"
 	OUTPUT_NAMES_FILE="$3"
 	OUTPUT_SUMMARY_FAMILIES="$4"
+	OUTPUT_SUMMARY_ALL_FAMILIES="$5"
 	echo "Beginning duplicates calculation on $INPUT_FILE"
 	validate_input_file "$INPUT_FILE"
 	build_sql_import "$INPUT_FILE" mofs
@@ -119,6 +125,12 @@ SELECT identifier, qty, duplicates
 	WHERE qty > 1
 	ORDER BY qty DESC, identifier;
 
+-- And keeping all of the singleton families
+.output ${OUTPUT_SUMMARY_ALL_FAMILIES}
+SELECT identifier, qty, duplicates
+	FROM duplicates
+	ORDER BY qty DESC, identifier;
+
 .output ${OUTPUT_NAMES_FILE}
 SELECT mofs.filename, duplicates.qty, mofs.identifier
 	FROM duplicates
@@ -127,12 +139,8 @@ SELECT mofs.filename, duplicates.qty, mofs.identifier
 	ORDER BY mofs.filename;
 OUTPUT_HEREDOC
 
-elif [ $# -eq 5 ]
+elif [[ "$1" == "overlap" ]]
 then
-	if [[ "$1" != "overlap" ]]
-	then
-		echo "Usage: \"overlap\" must be specified as the first argument" 1>&2 && exit
-	fi
 	INPUT_LEFT="$2"
 	INPUT_RIGHT="$3"
 	OUTPUT_NAMES_FILE="$4"
@@ -189,9 +197,7 @@ OUTPUT_HEREDOC
 
 else
 	echo "ERROR: incorrect usage." 1>&2
-	echo "\"duplicates\" or \"overlap\" must be specified as the first argument, e.g." 1>&2
-	echo "Analysis/find_duplicates.sh duplicates in_mofkey.tsv_OR_in_mofid.smi out_with_names.tsv out_summary.tsv" 1>&2
-	echo "Analysis/find_duplicates.sh overlap left_mofkey.tsv_OR_in_mofid.smi right_input out_with_names.tsv out_summary.tsv" 1>&2
+	echo "\"duplicates\" or \"overlap\" must be specified as the first argument" 1>&2
 	exit
 fi
 
