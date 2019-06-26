@@ -63,7 +63,7 @@ def extract_fragments(mof_path,output_path):
 	cpp_output = cpp_run.stdout
 	sys.stderr.write(cpp_run.stderr)  # Re-forward sbu.cpp errors
 	if cpp_run.returncode:  # EasyProcess uses threads, so you don't have to worry about the entire code crashing
-		fragments = ['*']  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
+		all_fragments = ['*']  # Null-behaving atom for Open Babel and rdkit, so the .smi file is still useful
 	else:
 		all_fragments = cpp_output.strip().split('\n')
 		all_fragments = [x.strip() for x in all_fragments]  # clean up extra tabs, newlines, etc.
@@ -77,7 +77,7 @@ def extract_fragments(mof_path,output_path):
 	
 	# Parse node/linker fragment notation
 	if all_fragments[0] != '# Nodes:':
-		return (None, None, cat, None)
+		return (['*'], [], cat, '')
 	all_fragments.pop(0)
 	linker_flag_loc = all_fragments.index('# Linkers:')
 	node_fragments = all_fragments[:linker_flag_loc]
@@ -150,6 +150,8 @@ def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE'):
 		mofid = mofid + cat
 	elif cat is not None:
 		mofid = mofid + 'cat' + cat
+	else:
+		mofid = mofid + 'NA'
 	if mofid.startswith(' '):  # Null linkers.  Make .smi compatible
 		mofid = '*' + mofid + 'no_mof'
 	mofid = mofid + ';' + mof_name
