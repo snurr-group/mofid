@@ -1225,8 +1225,14 @@
             'analyzeMOFc', 'null', ['string', 'number', 'number']
           );
 
-          if(!FS.analyzePath('/Test').exists) {
-            FS.mkdir('/Test');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
+          if(!FS.analyzePath('/Output').exists) {
+            FS.mkdir('/Output');  // See also docs on filesystem API: https://kripken.github.io/emscripten-site/docs/api_reference/Filesystem-API.html
+            // Ideally, the C_obcode executable would automatically make all of the directories,
+            // but it's broken at least in an old version of Emscripten.
+            FS.mkdir('/Output/MetalOxo');
+            FS.mkdir('/Output/SingleNode');
+            FS.mkdir('/Output/AllNode');
+            FS.mkdir('/Output/StandardIsolated');
           }
 
           var buflen = 65536;
@@ -1258,7 +1264,7 @@
               while (fileoptions.firstChild) {  // clear out available options
                 fileoptions.removeChild(fileoptions.firstChild);
               }
-              var filelist = lsdir("/Test");
+              var filelist = lsdir("/Output");
               filelist.forEach(function(file) {
                 var option = document.createElement("option");
                 option.text = file;
