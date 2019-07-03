@@ -7,6 +7,7 @@
 
 #include <string>
 #include <sstream>
+#include <ostream>
 #include <queue>
 #include <stack>
 #include <set>
@@ -24,6 +25,7 @@
 namespace OpenBabel
 {
 
+std::set<std::string> LOGGED_ERRORS;  // global variable to keep track of reported errors in exportNormalizedMol
 
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds) {
 	// Write a list of unique SMILES for a set of fragments
@@ -41,9 +43,22 @@ std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bo
 }
 
 
-std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds) {
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds, bool unique_errors) {
 	// Resets a fragment's bonding/location before format conversion
-	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders
+	// If only_single_bonds is set (disabled by default), only use single bonds instead of bond orders.
+
+	// If unique_errors is set (enabled by default), only report a unique error message once per executable.
+	// Otherwise, some MOFs flood the error log with warnings about aromatic bonds (raised by
+	// PerceiveBondOrders within resetBonds) or unexpected valences in the InChI converter.
+
+	std::stringstream redirected_errors;
+	std::ostream* orig_err_stream = NULL;
+	if (unique_errors) {
+		orig_err_stream = obErrorLog.GetOutputStream();
+		obErrorLog.SetOutputStream(&redirected_errors);
+	}
+
+	// A block of actual, non-error work:
 	OBMol canon = fragment;
 	resetBonds(&canon);
 	if (only_single_bonds) {
@@ -52,7 +67,21 @@ std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_s
 		}
 	}
 	unwrapFragmentMol(&canon);
-	return obconv.WriteString(&canon);
+	std::string output_string = obconv.WriteString(&canon);
+
+	if (unique_errors) {
+		obErrorLog.SetOutputStream(orig_err_stream);  // restore the original error stream
+		std::set<std::string> errors = getUniqueErrors(redirected_errors.str());
+		for (std::set<std::string>::iterator it=errors.begin(); it!=errors.end(); ++it) {
+			std::string err = *it;
+			if (LOGGED_ERRORS.find(err) == LOGGED_ERRORS.end()) {
+				LOGGED_ERRORS.insert(err);
+				*orig_err_stream << err;  // re-raise the error, per the mechanism from oberror.cpp
+			}
+		}
+	}
+
+	return output_string;
 }
 
 
@@ -61,6 +90,37 @@ std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bond
 	return exportNormalizedMol(fragment, obconv, only_single_bonds);
 }
 
+
+std::set<std::string> getUniqueErrors(const std::string lines_of_errors) {
+	// Extract unique blocks from a string of errors
+
+	std::set<std::string> unique_errors;
+	if (lines_of_errors.length() == 0) { return unique_errors; }
+
+	std::stringstream input_lines;
+	input_lines << lines_of_errors;
+
+	// Parse the first line and check the error format
+	std::string first_line;
+	std::getline(input_lines, first_line);
+	if (first_line.find("====") != 0) {
+		obErrorLog.ThrowError(__FUNCTION__, "Error log did not begin with ==== delimiter", obError);
+		return unique_errors;
+	}
+
+	std::string curr_line;
+	std::stringstream curr_block;
+	curr_block << first_line << std::endl;  // initialize with the first line
+	while (std::getline(input_lines, curr_line)) {
+		if (curr_line.find("====") == 0) {  // new header line and block
+			unique_errors.insert(curr_block.str());
+			curr_block.clear();
+		}
+		curr_block << curr_line << std::endl;
+	}
+	unique_errors.insert(curr_block.str());  // finish the last block against end of string
+	return unique_errors;
+}
 
 
 Deconstructor::Deconstructor(OBMol* orig_mof) : simplified_net(orig_mof) {
@@ -351,7 +411,7 @@ std::string Deconstructor::GetCatenationInfo(int num_nets) {
 void Deconstructor::SimplifyMOF(bool write_intermediate_cifs) {
 	// Runs a MOF simplfication, optionally writing intermediate CIFs
 
-	if (write_intermediate_cifs) { WriteSimplifiedNet("simplified_test_orig.cif"); }
+	if (write_intermediate_cifs) { WriteSimplifiedNet("test_simplified_orig.cif"); }
 	DetectInitialNodesAndLinkers();
 	CollapseLinkers();
 	if (write_intermediate_cifs) { WriteSimplifiedNet("test_partial.cif"); }
@@ -401,19 +461,22 @@ std::string Deconstructor::GetMOFInfo() {
 	// Handle node and node_bridge separately to match old test SMILES
 	node_export = simplified_net.PseudoToOrig(node_export);
 	OBMol node_mol = node_export.ToOBMol();
+	analysis << "# Nodes:" << std::endl;
 	analysis << writeFragments(node_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol node_bridge_export = simplified_net.GetAtomsOfRole("node bridge");
 	node_bridge_export = simplified_net.PseudoToOrig(node_bridge_export);
 	OBMol node_bridge_mol = node_bridge_export.ToOBMol();
+	// Considered as part of the nodes for purposes of python_smiles_parts.txt, so no subheader
 	analysis << writeFragments(node_bridge_mol.Separate(), obconv, export_single_bonds);
 
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
 	linker_export = simplified_net.PseudoToOrig(linker_export);
 	OBMol linker_mol = linker_export.ToOBMol();
+	analysis << "# Linkers:" << std::endl;
 	analysis << writeFragments(linker_mol.Separate(), obconv, !export_single_bonds);
 
-	analysis << GetCatenationInfo(CheckCatenation());
+	analysis << "# " << GetCatenationInfo(CheckCatenation());
 	return analysis.str();
 }
 
@@ -445,16 +508,16 @@ void Deconstructor::WriteAtomsOfRole(const std::string &simplified_role, const s
 
 
 
-MOFidDeconstructor::MOFidDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
-	// Note: MOFidDeconstructor would call the default constructor for Deconstructor,
+MetalOxoDeconstructor::MetalOxoDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
+	// Note: MetalOxoDeconstructor would call the default constructor for Deconstructor,
 	// not Deconstructor(orig_mof) unless specified above.
 	// See also https://www.learncpp.com/cpp-tutorial/114-constructors-and-initialization-of-derived-classes/
 
-	// Could initialize MOFidDeconstructor variables, etc., here
+	// Could initialize MetalOxoDeconstructor variables, etc., here
 }
 
 
-void MOFidDeconstructor::PostSimplification() {
+void MetalOxoDeconstructor::PostSimplification() {
 	// Split 4-coordinated linkers into 3+3 by convention for MIL-47, etc.
 	// This code was only necessary in the original MOFid deconstruction algorithm and will
 	// be automatically handled in the single/all-node deconstruction algorithms.
@@ -470,7 +533,7 @@ void MOFidDeconstructor::PostSimplification() {
 }
 
 
-std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
+std::vector<std::string> MetalOxoDeconstructor::PAsToUniqueInChIs(VirtualMol pa, const std::string &format) {
 	// Convert PsuedoAtoms in the simplified net to their unique InChI(key) values
 	// This code will strip the protonation state off of the InChIKey
 
@@ -525,17 +588,12 @@ std::vector<std::string> MOFidDeconstructor::PAsToUniqueInChIs(VirtualMol pa, co
 }
 
 
-std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
+std::string MetalOxoDeconstructor::GetMOFkey(const std::string &topology) {
 	// Print out the detected MOFkey, optionally with the topology field.
-	// This method is implemented in MOFidDeconstructor instead of the others, because the
+	// This method is implemented in MetalOxoDeconstructor instead of the others, because the
 	// organic building blocks must be intact (e.g. including carboxylates) to properly
 	// calculate the MOFkey.
 	std::stringstream mofkey;
-	mofkey << "MOFkey-" << MOFKEY_VERSION;  // MOFkey format signature
-
-	if (!topology.empty()) {
-		mofkey << MOFKEY_SEP << topology;
-	}
 
 	// Get unique metal atoms from the nodes
 	std::vector<int> unique_elements;
@@ -550,14 +608,12 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 		}
 	}
 	if (unique_elements.size() == 0) {
-		mofkey << MOFKEY_SEP << MOFKEY_NO_METALS;
+		mofkey << MOFKEY_NO_METALS;
 	} else {
 		std::sort(unique_elements.begin(), unique_elements.end());  // sort by atomic number
 		bool first_element = true;
 		for (std::vector<int>::iterator element=unique_elements.begin(); element!=unique_elements.end(); ++element) {
-			if (first_element) {
-				mofkey << MOFKEY_SEP;
-			} else {
+			if (!first_element) {
 				mofkey << MOFKEY_METAL_DELIM;
 			}
 			mofkey << OBElements::GetSymbol(*element);
@@ -574,11 +630,17 @@ std::string MOFidDeconstructor::GetMOFkey(const std::string &topology) {
 		mofkey << MOFKEY_SEP << *it;
 	}
 
+	// Add the MOFkey format signature, and topology if available
+	mofkey << MOFKEY_SEP << "MOFkey-" << MOFKEY_VERSION;
+	if (!topology.empty()) {
+		mofkey << MOFKEY_SEP << topology;
+	}
+
 	return mofkey.str();
 }
 
 
-std::string MOFidDeconstructor::GetLinkerInChIs() {
+std::string MetalOxoDeconstructor::GetLinkerInChIs() {
 	// Get unique, sorted InChI's for linkers in a MOF, delimited by newlines
 	std::stringstream inchis;
 	VirtualMol linker_export = simplified_net.GetAtomsOfRole("linker");
@@ -590,7 +652,7 @@ std::string MOFidDeconstructor::GetLinkerInChIs() {
 }
 
 
-std::string MOFidDeconstructor::GetLinkerStats(std::string sep) {
+std::string MetalOxoDeconstructor::GetLinkerStats(std::string sep) {
 	// Get detailed stats about the linkers in a MOF, such as connectivity
 	// and the SMILES-reduced InChIkey mapping
 
@@ -645,6 +707,54 @@ std::string MOFidDeconstructor::GetLinkerStats(std::string sep) {
 
 
 
+void StandardIsolatedDeconstructor::DetectInitialNodesAndLinkers() {
+	// Break apart the MOF into isolated metal atoms + linkers as everything else
+	// Based on the base class's Deconstructor::DetectInitialNodesAndLinkers()
+	FOR_ATOMS_OF_MOL(a, *parent_molp) {
+		VirtualMol a_orig(&*a);
+		VirtualMol a_pseudo = simplified_net.OrigToPseudo(a_orig);
+		if (isMetal(&*a)) {
+			simplified_net.SetRoleToAtoms("node", a_pseudo);
+		} else {
+			simplified_net.SetRoleToAtoms("linker", a_pseudo);  // simplified later in CollapseLinkers()
+		}
+	}
+}
+
+
+bool StandardIsolatedDeconstructor::CollapseNodes() {
+	// Nothing to do: all metal atoms are already isolated species, and we do not want to combine them
+	// Return false since we're not doing anything with rod-like MOFs
+	return false;
+}
+
+
+void StandardIsolatedDeconstructor::SimplifyTopology() {
+	// Simplify the topological net adjacency matrix
+
+	int simplifications = 0;
+	do {
+		simplifications = 0;
+
+		// Check for duplicate connector sites, like the base SimplifyTopology() implementation
+		simplifications += simplified_net.SimplifyAxB();
+
+		// Simplify the adjacency matrix by outright deleting 0-c and 1-c sites
+		AtomSet base_pas = simplified_net.GetAtoms(false).GetAtoms();
+		for (AtomSet::iterator it=base_pas.begin(); it!=base_pas.end(); ++it) {
+			if ((*it)->GetValence() == 1) {
+				simplified_net.DeleteAtomAndConns(*it, "deleted 1-c site");
+				++simplifications;
+			} else if ((*it)->GetValence() == 0) {
+				simplified_net.DeleteAtomAndConns(*it, "deleted 0-c site");
+				++simplifications;
+			}
+		}
+	} while(simplifications);  // repeat until self-consistent
+}
+
+
+
 SingleNodeDeconstructor::SingleNodeDeconstructor(OBMol* orig_mof) : Deconstructor(orig_mof) {
 }
 
@@ -688,7 +798,8 @@ std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(
 	// (e.g. it won't grab a phenyl group or a fused ring).
 	// Returns an empty molecule if a and b are not in the same ring.
 
-	// The second VirtualMol has point(s) of extension.  The first VirtualMol is the ring minus those points.
+	// The first VirtualMol has all ring atoms.
+	// The Second VirtualMol only contains the point(s) of extension.
 	// (could use a custom struct later if we need more fields)
 
 	// Verify that a and b are neighbors
@@ -751,7 +862,6 @@ std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(
 			VirtualMol substituents = GetNonmetalRingSubstituent(curr_ring_atom);
 			if (substituents.NumAtoms() == 1) {  // single curr_ring_atom if connection has rings, metals, etc.
 				atoms_with_ring_nbors.AddAtom(curr_ring_atom);
-				ring.RemoveAtom(curr_ring_atom);
 			} else {
 				ring.AddVirtualMol(substituents);
 			}
@@ -887,20 +997,39 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 			OBAtom* bridge_bw_metals = NULL;
 			FOR_NBORS_OF_ATOM(n, *nn) {
 				if (n->GetAtomicNum() == 7 && nodes.HasAtom(&*n)) {
-					if (bridge_bw_metals) {  // already defined
-						obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found N-N-N species in node.", obWarning);
-					}
+					// FIXME: we should more generally handle cases other than N-N binding, without breaking ZIFs.
+					// Probably implement by checking bridge_bw_metals only for a missing NN, then maybe
+					// constructing a new test molecule via the nn_ring and existing nodes for periodicity?
+					// TODO: also considering cases like hMOF-17399 so we don't grab the nitrogen as part of the node?
+					// It's increasingly sounding like we should check for periodicity as well as number of connections to the same metal cluster
 					bridge_bw_metals = &*n;
+					// There is no problem with an N-N-N ring, e.g. MFU-4L, so deleting this code:
+					//if (bridge_bw_metals) {  // already defined
+					//	obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found N-N-N species in node.", obWarning);
+					//}
 				}
 			}
 			if (!bridge_bw_metals) {  // Binding end-on, e.g. pillared MOFs, porphyrins, and probably amines
 				nodes.RemoveAtom(nn);  // not part of an SBU cluster
 			} else {  // If there is a bridge, grab the whole ring
 				std::pair<VirtualMol,VirtualMol> ring_info = CalculateNonmetalRing(nn, bridge_bw_metals);
-				nodes.AddVirtualMol(ring_info.first);
-				points_of_extension.AddVirtualMol(ring_info.second);
-				visited_bridges.AddAtom(nn);
-				visited_bridges.AddAtom(bridge_bw_metals);
+				VirtualMol nn_ring = ring_info.first;
+				nodes.AddVirtualMol(nn_ring);
+				visited_bridges.AddVirtualMol(nn_ring);
+
+				VirtualMol nn_poe = ring_info.second;
+				// But don't classify ring atoms bound to the metals as PoE's
+				AtomSet nn_poe_set = nn_poe.GetAtoms();
+				for (AtomSet::iterator poe_it=nn_poe_set.begin(); poe_it!=nn_poe_set.end(); ++poe_it) {
+					if (nodes.HasAtom(*poe_it)) {  // FIXME: not exactly correct: we've already added the nodes!
+						// TODO: We could consider implementing via a neighbor search, but it still doesn't
+						// account for the PoE-PoE deletion, etc., for fused rings.
+						// Or, maybe we just accept that PoE will not be correctly identify if rings are fused.
+						// In that case, it's not a true PoE anyway
+						nn_poe.RemoveAtom(*poe_it);
+					}
+				}
+				points_of_extension.AddVirtualMol(nn_poe);
 			}
 		}
 	}
@@ -1245,10 +1374,18 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		if (orig_from_pa.size() == 0) {
 			obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found a PA without origin atoms during connection labeling", obError);
 		}
+		int num_conn_sites = 0;
 		for (AtomSet::iterator it=orig_from_pa.begin(); it!=orig_from_pa.end(); ++it) {
-			if (connection_points.HasAtom(*it)) {
-				pa->SetAtomicNum(TREE_EXT_CONN);
-			}
+			if (connection_points.HasAtom(*it)) { ++num_conn_sites; }
+		}
+		if (num_conn_sites == 1) {
+			pa->SetAtomicNum(TREE_EXT_CONN);
+		} else if (num_conn_sites > 1) {
+			// Technically, this rule is overly broad and will also classify simple 2-c linkers as
+			// BP's (even if they don't contain an additional internal connection), but it's
+			// otherwise a simple method to detect branch point rings with 2+ external connections
+			// which may also include an internal bond.
+			pa->SetAtomicNum(TREE_BRANCH_POINT);
 		}
 	}
 	if (DEBUG_WITH_CIFS) {writeCIF(frag_molp, GetOutputPath("debug_tree_3_label_conns.cif")); }
@@ -1261,7 +1398,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		simplifications = 0;
 		ConnIntToExt pa_to_1c;
 		FOR_ATOMS_OF_MOL(a, *frag_molp) {
-			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN) {
+			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT) {
 				FOR_NBORS_OF_ATOM(nbor, *a) {  // get the 1 neighbor (inner to fragment)
 					pa_to_1c.insert(AtomPair(&*nbor, &*a));
 				}

@@ -11,7 +11,7 @@
 # Do not call this job file directly
 
 module load python
-module load git
+#module load git  # Needed earlier for run_folder.sh, but the explicit git dependence has been removed
 
 cd $PBS_O_WORKDIR
 echo $PBS_JOBID > "jobid_$OUTPUT_DIR"

@@ -25,7 +25,8 @@ class OBMol;
 // Constants:
 // Default directory for CIF/Systre outputs.  Also used in Python/run_mofid.py and bin/sbu
 const std::string DEFAULT_OUTPUT_PATH = "Output/";
-const std::string NO_SBU_SUFFIX = "/NoSBU";  // base MOFidDeconstructor class
+const std::string METAL_OXO_SUFFIX = "/MetalOxo";
+const std::string STANDARD_ISOLATED_SUFFIX = "/StandardIsolated";
 const std::string SINGLE_NODE_SUFFIX = "/SingleNode";
 const std::string ALL_NODE_SUFFIX = "/AllNode";
 
@@ -50,8 +51,9 @@ const int TREE_EXT_CONN = 115;  // Mc
 
 // Function prototypes
 std::string writeFragments(std::vector<OBMol> fragments, OBConversion obconv, bool only_single_bonds=false);
-std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds=false);
+std::string exportNormalizedMol(OBMol fragment, OBConversion obconv, bool only_single_bonds=false, bool unique_errors=true);
 std::string getSMILES(OBMol fragment, OBConversion obconv, bool only_single_bonds=false);
+std::set<std::string> getUniqueErrors(const std::string lines_of_errors);
 
 
 class Deconstructor {
@@ -101,7 +103,7 @@ public:
 };
 
 
-class MOFidDeconstructor : public Deconstructor {
+class MetalOxoDeconstructor : public Deconstructor {
 // The original MOFid algorithm and implementation of Deconstructor (originally in sbu.cpp).
 // Converts 4-c linkers in MIL-47, etc., to 2 x 3-c.
 protected:
@@ -109,11 +111,25 @@ protected:
 	std::vector<std::string> PAsToUniqueInChIs(VirtualMol pa, const std::string &format);
 
 public:
-	MOFidDeconstructor(OBMol* orig_mof = NULL);
-	virtual ~MOFidDeconstructor() {};
+	MetalOxoDeconstructor(OBMol* orig_mof = NULL);
+	virtual ~MetalOxoDeconstructor() {};
 	std::string GetMOFkey(const std::string &topology = DEFAULT_MOFKEY_TOPOLOGY);
 	std::string GetLinkerInChIs();
 	std::string GetLinkerStats(std::string sep="\t");
+};
+
+
+class StandardIsolatedDeconstructor : public Deconstructor {
+// Same approach as the standard representation in ToposPro, which considers each metal atom
+// as a vertex in the simplified net.  See also 10.1021/cg500498k and 10.1021/acs.cgd.8b00126
+protected:
+	virtual void DetectInitialNodesAndLinkers();  // detect metals as isolated species
+	virtual bool CollapseNodes();  // keeping metal atoms isolated
+	virtual void SimplifyTopology();  // simpler handling of the adjacency matrix
+
+public:
+	StandardIsolatedDeconstructor(OBMol* orig_mof = NULL) : Deconstructor(orig_mof) {};
+	virtual ~StandardIsolatedDeconstructor() {};
 };
 
 

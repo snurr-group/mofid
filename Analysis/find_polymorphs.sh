@@ -15,11 +15,27 @@ sqlite3 <<EMBEDDED_SQL_HEREDOC
 
 .import ${TSV_FILE} mofs
 
+ALTER TABLE mofs
+	ADD COLUMN sn_topology TEXT;
+UPDATE mofs
+	SET sn_topology = SUBSTR(topology, 1, COALESCE(
+		NULLIF((INSTR(topology, ',')-1), -1),  -- returns the comma position minus 1 if exists, else 0-1=-1
+		LENGTH(topology)  -- else, coalesce and return the full string, because no comma
+		));
+ALTER TABLE mofs RENAME COLUMN topology TO all_topology;
+ALTER TABLE mofs RENAME COLUMN refcode TO filename;
+
+/*
+-- Spot checking the block above, for debugging
+SELECT topology, sn_topology FROM mofs WHERE INSTR(topology, ',') != 0 LIMIT 10;
+SELECT topology, sn_topology FROM mofs WHERE INSTR(topology, ',') == 0 LIMIT 10;
+*/
+
 .headers off
 CREATE TABLE polymorphic AS
-	SELECT smiles, COUNT(DISTINCT topology) AS qty, GROUP_CONCAT(DISTINCT topology) AS topologies
+	SELECT smiles, COUNT(DISTINCT sn_topology) AS qty, GROUP_CONCAT(DISTINCT sn_topology) AS topologies
 	FROM mofs
-	WHERE topology NOT IN ('ERROR', 'NEW', 'NA', 'MISMATCH', 'TIMEOUT')
+	WHERE sn_topology NOT IN ('ERROR', 'NEW', 'NA', 'MISMATCH', 'TIMEOUT', 'UNKNOWN')
 	GROUP BY smiles
 	HAVING qty > 1
 	ORDER BY qty DESC;
@@ -28,10 +44,10 @@ CREATE TABLE polymorphic AS
 
 .headers on
 .output ${OUTPUT_NAMES_FILE}
-SELECT mofs.refcode, mofs.smiles, mofs.topology, polymorphic.qty
+SELECT mofs.refcode, mofs.smiles, mofs.sn_topology, polymorphic.qty
 	FROM polymorphic
 	LEFT JOIN mofs ON mofs.smiles = polymorphic.smiles
-	ORDER BY polymorphic.qty DESC, mofs.smiles, mofs.topology, refcode;
+	ORDER BY polymorphic.qty DESC, mofs.smiles, mofs.sn_topology, refcode;
 
 .output ${OUTPUT_SUMMARY_FAMILIES}
 SELECT * FROM polymorphic;
