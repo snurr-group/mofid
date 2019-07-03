@@ -99,7 +99,7 @@ github-web: web
 	# Commit and push the changes in the web-mofid repo to update
 	# the live website on Github.
 
-html: src/Web/*.html
+html: src/Web/*.html src/Web/*.css
 	cp $^ embin/
 
 embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
