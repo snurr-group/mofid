@@ -15,7 +15,7 @@
         var lsdir = function(path) {
           return FS.readdir(path).filter(function(e) {
             return !['..', '.'].includes(e);  // filter out current and parent dirs
-          })
+          }).sort();
         };
 
         var SmilesToSVG = function(smiles, createSVG) {
@@ -75,17 +75,9 @@
             if (mofid != "") {
               document.getElementById("obresults").innerHTML = "<pre>" + mofid + "</pre>";
 
-              var fileoptions = document.getElementById("cifdownload");
-              while (fileoptions.firstChild) {  // clear out available options
-                fileoptions.removeChild(fileoptions.firstChild);
-              }
-              var filelist = lsdir("/Output");
-              filelist.forEach(function(file) {
-                var option = document.createElement("option");
-                option.text = file;
-                option.value = file;
-                fileoptions.appendChild(option);
-              });
+              clearDropdown("cifdownload");
+              updateFileList();  // populate the initial list of files
+
               document.getElementById("resultsdownload").style.display = "block";
 
               var svg = SmilesToSVG(rawToSmiles(mofid), true);
@@ -100,10 +92,33 @@
           cifreader.readAsText(ciffile);
         }
 
+        clearDropdown = function(select_id) {
+          // Clear out the listed options from a <select> tag
+          var select_tag = document.getElementById(select_id);
+          while (select_tag.firstChild) {
+            select_tag.removeChild(select_tag.firstChild);
+          }
+        }
+
+        updateFileList = function() {
+          clearDropdown("cifdownload");
+          var folder_input = document.getElementById("folderdownload");
+          var folder_name = folder_input.options[folder_input.selectedIndex].value;
+          var filelist = lsdir("/Output/" + folder_name);
+          filelist.forEach(function(file) {
+            var option = document.createElement("option");
+            option.text = file;
+            option.value = file;
+            document.getElementById("cifdownload").appendChild(option);
+          });
+        }
+
         handleDownload = function() {
+          var folder_input = document.getElementById("folderdownload");
           var download_input = document.getElementById("cifdownload");
+          var folder_name = folder_input.options[folder_input.selectedIndex].value;
           var filename = download_input.options[download_input.selectedIndex].value;
-          var filepath = "Output/" + filename;  // Set in deconstructor.h:DEFAULT_OUTPUT_PATH
+          var filepath = "Output/" + folder_name + "/" + filename;  // Set in deconstructor.h:DEFAULT_OUTPUT_PATH
 
           var contents = FS.readFile(filepath, {'encoding': 'utf8'});
           var download_contents = "data:text/plain;base64," + btoa(contents);
@@ -128,7 +143,16 @@ Enter CIF:
 <br/>
             <span id="obresults"></span>
 <div id="resultsdownload" style="display: none;">
-Download results:
+<p style="font-weight:bold;">Download results:</p>
+Algorithm:
+<select id="folderdownload" onchange="updateFileList()">
+  <!--<option value="base">(utilities)</option>-->
+  <option value="MetalOxo">Metal-Oxo</option>
+  <option value="SingleNode">Single Node</option>
+  <option value="AllNode">All Node</option>
+  <option value="StandardIsolated">Standard Algorithm</option>
+</select>
+CIF:
 <select id="cifdownload"><option value="temp">hi</option></select>
 <input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
 </div>
