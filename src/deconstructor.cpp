@@ -798,7 +798,8 @@ std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(
 	// (e.g. it won't grab a phenyl group or a fused ring).
 	// Returns an empty molecule if a and b are not in the same ring.
 
-	// The second VirtualMol has point(s) of extension.  The first VirtualMol is the ring minus those points.
+	// The first VirtualMol has all ring atoms.
+	// The Second VirtualMol only contains the point(s) of extension.
 	// (could use a custom struct later if we need more fields)
 
 	// Verify that a and b are neighbors
@@ -861,7 +862,6 @@ std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(
 			VirtualMol substituents = GetNonmetalRingSubstituent(curr_ring_atom);
 			if (substituents.NumAtoms() == 1) {  // single curr_ring_atom if connection has rings, metals, etc.
 				atoms_with_ring_nbors.AddAtom(curr_ring_atom);
-				ring.RemoveAtom(curr_ring_atom);
 			} else {
 				ring.AddVirtualMol(substituents);
 			}
@@ -997,20 +997,39 @@ void SingleNodeDeconstructor::DetectInitialNodesAndLinkers() {
 			OBAtom* bridge_bw_metals = NULL;
 			FOR_NBORS_OF_ATOM(n, *nn) {
 				if (n->GetAtomicNum() == 7 && nodes.HasAtom(&*n)) {
-					if (bridge_bw_metals) {  // already defined
-						obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found N-N-N species in node.", obWarning);
-					}
+					// FIXME: we should more generally handle cases other than N-N binding, without breaking ZIFs.
+					// Probably implement by checking bridge_bw_metals only for a missing NN, then maybe
+					// constructing a new test molecule via the nn_ring and existing nodes for periodicity?
+					// TODO: also considering cases like hMOF-17399 so we don't grab the nitrogen as part of the node?
+					// It's increasingly sounding like we should check for periodicity as well as number of connections to the same metal cluster
 					bridge_bw_metals = &*n;
+					// There is no problem with an N-N-N ring, e.g. MFU-4L, so deleting this code:
+					//if (bridge_bw_metals) {  // already defined
+					//	obErrorLog.ThrowError(__FUNCTION__, "Unexpectedly found N-N-N species in node.", obWarning);
+					//}
 				}
 			}
 			if (!bridge_bw_metals) {  // Binding end-on, e.g. pillared MOFs, porphyrins, and probably amines
 				nodes.RemoveAtom(nn);  // not part of an SBU cluster
 			} else {  // If there is a bridge, grab the whole ring
 				std::pair<VirtualMol,VirtualMol> ring_info = CalculateNonmetalRing(nn, bridge_bw_metals);
-				nodes.AddVirtualMol(ring_info.first);
-				points_of_extension.AddVirtualMol(ring_info.second);
-				visited_bridges.AddAtom(nn);
-				visited_bridges.AddAtom(bridge_bw_metals);
+				VirtualMol nn_ring = ring_info.first;
+				nodes.AddVirtualMol(nn_ring);
+				visited_bridges.AddVirtualMol(nn_ring);
+
+				VirtualMol nn_poe = ring_info.second;
+				// But don't classify ring atoms bound to the metals as PoE's
+				AtomSet nn_poe_set = nn_poe.GetAtoms();
+				for (AtomSet::iterator poe_it=nn_poe_set.begin(); poe_it!=nn_poe_set.end(); ++poe_it) {
+					if (nodes.HasAtom(*poe_it)) {  // FIXME: not exactly correct: we've already added the nodes!
+						// TODO: We could consider implementing via a neighbor search, but it still doesn't
+						// account for the PoE-PoE deletion, etc., for fused rings.
+						// Or, maybe we just accept that PoE will not be correctly identify if rings are fused.
+						// In that case, it's not a true PoE anyway
+						nn_poe.RemoveAtom(*poe_it);
+					}
+				}
+				points_of_extension.AddVirtualMol(nn_poe);
 			}
 		}
 	}
