@@ -202,7 +202,7 @@
 <div id="composer" style="width:600px;height:400px;" data-widget="Kekule.Editor.Composer"></div>
 </div>
 
-<input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
+<input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
 <br/>
             <span id="obresults"></span>
 
@@ -213,7 +213,7 @@
 
       var Module = {
         preRun: [],
-        postRun: [],
+        postRun: [function() {document.getElementById("emrun").disabled = false;}],
         print: (function() {
           var element = document.getElementById('output');
           if (element) element.value = ''; // clear browser cache

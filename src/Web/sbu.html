@@ -139,7 +139,7 @@
             </div>
 Enter CIF:
 <input type="file" id="cifloader"></input>
-<input type="submit" value="Submit" id="emrun" onclick="handleInput()"></input>
+<input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
 <br/>
             <span id="obresults"></span>
 <div id="resultsdownload" style="display: none;">
@@ -166,7 +166,7 @@ CIF:
 
       var Module = {
         preRun: [],
-        postRun: [],
+        postRun: [function() {document.getElementById("emrun").disabled = false;}],
         print: (function() {
           var element = document.getElementById('output');
           if (element) element.value = ''; // clear browser cache
