@@ -13,6 +13,7 @@
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
+      <script src="ngl.js"></script>
       <script type="text/javascript">
         var lsdir = function(path) {
           return FS.readdir(path).filter(function(e) {
@@ -135,6 +136,21 @@
           document.body.removeChild(fakelink);
         }
         </script>
+      <script> /* Set up NGL viewer */
+        // Adapted from examples at http://nglviewer.org/ngl/api/manual/usage/embedding.html
+        // and https://codepen.io/pen?template=JNLMXb and http://nglviewer.org/ngldev/api/manual/snippets.html
+        document.addEventListener("DOMContentLoaded", function () {
+          var stage = new NGL.Stage("cifviewport");
+          var path_to_cif = "https://raw.githubusercontent.com/numat/RASPA2/master/structures/mofs/cif/MOF-1-Dybtsev-dmol.cif";
+          stage.loadFile(path_to_cif, {defaultRepresentation: true}).then( function( o ){
+            o.addRepresentation( "unitcell" );
+            //console.log(o);
+            /* See class documentation at http://nglviewer.org/ngl/api/class/src/stage/stage.js~Stage.html */
+            o.stage.setParameters( {backgroundColor: "white"} );
+            o.autoView();
+          } );
+        });
+      </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
@@ -160,6 +176,8 @@ CIF:
 </div>
 
 <span id="svgimage"></span>
+
+<div id="cifviewport" style="width:400px; height:300px;"></div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
