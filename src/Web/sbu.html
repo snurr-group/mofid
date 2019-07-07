@@ -3,16 +3,51 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Emscripten-Generated Code</title>
+    <title>MOFid/MOFkey generator</title>
     <link href="mofid.css" rel="stylesheet" type="text/css">  <!-- old emscripten boilerplate -->
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico">
+    <style>
+      #headerlogo {
+        height: 2em;
+        margin-right: 2em;
+      }
+      #headerlogo, h1, #loading {
+        display: inline-block;
+      }
+
+      body {
+        display: grid;  /* https://css-tricks.com/snippets/css/complete-guide-grid/ */
+        grid-template-columns: repeat(2, minmax(400px, auto));
+        /*grid-auto-rows: minmax(100px, auto);*/
+        grid-column-gap: 2em;
+        grid-row-gap: 2em;
+        padding: 1em;
+        grid-template-areas:
+          "head head"
+          /*"load load"*/
+          "upload viz"
+          "algorithm viz"
+          "mofid mofid";
+      }
+      /* Replace explicit grid columns by the somewhat-visual grid-template-areas approach */
+      /*header, .loading { grid-column: 1 / span 2; }*/
+      header { grid-area: head; }
+      /*#loading { grid-area: load; }*/
+      #inputblock { grid-area: upload; }
+      #resultsdownload { grid-area: algorithm; }
+      #viewportwrapper { grid-area: viz; }
+      #identifiers { grid-area: mofid; }
+
+      .content {
+        border: 1px solid black;
+        border-collapse: collapse;
+        border-radius: 1em;
+        padding: 1em;
+      }
+    </style>
   </head>
   <body>
-  <h1>MOFid/MOFkey generator</h1>
-    <div class="spinner" id='spinner'></div>
-    <div class="emscripten" id="status">Downloading...</div>
-
       <script src="ngl.js"></script>
 
       <script type="text/javascript">
@@ -91,7 +126,7 @@
               clearDropdown("cifdownload");
               updateFileList();  // populate the initial list of files
 
-              document.getElementById("resultsdownload").style.display = "block";
+              document.getElementById("resultsdownload").style.visibility = "visible";
 
               document.getElementById("viewportnote").style.display = "none";
               clearViewer(stage);
@@ -103,7 +138,7 @@
 
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
-              document.getElementById("resultsdownload").style.display = "none";
+              document.getElementById("resultsdownload").style.visibility = "hidden";
               document.getElementById("svgimage").innerHTML = "";
               document.getElementById("cifviewport").style.visibility = "hidden";
             }
@@ -176,35 +211,52 @@
         }
         </script>
 
-            <div class="emscripten">
-              <progress value="0" max="100" id="progress" hidden=1></progress>
-            </div>
+<header>
+  <img src="mofid_logo.png" id="headerlogo" />
+  <h1>MOFid/MOFkey generator</h1>
+  <div id="loading">
+    <div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
+
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+  </div>
+</header>
+
+<div id="inputblock" class="content">
 Enter CIF:
 <input type="file" id="cifloader"></input>
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
-<br/>
-            <span id="obresults"></span>
-<div id="resultsdownload" style="display: none;">
-<p style="font-weight:bold;">Download results:</p>
-Algorithm:
-<select id="folderdownload" onchange="updateFileList()">
-  <!--<option value="base">(utilities)</option>-->
-  <option value="MetalOxo">Metal-Oxo</option>
-  <option value="SingleNode">Single Node</option>
-  <option value="AllNode">All Node</option>
-  <option value="StandardIsolated">Standard Algorithm</option>
-</select>
-CIF:
-<select id="cifdownload"><option value="temp">hi</option></select>
-<input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
 </div>
 
-<span id="svgimage"></span>
+<div id="resultsdownload" style="visibility: hidden;" class="content">
+  <!--<h3>Algorithms</h3>-->
+  <div>Algorithm:
+    <select id="folderdownload" onchange="updateFileList()">
+      <!--<option value="base">(utilities)</option>-->
+      <option value="MetalOxo">Metal-Oxo</option>
+      <option value="SingleNode">Single Node</option>
+      <option value="AllNode">All Node</option>
+      <option value="StandardIsolated">Standard Algorithm</option>
+    </select>
+  </div>
+  <div>
+    Download CIF:
+    <select id="cifdownload"><option value="temp">hi</option></select>
+    <input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
+  </div>
+</div>
 
-<div id="viewportwrapper" style="border: 1px solid black; width:400px;">
+<div id="viewportwrapper" style="width:400px;" class="content">
   <div id="viewportnote" style="position: relative; left: 1em; top: 1em;">(CIFs are visualized here)</div>
   <div id="cifviewport" style="width:400px; height:300px; visibility:hidden;"></div>
 </div>
+
+<div id="identifiers">
+    <span id="obresults"></span>  <!-- TODO: implement as a popup menu for "raw results" -->
+    <span id="svgimage"></span>
+</div>  <!-- MOFid and MOFkey should go here -->
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
