@@ -14,12 +14,22 @@
     <div class="emscripten" id="status">Downloading...</div>
 
       <script src="ngl.js"></script>
+
       <script type="text/javascript">
+        var stage;
+
         var lsdir = function(path) {
           return FS.readdir(path).filter(function(e) {
             return !['..', '.'].includes(e);  // filter out current and parent dirs
           }).sort();
         };
+
+        // Adapted from examples at http://nglviewer.org/ngl/api/manual/usage/embedding.html
+        // and https://codepen.io/pen?template=JNLMXb and http://nglviewer.org/ngldev/api/manual/snippets.html
+        document.addEventListener("DOMContentLoaded", function () {
+          stage = new NGL.Stage("cifviewport");
+          stage.setParameters( {backgroundColor: "white"} );
+        });
 
         var SmilesToSVG = function(smiles, createSVG) {
           // From Noel O'Boyle: https://baoilleach.blogspot.com/2015/02/cheminformaticsjs-open-babel.html
@@ -83,6 +93,11 @@
 
               document.getElementById("resultsdownload").style.display = "block";
 
+              document.getElementById("viewportnote").style.display = "none";
+              clearViewer(stage);
+              drawEmCIF(stage, "/Output/orig_mol.cif");
+              document.getElementById("cifviewport").style.visibility = "visible";
+
               var svg = SmilesToSVG(rawToSmiles(mofid), true);
               document.getElementById("svgimage").innerHTML = svg;
 
@@ -90,6 +105,7 @@
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
               document.getElementById("resultsdownload").style.display = "none";
               document.getElementById("svgimage").innerHTML = "";
+              document.getElementById("cifviewport").style.visibility = "hidden";
             }
           };
           cifreader.readAsText(ciffile);
@@ -116,6 +132,29 @@
           });
         }
 
+        clearViewer = function(ngl_stage) {
+          ngl_stage.removeAllComponents();
+        }
+
+        addCIFtoViewer = function(ngl_stage, path_to_cif) {
+          var component;
+          ngl_stage.loadFile(path_to_cif, {defaultRepresentation: true, ext: 'cif'}).then( function( o ){
+            o.addRepresentation( "unitcell" );
+            o.autoView();
+            /* See class documentation at http://nglviewer.org/ngl/api/class/src/stage/stage.js~Stage.html */
+            /* See also the general documentation at http://nglviewer.org/ngl/api/manual/ */
+          } );
+          return component;
+        }
+
+        drawEmCIF = function(ngl_stage, emscripten_path) {
+          var temp_file = new Blob(
+            [FS.readFile(emscripten_path, {'encoding': 'utf8'})],
+            {type: 'chemical/x-cif'}
+          );
+          return addCIFtoViewer(ngl_stage, temp_file);
+        }
+
         handleDownload = function() {
           var folder_input = document.getElementById("folderdownload");
           var download_input = document.getElementById("cifdownload");
@@ -136,21 +175,6 @@
           document.body.removeChild(fakelink);
         }
         </script>
-      <script> /* Set up NGL viewer */
-        // Adapted from examples at http://nglviewer.org/ngl/api/manual/usage/embedding.html
-        // and https://codepen.io/pen?template=JNLMXb and http://nglviewer.org/ngldev/api/manual/snippets.html
-        document.addEventListener("DOMContentLoaded", function () {
-          var stage = new NGL.Stage("cifviewport");
-          var path_to_cif = "https://raw.githubusercontent.com/numat/RASPA2/master/structures/mofs/cif/MOF-1-Dybtsev-dmol.cif";
-          stage.loadFile(path_to_cif, {defaultRepresentation: true}).then( function( o ){
-            o.addRepresentation( "unitcell" );
-            //console.log(o);
-            /* See class documentation at http://nglviewer.org/ngl/api/class/src/stage/stage.js~Stage.html */
-            o.stage.setParameters( {backgroundColor: "white"} );
-            o.autoView();
-          } );
-        });
-      </script>
 
             <div class="emscripten">
               <progress value="0" max="100" id="progress" hidden=1></progress>
@@ -177,7 +201,10 @@ CIF:
 
 <span id="svgimage"></span>
 
-<div id="cifviewport" style="width:400px; height:300px;"></div>
+<div id="viewportwrapper" style="border: 1px solid black; width:400px;">
+  <div id="viewportnote" style="position: relative; left: 1em; top: 1em;">(CIFs are visualized here)</div>
+  <div id="cifviewport" style="width:400px; height:300px; visibility:hidden;"></div>
+</div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
