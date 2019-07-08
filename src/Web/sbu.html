@@ -109,7 +109,7 @@
 
         var rawToSmiles = function(raw_mofid) {
           // Converts the raw output from the MOFid code to a parseable SMILES format
-          var lines = raw_mofid.replace(/\t/g, '').split(/r\n|\r|\n/g);  // remove trailing tabs before splitting
+          var lines = raw_mofid.replace(/\t/g, '').split(/\r\n|\r|\n/g);  // remove trailing tabs before splitting
           lines.pop();  // remove line about number of simplified nets
           return lines.join('.');
         }
@@ -206,11 +206,49 @@
           return component;
         }
 
-        drawEmCIF = function(ngl_stage, emscripten_path, color_scheme = "element") {
-          var temp_file = new Blob(
-            [FS.readFile(emscripten_path, {'encoding': 'utf8'})],
-            {type: 'chemical/x-cif'}
-          );
+        drawEmCIF = function(ngl_stage, emscripten_path, color_scheme = "element", convert_to_mmcif = true) {
+          var cif_string = FS.readFile(emscripten_path, {'encoding': 'utf8'});
+          if (convert_to_mmcif) {
+            // Convert the output bond format to an mmcif convention that nglviewer understands
+            // http://mmcif.rcsb.org/dictionaries/mmcif_pdbx_v40.dic/Categories/chem_comp_bond.html
+            cif_string = cif_string.replace(
+              "loop_\n    _geom_bond_atom_site_label_1\n    _geom_bond_atom_site_label_2\n    _geom_bond_distance\n    _geom_bond_site_symmetry_2\n    _ccdc_geom_bond_type\n",
+              //"loop_\n_chem_comp_bond.comp_id\n_chem_comp_bond.atom_id_1\n_chem_comp_bond.atom_id_2\n_chem_comp_bond.value_order\n"
+              "loop_\n_chem_comp_bond.atom_id_1\n_chem_comp_bond.atom_id_2\n_chem_comp_bond.value_order\n"
+            );
+
+            var split_string = cif_string.split(/\r\n|\r|\n/g);
+            var cif_num_lines = split_string.length;
+            var bond_section = false;
+            for (var i = 0; i < cif_num_lines; i++) {
+              var curr_line = split_string[i];
+              if (curr_line.includes("_chem_comp_bond.value_order")) {
+                bond_section = true;
+                continue;
+              }
+              if (bond_section) {
+                var line_items = curr_line.trim().split(/\s+/);
+                var sym_key = line_items[3];
+                if (sym_key != "." && sym_key != "1_555") {
+                  // Hide bonds with symmetry keys, which span across unit cells
+                  split_string[i] = "";
+                  continue;
+                }
+                var bond_order = line_items[4];
+                var value_order = "sing";  // TODO: TRANSLATE FROM bond_order
+                //var comp_id = "[HET]1";
+                //comp_id = "1"
+                //split_string[i] = [comp_id, line_items[0], line_items[1], value_order].join(" ");
+                split_string[i] = [line_items[0], line_items[1], value_order].join(" ");
+              }
+            }
+            cif_string = split_string.join("\n");
+
+            if (true) {
+              document.getElementById("cif_diagnostics").innerHTML = "<pre>" + cif_string + "</pre>";
+            }
+          }
+          var temp_file = new Blob([cif_string], {type: 'chemical/x-cif'});
           return addCIFtoViewer(ngl_stage, temp_file, color_scheme);
         }
 
@@ -289,6 +327,7 @@ Enter CIF:
 <div id="identifiers">
     <span id="obresults"></span>  <!-- TODO: implement as a popup menu for "raw results" -->
     <span id="svgimage"></span>
+    <span id="cif_diagnostics"></span>
 </div>  <!-- MOFid and MOFkey should go here -->
 
     <script type='text/javascript'>
