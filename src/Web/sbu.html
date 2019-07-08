@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>MOFid/MOFkey generator</title>
-    <link href="mofid.css" rel="stylesheet" type="text/css">  <!-- old emscripten boilerplate -->
+    <link href="mofid.css" rel="stylesheet" type="text/css">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico">
     <style>
@@ -22,7 +22,6 @@
         /*grid-auto-rows: minmax(100px, auto);*/
         grid-column-gap: 2em;
         grid-row-gap: 1em;
-        padding: 1em;
         grid-template-areas:
           "head head"
           /*"load load"*/
@@ -38,20 +37,6 @@
       #resultsdownload { grid-area: algorithm; }
       #viewportwrapper { grid-area: viz; }
       #identifiers { grid-area: mofid; }
-
-      .content {
-        border: 1px solid black;
-        border-collapse: collapse;
-        border-radius: 1em;
-        padding: 1em;
-      }
-
-      .inactive {
-        opacity: 0.2;
-      }
-      .inactive input, .inactive select {
-        pointer-events: none;
-      }
     </style>
   </head>
   <body>

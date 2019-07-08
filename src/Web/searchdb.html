@@ -27,17 +27,16 @@
       .modal.closed {
         display: none;
       }
+
+      * + div {
+        margin-top: 1em;
+      }
     </style>
-    <link href="mofid.css" rel="stylesheet" type="text/css">  <!-- old emscripten boilerplate -->
+    <link href="mofid.css" rel="stylesheet" type="text/css">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon.ico">
   </head>
   <body>
-  <h1>CoRE MOF search</h1>
-  <h3>(blank fields are ignored)</h3>
-    <div class="spinner" id='spinner'></div>
-    <div class="emscripten" id="status">Downloading...</div>
-
       <script type="text/javascript">
         var runSearch = function(query, invert_selection) {
           C_obcode = Module.cwrap(
@@ -113,7 +112,7 @@
           var catQuery = getInput("catenation");
 
           var matches_raw = runSearch(smartsQuery, invertSearch);
-          var matches = matches_raw.split(/r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
+          var matches = matches_raw.split(/\r\n|\r|\n/g).slice(0, -1);  // matches end in a newline
 
           if (rcsrQuery != "") {
             matches = matches.filter(function(mofid) {
@@ -130,6 +129,7 @@
             });
           }
 
+          document.getElementById("resultswrapper").classList.remove("inactive");
           var numlines = matches.length;
           matches = matches.join('\n');  // defaults to UNIX line endings, which is fine tbh
           if (matches != "") {
@@ -175,24 +175,40 @@
           }
         }
         </script>
+<header>
+  <img src="mofid_logo.png" id="headerlogo" />
+  <h1>CoRE MOF search</h1>
+  <div id="loading">
+    <div class="spinner" id='spinner'></div>
+    <div class="emscripten" id="status">Downloading...</div>
 
-            <div class="emscripten">
-              <progress value="0" max="100" id="progress" hidden=1></progress>
-            </div>
-<p><b>Substructure:</b> Enter SMILES/SMARTS or <input type="submit" value="draw query" onclick="openKekule()"></input>
-<input type="text" name="smartsinput" id="smartsinput"></input>
-<input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
-<p><b>RCSR topology:</b> <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
-<p><b>Catenation:</b>
-<select id="catenation">
-  <option value="unused">(unused)</option>
-  <option value="0">Uncatenated</option>
-  <option value="1">2 nets total</option>
-  <option value="2">3 nets total</option>
-  <option value="3">4 nets total</option>
-  <option value="null">No MOFs identified</option>
-</select>
-</p>
+    <div class="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1></progress>
+    </div>
+  </div>
+</header>
+
+<!--<div class="content">--><div>
+  <h3>Query parameters</h3>
+  <p>(blank fields are ignored)</p>
+  <p><b>Substructure:</b> Enter SMILES/SMARTS or <input type="submit" value="draw query" onclick="openKekule()"></input>
+  <input type="text" name="smartsinput" id="smartsinput"></input>
+  <input type="checkbox" name="opposite" id="inverseclick">Invert selection</input></p>
+  <p><b>RCSR topology:</b> <input type="text" name="rcsrinput" id="rcsrinput"></input></p>
+  <p>
+    <b>Catenation:</b>
+    <select id="catenation">
+      <option value="unused">(unused)</option>
+      <option value="0">Uncatenated</option>
+      <option value="1">2 nets total</option>
+      <option value="2">3 nets total</option>
+      <option value="3">4 nets total</option>
+      <option value="null">No MOFs identified</option>
+    </select>
+  </p>
+  <input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
+</div>
+
 
 <div class="modal closed" id="structure-modal">
 <!-- See kekule.js documentation at http://partridgejiang.github.io/Kekule.js/documents/tutorial/content/composer.html -->
@@ -204,9 +220,13 @@
 <div id="composer" style="width:600px;height:400px;" data-widget="Kekule.Editor.Composer"></div>
 </div>
 
-<input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
-<br/>
-            <span id="obresults"></span>
+<!--<div class="content inactive" id="resultswrapper">-->
+<div class="inactive" id="resultswrapper">
+  <h3>Results</h3>
+  <span id="obresults">(Results show up here)</span>
+</div>
+
+<div id="results_table"></div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');

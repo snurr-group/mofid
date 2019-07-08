@@ -1,7 +1,38 @@
+#headerlogo {
+	height: 2em;
+	margin-right: 2em;
+}
+
+#headerlogo, h1, #loading {
+	display: inline-block;
+}
+
+.content {
+	border: 1px solid black;
+	border-collapse: collapse;
+	border-radius: 1em;
+	padding: 1em;
+	max-width: 600px;
+}
+
+body {
+	padding: 1em;
+}
+
+.inactive {
+	opacity: 0.2;
+}
+.inactive input, .inactive select {
+	pointer-events: none;
+}
+
+
+/* Old emscripten boilerplate below, with minor edits */
+
 body {
 	font-family: arial;
-	margin: 0;
-	padding: none;
+	/*margin: 0;
+	padding: none;*/
 }
 
 .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
