@@ -45,6 +45,13 @@
         border-radius: 1em;
         padding: 1em;
       }
+
+      .inactive {
+        opacity: 0.2;
+      }
+      .inactive input, .inactive select {
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -127,21 +134,21 @@
               updateFileList();  // populate the initial list of files
               document.getElementById("folderdownload").selectedIndex = "0";  // back to the orig_mol
 
-              document.getElementById("resultsdownload").style.visibility = "visible";
-
+              document.getElementById("resultsdownload").classList.remove("inactive");
               document.getElementById("viewportnote").style.display = "none";
+              document.getElementById("viewportwrapper").classList.remove("inactive");
+
               clearViewer(stage);
               drawEmPDB(stage, "/Output/orig_mol.pdb");
-              document.getElementById("cifviewport").style.visibility = "visible";
 
               var svg = SmilesToSVG(rawToSmiles(mofid), true);
               document.getElementById("svgimage").innerHTML = svg;
 
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
-              document.getElementById("resultsdownload").style.visibility = "hidden";
+              document.getElementById("resultsdownload").classList.add("inactive");
               document.getElementById("svgimage").innerHTML = "";
-              document.getElementById("cifviewport").style.visibility = "hidden";
+              document.getElementById("viewportwrapper").classList.add("inactive");
             }
           };
           cifreader.readAsText(ciffile);
@@ -261,7 +268,7 @@ Enter CIF:
 <input type="submit" value="Submit" id="emrun" onclick="handleInput()" disabled></input>
 </div>
 
-<div id="resultsdownload" style="visibility: hidden;" class="content">
+<div id="resultsdownload" class="content inactive">
   <!--<h3>Algorithms</h3>-->
   <div>Algorithm:
     <select id="folderdownload" onchange="updateAlgorithmSelection()">
@@ -275,14 +282,14 @@ Enter CIF:
   </div>
   <div>
     Download CIF:
-    <select id="cifdownload"><option value="temp">hi</option></select>
+    <select id="cifdownload"><option value="temp">Download options</option></select>
     <input type="submit" value="Download" id="rundownload" onclick="handleDownload()"></input>
   </div>
 </div>
 
-<div id="viewportwrapper" style="width:400px;" class="content">
+<div id="viewportwrapper" style="width:400px;" class="content inactive">
   <div id="viewportnote" style="position: relative; left: 1em; top: 1em;">(MOFs are visualized here)</div>
-  <div id="cifviewport" style="width:400px; height:300px; visibility:hidden;"></div>
+  <div id="cifviewport" style="width:400px; height:300px;"></div>
 </div>
 
 <div id="identifiers">
