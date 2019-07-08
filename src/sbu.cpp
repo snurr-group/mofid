@@ -148,6 +148,7 @@ void analyzeMOFc(const char *cifdata, char *analysis, int buflen) {
 	std::ofstream cifp(TEMP_FILE, std::ios::out | std::ios::trunc);
 	cifp << std::string(cifdata);
 	cifp.close();
+	COPY_ALL_CIFS_TO_PDB = true;
 
 	strncpy(analysis, analyzeMOF(TEMP_FILE).c_str(), buflen);
 }

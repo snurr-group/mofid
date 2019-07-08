@@ -15,6 +15,8 @@ namespace OpenBabel
 // forward declarations
 class OBMol;
 
+extern bool COPY_ALL_CIFS_TO_PDB;
+
 struct MinimalAtom {
 // Contains the critial information about OBAtom's, to avoid accidentally copying perceived properties, etc.
 	vector3 loc;
@@ -24,6 +26,7 @@ struct MinimalAtom {
 
 bool importCIF(OBMol* molp, std::string filepath, bool bond_orders = true, bool makeP1 = true);
 void writeCIF(OBMol* molp, std::string filepath, bool write_bonds = true);
+void writePDB(OBMol* orig_molp, std::string pdb_filepath, bool write_bonds = true, bool exclude_pbc = true);
 OBMol initMOFwithUC(OBMol *orig_in_uc);
 void copyMOF(OBMol *src, OBMol *dest);
 

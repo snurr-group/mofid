@@ -131,7 +131,7 @@
 
               document.getElementById("viewportnote").style.display = "none";
               clearViewer(stage);
-              drawEmCIF(stage, "/Output/orig_mol.cif");
+              drawEmPDB(stage, "/Output/orig_mol.pdb");
               document.getElementById("cifviewport").style.visibility = "visible";
 
               var svg = SmilesToSVG(rawToSmiles(mofid), true);
@@ -161,7 +161,7 @@
           var folder_name = folder_input.options[folder_input.selectedIndex].value;
           var filelist;
           if (folder_name == "") {  // original base directory
-            filelist = ["orig_mol.cif"];
+            filelist = ["orig_mol.pdb"];
           } else {
             filelist = lsdir("/Output/" + folder_name);
           }
@@ -183,10 +183,11 @@
           var folder_name = getInputValue("folderdownload");
           clearViewer(stage);
           if (folder_name == "") {  // original base directory
-            drawEmCIF(stage, "/Output/orig_mol.cif", "element");
+            drawEmPDB(stage, "/Output/orig_mol.pdb", "element");
           } else {
-            drawEmCIF(stage, "/Output/" + folder_name + "/nodes.cif", UniformColor(0xFF9155));
-            drawEmCIF(stage, "/Output/" + folder_name + "/linkers.cif", UniformColor(0x2298FE));
+            drawEmPDB(stage, "/Output/" + folder_name + "/nodes.pdb", UniformColor(0xFF9155));
+            drawEmPDB(stage, "/Output/" + folder_name + "/linkers.pdb", UniformColor(0x2298FE));
+            //drawEmPDB(stage, "/Output/" + folder_name + "/simplified_topology_with_two_conn.pdb", UniformColor(0x888888));
           }
         }
 
@@ -194,9 +195,9 @@
           ngl_stage.removeAllComponents();
         }
 
-        addCIFtoViewer = function(ngl_stage, path_to_cif, color_scheme = "element") {
+        addPDBtoViewer = function(ngl_stage, path_to_cif, color_scheme = "element") {
           var component;
-          ngl_stage.loadFile(path_to_cif, {ext: 'cif'}).then( function( o ){
+          ngl_stage.loadFile(path_to_cif, {ext: "pdb"}).then( function( o ){
             o.addRepresentation("ball+stick", {colorScheme: color_scheme});
             o.addRepresentation( "unitcell" );
             o.autoView();
@@ -206,10 +207,10 @@
           return component;
         }
 
-        drawEmCIF = function(ngl_stage, emscripten_path, color_scheme = "element") {
+        drawEmPDB = function(ngl_stage, emscripten_path, color_scheme = "element") {
           var cif_string = FS.readFile(emscripten_path, {'encoding': 'utf8'});
           var temp_file = new Blob([cif_string], {type: 'chemical/x-cif'});
-          return addCIFtoViewer(ngl_stage, temp_file, color_scheme);
+          return addPDBtoViewer(ngl_stage, temp_file, color_scheme);
         }
 
         UniformColor = function(hex_color = 0x000000) {
@@ -280,7 +281,7 @@ Enter CIF:
 </div>
 
 <div id="viewportwrapper" style="width:400px;" class="content">
-  <div id="viewportnote" style="position: relative; left: 1em; top: 1em;">(CIFs are visualized here)</div>
+  <div id="viewportnote" style="position: relative; left: 1em; top: 1em;">(MOFs are visualized here)</div>
   <div id="cifviewport" style="width:400px; height:300px; visibility:hidden;"></div>
 </div>
 
