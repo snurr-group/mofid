@@ -206,54 +206,8 @@
           return component;
         }
 
-        drawEmCIF = function(ngl_stage, emscripten_path, color_scheme = "element", convert_to_mmcif = true) {
+        drawEmCIF = function(ngl_stage, emscripten_path, color_scheme = "element") {
           var cif_string = FS.readFile(emscripten_path, {'encoding': 'utf8'});
-          if (convert_to_mmcif) {
-            // Convert the output bond format to an mmcif convention that nglviewer understands.
-            // See the processConnections source code at http://nglviewer.org/ngl/api/file/src/parser/cif-parser.js.html
-            // and _struct_conn info at http://mmcif.wwpdb.org/dictionaries/mmcif_mdb.dic/Categories/struct_conn.html
-            cif_string = cif_string.replace(
-              "loop_\n    _geom_bond_atom_site_label_1\n    _geom_bond_atom_site_label_2\n    _geom_bond_distance\n    _geom_bond_site_symmetry_2\n    _ccdc_geom_bond_type\n",
-              //"loop_\n_struct_conn.id\n_struct_conn.conn_type_id\n_struct_conn.ptnr1_label_comp_id\n_struct_conn.ptnr1_label_asym_id\n_struct_conn.ptnr1_label_seq_id\n_struct_conn.ptnr1_label_atom_id\n_struct_conn.ptnr1_role\n_struct_conn.ptnr1_symmetry\n_struct_conn.ptnr2_label_comp_id\n_struct_conn.ptnr2_label_asym_id\n_struct_conn.ptnr2_label_seq_id\n_struct_conn.ptnr2_label_atom_id\n_struct_conn.ptnr2_role\n_struct_conn.ptnr2_symmetry\n_struct_conn.details\n"
-              //"loop_\n_struct_conn.id\n_struct_conn.conn_type_id\n_struct_conn.ptnr1_label_comp_id\n_struct_conn.ptnr1_label_asym_id\n_struct_conn.ptnr1_label_seq_id\n_struct_conn.ptnr1_label_atom_id\n_struct_conn.ptnr1_symmetry\n_struct_conn.ptnr2_label_comp_id\n_struct_conn.ptnr2_label_asym_id\n_struct_conn.ptnr2_label_seq_id\n_struct_conn.ptnr2_label_atom_id\n_struct_conn.ptnr2_symmetry\n_struct_conn.details\n"
-              "loop_\n_struct_conn.id\n_struct_conn.conn_type_id\n_struct_conn.ptnr1_label_atom_id\n_struct_conn.ptnr1_symmetry\n_struct_conn.ptnr2_label_atom_id\n_struct_conn.ptnr2_symmetry\n_struct_conn.details\n"
-            );
-
-            var split_string = cif_string.split(/\r\n|\r|\n/g);
-            var cif_num_lines = split_string.length;
-            var bond_section = false;
-            var curr_bond = 1;
-            for (var i = 0; i < cif_num_lines; i++) {
-              var curr_line = split_string[i];
-              if (curr_line.includes("_struct_conn.details")) {
-                bond_section = true;
-                continue;
-              }
-              if (bond_section) {
-                var line_items = curr_line.trim().split(/\s+/);
-                var sym_key = line_items[3];
-                if (sym_key != "." && sym_key != "1_555") {
-                  // Hide bonds with symmetry keys, which span across unit cells
-                  split_string[i] = "";
-                  continue;
-                }
-                var bond_order = line_items[4];
-                split_string[i] = [
-                  "bond" + curr_bond,
-                  "covale",  // set everything as covalent bonds
-                  line_items[0], "1_555",
-                  line_items[1], "1_555",
-                  "."  // no details, just an empty comment
-                  ].join(" ");
-                curr_bond++;
-              }
-            }
-            cif_string = split_string.join("\n");
-
-            if (true) {
-              document.getElementById("cif_diagnostics").innerHTML = "<pre>" + cif_string + "</pre>";
-            }
-          }
           var temp_file = new Blob([cif_string], {type: 'chemical/x-cif'});
           return addCIFtoViewer(ngl_stage, temp_file, color_scheme);
         }
@@ -333,7 +287,6 @@ Enter CIF:
 <div id="identifiers">
     <span id="obresults"></span>  <!-- TODO: implement as a popup menu for "raw results" -->
     <span id="svgimage"></span>
-    <span id="cif_diagnostics"></span>
 </div>  <!-- MOFid and MOFkey should go here -->
 
     <script type='text/javascript'>
