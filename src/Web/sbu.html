@@ -116,7 +116,7 @@
               document.getElementById("obresults").innerHTML = "<pre>" + mofid + "</pre>";
 
               clearDropdown("cifdownload");
-              updateFileList();  // populate the initial list of files
+              updateFileLists();  // populate the initial list of files
               document.getElementById("folderdownload").selectedIndex = "0";  // back to the orig_mol
 
               document.getElementById("resultsdownload").classList.remove("inactive");
@@ -147,15 +147,25 @@
           }
         }
 
-        updateFileList = function() {
+        updateFileLists = function() {
           clearDropdown("cifdownload");
-          var folder_input = document.getElementById("folderdownload");
-          var folder_name = folder_input.options[folder_input.selectedIndex].value;
+          var folder_name = getInputValue("folderdownload");
+          var selected_view_index = document.getElementById("view_type").selectedIndex;
+
           var filelist;
+          var view_value_list = ["original", "nodes_and_linkers", "simplified_net"];
+          var view_name_list = ["Original MOF", "Nodes + Linkers", "Simplified topology"];
           if (folder_name == "") {  // original base directory
-            filelist = ["orig_mol.pdb"];
+            filelist = ["orig_mol.cif", "orig_mol.pdb"];
+            // Only keeping the original MOF in the viewer types:
+            view_value_list = [view_value_list[0]];
+            view_name_list = [view_name_list[0]];
+            selected_view_index = "0";
           } else {
             filelist = lsdir("/Output/" + folder_name);
+            // Removing the original MOF from the viewer types:
+            view_value_list.shift();
+            view_name_list.shift();
           }
           filelist.forEach(function(file) {
             var option = document.createElement("option");
@@ -163,6 +173,15 @@
             option.value = file;
             document.getElementById("cifdownload").appendChild(option);
           });
+
+          clearDropdown("view_type");
+          for (var i=0; i<view_value_list.length; i++) {
+            var option = document.createElement("option");
+            option.text = view_name_list[i];
+            option.value = view_value_list[i];
+            document.getElementById("view_type").appendChild(option);
+          }
+          document.getElementById("view_type").selectedIndex = selected_view_index;
         }
 
         getInputValue = function(html_id) {
@@ -171,16 +190,25 @@
         }
 
         updateAlgorithmSelection = function() {
-          updateFileList();
+          updateFileLists();
+          updateAlgorithmView();
+        }
+
+        updateAlgorithmView = function() {
+          var view_name = getInputValue("view_type");
           var folder_name = getInputValue("folderdownload");
           clearViewer(stage);
-          if (folder_name == "") {  // original base directory
+          if (view_name == "original") {
             drawEmPDB(stage, "/Output/orig_mol.pdb", "element");
-          } else {
+          } else if (view_name == "nodes_and_linkers") {
             drawEmPDB(stage, "/Output/" + folder_name + "/nodes.pdb", UniformColor(0xFF9155));
             drawEmPDB(stage, "/Output/" + folder_name + "/node_bridges.pdb", UniformColor(0xFF9155));
             drawEmPDB(stage, "/Output/" + folder_name + "/linkers.pdb", UniformColor(0x2298FE));
+          } else if (view_name == "simplified_net") {
             //drawEmPDB(stage, "/Output/" + folder_name + "/simplified_topology_with_two_conn.pdb", UniformColor(0x888888));
+            drawEmPDB(stage, "/Output/" + folder_name + "/simplified_topology_with_two_conn.pdb", "element");
+          } else {
+            throw "Unknown view name: " + view_name;
           }
         }
 
@@ -258,12 +286,16 @@ Enter CIF:
   <!--<h3>Algorithms</h3>-->
   <div>Algorithm:
     <select id="folderdownload" onchange="updateAlgorithmSelection()">
-      <!--<option value="base">(utilities)</option>-->
       <option value="" selected>Original input</option>
       <option value="MetalOxo">Metal-Oxo</option>
       <option value="SingleNode">Single Node</option>
       <option value="AllNode">All Node</option>
       <option value="StandardIsolated">Standard Algorithm</option>
+    </select>
+  </div>
+  <div>Visualization:
+    <select id="view_type" onchange="updateAlgorithmView()">
+      <option value="none" selected>None</option>
     </select>
   </div>
   <div>
