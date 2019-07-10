@@ -180,6 +180,10 @@
             view_value_list.shift();
             view_name_list.shift();
           }
+          if (folder_name == "AllNode") {
+            // Separate linkers into branches + branch points for the AllNode algorithm
+            view_value_list[0] = "nodes_and_branches";
+          }
           filelist.forEach(function(file) {
             var option = document.createElement("option");
             option.text = file;
@@ -213,10 +217,15 @@
           clearViewer(stage);
           if (view_name == "original") {
             drawEmPDB(stage, "/Output/orig_mol.pdb", "element");
-          } else if (view_name == "nodes_and_linkers") {
+          } else if (view_name == "nodes_and_linkers" || view_name == "nodes_and_branches") {
             drawEmPDB(stage, "/Output/" + folder_name + "/nodes.pdb", UniformColor(0xFF9155));
             drawEmPDB(stage, "/Output/" + folder_name + "/node_bridges.pdb", UniformColor(0xFF9155));
-            drawEmPDB(stage, "/Output/" + folder_name + "/linkers.pdb", UniformColor(0x2298FE));
+            if (view_name == "nodes_and_linkers") {
+              drawEmPDB(stage, "/Output/" + folder_name + "/linkers.pdb", UniformColor(0x2298FE));
+            } else {
+              drawEmPDB(stage, "/Output/" + folder_name + "/branches.pdb", UniformColor(0x2298FE));
+              drawEmPDB(stage, "/Output/" + folder_name + "/branch_points.pdb", UniformColor(0x2298FE));
+            }
           } else if (view_name == "simplified_net") {
             //drawEmPDB(stage, "/Output/" + folder_name + "/simplified_topology_with_two_conn.pdb", UniformColor(0x888888));
             drawEmPDB(stage, "/Output/" + folder_name + "/simplified_topology_with_two_conn.pdb", "element");
