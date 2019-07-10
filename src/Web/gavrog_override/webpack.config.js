@@ -26,9 +26,11 @@ module.exports = {
   plugins: [
     new CleanWebpackPlugin()
   ],
-  output: {
+  output: {  // export as a library, per https://webpack.js.org/guides/author-libraries/
     filename: '[name].js',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'dist'),
+    library: 'webGavrog',
+    libraryTarget: 'var'
   },
   optimization: {
     runtimeChunk: 'single',

@@ -109,8 +109,9 @@ embin/webGavrog/main.js: src/Web/gavrog_override/*.js
 	cp -r src/Web/gavrog_override/* embin/webGavrog-build/; \
 	cd embin/webGavrog-build; \
 	npm install; \
-	npm run build; \
+	npm run build-dev; \
 	cp dist/*.js ../webGavrog/
+	# If better debug info is needed for webGavrog, replace `npm run build` with `npm run build-dev`
 
 embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
 	source Scripts/setup_web_compiler_paths.sh; \
