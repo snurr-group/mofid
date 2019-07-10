@@ -80,7 +80,10 @@ init-web:
 	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1"; \
 	mkdir kekule; \
 	cd kekule; \
-	unzip ../../Resources/kekule.release.0.7.5.170624.zip
+	unzip ../../Resources/kekule.release.0.7.5.170624.zip; \
+	cd ..; \
+	unzip ../Resources/webGavrog-20190709.zip && mv webGavrog-master webGavrog-build; \
+	mkdir webGavrog
 
 openbabel/embuild/obabel.js:
 	source Scripts/setup_web_compiler_paths.sh; \
@@ -88,7 +91,7 @@ openbabel/embuild/obabel.js:
 	emmake make; \
 	emmake make install
 
-web: embin/sbu.js html
+web: embin/sbu.js html embin/webGavrog/main.js
 
 github-web: web
 	cp embin/sbu* ../web-mofid; \
@@ -101,6 +104,13 @@ github-web: web
 
 html: src/Web/*.html src/Web/*.css src/Web/*.md src/Web/favicon.ico src/Web/*.png Resources/ngl.js
 	cp $^ embin/
+
+embin/webGavrog/main.js: src/Web/gavrog_override/*.js
+	cp -r src/Web/gavrog_override/* embin/webGavrog-build/; \
+	cd embin/webGavrog-build; \
+	npm install; \
+	npm run build; \
+	cp dist/*.js ../webGavrog/
 
 embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
 	source Scripts/setup_web_compiler_paths.sh; \
