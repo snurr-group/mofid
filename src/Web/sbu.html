@@ -49,7 +49,10 @@
         Example code to run in the browser, after analyzing NU-1000: (only csq and ssa topologies are currently supported here)
 
         raw_rcsr_extract = "key      3 1 2 0 0 0 1 2 1 0 0 1 3 0 0 0 1 3 1 0 0 1 4 0 0 0 1 4 1 0 0 1 5 0 0 0 1 5 1 0 0 2 6 0 0 0 2 6 1 0 0 3 7 0 0 0 3 7 1 0 0 4 7 0 1 0 4 7 1 1 0 5 6 0 0 1 5 6 1 0 1 6 8 0 0 0 6 8 1 0 0 6 9 0 0 0 6 9 1 0 0 7 8 0 0 1 7 8 1 0 1 7 9 0 -1 0 7 9 1 -1 0\nversion  1.0\nid       csq\nchecksum 645c0577055342b2b2b8c51f98b6dee0\nref      \ndesc     \nend\n\nkey      3 1 2 0 0 0 1 3 0 0 0 1 4 0 0 0 1 5 0 0 0 2 6 0 0 0 2 7 0 0 0 2 8 0 0 0 3 6 1 0 0 3 7 1 0 0 3 8 0 0 0 4 6 0 1 0 4 9 0 0 0 4 10 0 0 0 5 6 1 1 0 5 9 0 0 0 5 10 1 0 0 7 11 0 0 0 7 12 0 0 0 8 11 1 0 1 8 12 0 0 1 9 11 1 0 1 9 12 0 0 1 10 11 0 1 0 10 12 0 1 0\nversion  1.0\nid       ssa\nchecksum 4e2892c19ef8932acaf185230c1bbb6a\nref      \ndesc     \nend\n";
-        webGavrog.getRCSRTopology(FS.readFile("/Output/SingleNode/topology.cgd", {'encoding': 'utf8'}), raw_rcsr_extract);
+        raw_cgd_test = "CRYSTAL\n  NAME \n  GROUP P1\n  CELL 12.7594 12.7594 12.7594 89.968 89.9802 90.0166\n  NODE 1 6 0.0184232 0.994034 0.993783\n  NODE 2 6 0.518423 0.494034 0.493783\n  EDGE  0.0184232 -0.00596648 0.993783   0.0184232 0.994034 0.993783\n  EDGE  0.0184232 0.994034 0.993783   0.0184232 0.994034 -0.00621696\n  EDGE  0.518423 0.494034 0.493783   0.518423 1.49403 0.493783\n  EDGE  0.0184232 0.994034 0.993783   1.01842 0.994034 0.993783\n  EDGE  -0.481577 0.494034 0.493783   0.518423 0.494034 0.493783\n  EDGE  0.518423 0.494034 1.49378   0.518423 0.494034 0.493783\n  # EDGE_CENTER  0.0184424 0.494519 0.993792\n  # EDGE_CENTER  0.0185049 0.994166 0.493299\n  # EDGE_CENTER  0.518442 0.994519 0.493792\n  # EDGE_CENTER  0.518908 0.993975 0.993817\n  # EDGE_CENTER  0.0189076 0.493975 0.493816\n  # EDGE_CENTER  0.518505 0.494166 0.993298\nEND\n";
+        webGavrog.getRCSRTopology(raw_cgd_test, raw_rcsr_extract);
+
+        //webGavrog.runSystre(FS.readFile("/Output/SingleNode/topology.cgd", {'encoding': 'utf8'}), raw_rcsr_extract);
       -->
 
       <script type="text/javascript">
@@ -138,6 +141,10 @@
 
               var svg = SmilesToSVG(rawToSmiles(mofid), true);
               document.getElementById("svgimage").innerHTML = svg;
+
+              const raw_rcsr_extract = "key      3 1 2 0 0 0 1 2 1 0 0 1 3 0 0 0 1 3 1 0 0 1 4 0 0 0 1 4 1 0 0 1 5 0 0 0 1 5 1 0 0 2 6 0 0 0 2 6 1 0 0 3 7 0 0 0 3 7 1 0 0 4 7 0 1 0 4 7 1 1 0 5 6 0 0 1 5 6 1 0 1 6 8 0 0 0 6 8 1 0 0 6 9 0 0 0 6 9 1 0 0 7 8 0 0 1 7 8 1 0 1 7 9 0 -1 0 7 9 1 -1 0\nversion  1.0\nid       csq\nchecksum 645c0577055342b2b2b8c51f98b6dee0\nref      \ndesc     \nend\n\nkey      3 1 2 0 0 0 1 3 0 0 0 1 4 0 0 0 1 5 0 0 0 2 6 0 0 0 2 7 0 0 0 2 8 0 0 0 3 6 1 0 0 3 7 1 0 0 3 8 0 0 0 4 6 0 1 0 4 9 0 0 0 4 10 0 0 0 5 6 1 1 0 5 9 0 0 0 5 10 1 0 0 7 11 0 0 0 7 12 0 0 0 8 11 1 0 1 8 12 0 0 1 9 11 1 0 1 9 12 0 0 1 10 11 0 1 0 10 12 0 1 0\nversion  1.0\nid       ssa\nchecksum 4e2892c19ef8932acaf185230c1bbb6a\nref      \ndesc     \nend\nkey      3 1 1 -1 0 0 1 1 0 -1 0 1 1 0 0 -1\nversion  1.0\nid       pcu\nchecksum 17a6f64aeaa5a3ae97c3cf7c1201a176\nref      \ndesc     \nend\n";
+              const raw_cgd = FS.readFile("/Output/SingleNode/topology.cgd", {'encoding': 'utf8'});
+              alert('Limited SingleNode RCSR topology:' + webGavrog.getRCSRTopology(raw_cgd, raw_rcsr_extract));
 
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
