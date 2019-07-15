@@ -36,7 +36,7 @@ const processRCSR = (input, options, archives = []) => {
 };
 
 
-export const getRCSRTopology = (topology_cgd, rcsr_archive) => {
+export const getRawRCSRTopology = (topology_cgd, rcsr_archive) => {
   // Extract the RCSR topology, similar to systre.processData
   const archive_obj =  new Archive('RCSRnets.arc');
   archive_obj.addAll(rcsr_archive);
@@ -71,7 +71,7 @@ export const getRCSRTopology = (topology_cgd, rcsr_archive) => {
         ));
       }
     } catch(ex) {
-      systre.reportSystreError('INTERNAL', ex + '\n' + ex.stack, console.log);
+      reportSystreError('INTERNAL', ex + '\n' + ex.stack, console.log);
       return "ERROR";
     }
 

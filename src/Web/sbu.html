@@ -62,24 +62,7 @@
           stage.setParameters( {backgroundColor: "white"} );
         });
 
-        var SmilesToSVG = function(smiles, createSVG) {
-          // From Noel O'Boyle: https://baoilleach.blogspot.com/2015/02/cheminformaticsjs-open-babel.html
-          // See also http://baoilleach.webfactional.com/site_media/blog/emscripten/openbabel/webdepict.html
-          C_SmilesToSVG = Module.cwrap(
-            'SmilesToSVG', 'number', ['string', 'number', 'number', 'number']
-          );
-
-          var buflen = 65536;
-          var ptr = Module._malloc(buflen);
-          var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
-          var length = C_SmilesToSVG(smiles, createSVG, ptr, buflen);
-          if (length == -1) return "";
-          var ans = Module.Pointer_stringify(ptr);
-          Module._free(ptr);
-          return ans;
-        };
-
-        var getMOFid = function(cifdata) {
+        var runMOFidCode = function(cifdata) {
           C_obcode = Module.cwrap(
             'analyzeMOFc', 'null', ['string', 'number', 'number']
           );
@@ -103,6 +86,94 @@
           return ans;
         };
 
+        var analyzeMOF = function(input_cif_str, cif_name) {
+          // Get relevant MOFid/MOFkey information from an input string of CIF-formatted coordinates
+          var raw_mofid_output = runMOFidCode(input_cif_str);
+          var single_node_topology = getTopology("/Output/SingleNode/topology.cgd");
+          var all_node_topology = getTopology("/Output/AllNode/topology.cgd");
+
+          // Extract the MOFid, per run_mofid.py:cif2mofid
+          const fragment_info = _extractFragments(raw_mofid_output);
+          let mofid_topology = '';
+          if (fragment_info.cat == null) {
+            mofid_topology = 'NA'
+          } else if (single_node_topology == all_node_topology) {
+            mofid_topology = single_node_topology;
+          } else {
+            mofid_topology = single_node_topology + ',' + all_node_topology;
+          }
+
+          let mof_name = cif_name;
+          if (cif_name.endsWith('.cif') || cif_name.endsWith('.CIF')) {
+            mof_name = cif_name.substring(0, cif_name.length - 4);
+          }
+          const all_fragments = fragment_info.nodes.concat(fragment_info.linkers);
+          all_fragments.sort();
+
+          // Assembling the MOFid from id_constructor.py:assemble_mofid
+          let mofid = all_fragments.join('.');
+          mofid += ' MOFid-v1.';
+          mofid += mofid_topology + '.';
+          if (fragment_info.cat == 'no_mof') {
+            mofid += fragment_info.cat
+          } else if (fragment_info.cat != null) {
+            mofid += 'cat' + fragment_info.cat;
+          } else {
+            mofid += 'NA';
+          }
+          if (mofid.startsWith(' ')) {  // Null linkers.  Make .smi compatible
+            mofid = '*' + mofid + 'no_mof';
+          }
+          mofid += ';' + mof_name;
+
+          // Extract the MOFkey
+          var base_mofkey = "";
+          if (fragment_info.parsed) {
+            base_mofkey = FS.readFile("/Output/MetalOxo/mofkey_no_topology.txt", {'encoding': 'utf8'});
+          }
+          var mofkey = base_mofkey.replace('MOFkey-v1', 'MOFkey-v1.' + single_node_topology);
+
+          return {
+            raw_output: raw_mofid_output,
+            mofid: mofid,
+            mofkey: mofkey,
+            fragments: fragment_info
+          };
+        }
+
+        var _extractFragments = function(raw_mofid_output) {
+          // Parse the MOFid output, per id_constructor.py:extract_fragments
+          let all_fragments = raw_mofid_output.trim().split(/\r\n|\r|\n/g);
+          all_fragments = all_fragments.map(a => a.trim());
+          if (all_fragments == '') {
+            return {nodes: ['*'], linkers: [], cat: cat, parsed: false};
+          }
+
+          const cat_num_line = all_fragments.pop();
+          let cat = null;
+          if (cat_num_line.includes('simplified net(s)')) {
+            cat = (parseInt(cat_num_line[8]) - 1).toString();  // '# Found x simplified net(s)'
+            if (cat == '-1') {
+              cat = null;
+            }
+          } else {
+            all_fragments = ['*'];
+          }
+
+          // Parse node/linker fragment notation
+          if (all_fragments[0] != '# Nodes:') {
+            return {nodes: ['*'], linkers: [], cat: cat, parsed: false};
+          }
+          all_fragments.shift();
+          const linker_flag_loc = all_fragments.findIndex(line => (line == "# Linkers:"));
+          const node_fragments = all_fragments.slice(0, linker_flag_loc);
+          const linker_fragments = all_fragments.slice(linker_flag_loc+1);
+          node_fragments.sort();
+          linker_fragments.sort();
+
+          return {nodes: node_fragments, linkers: linker_fragments, cat: cat, parsed: true};
+        }
+
         var rawToSmiles = function(raw_mofid) {
           // Converts the raw output from the MOFid code to a parseable SMILES format
           var lines = raw_mofid.replace(/\t/g, '').split(/\r\n|\r|\n/g);  // remove trailing tabs before splitting
@@ -112,12 +183,14 @@
 
         handleInput = function() {
           var ciffile = document.getElementById("cifloader").files[0];
-          document.getElementById("obresults").innerHTML = "<pre>Processing " + ciffile.name + "</pre>";
+          document.getElementById("obresults").innerHTML = "<code>Processing " + ciffile.name + "</code>";
           var cifreader = new FileReader();
           cifreader.onload = function(event) {
-            var mofid = getMOFid(event.target.result);
-            if (mofid != "") {
-              document.getElementById("obresults").innerHTML = "<pre>" + mofid + "</pre>";
+            var mofid_results = analyzeMOF(event.target.result, ciffile.name);
+            if (mofid_results.fragments.parsed) {
+              const mofid_html = "<div>MOFid:<br /><code>" + mofid_results.mofid + "</code></div>";
+              const mofkey_html = "<div>MOFkey:<br /><code>" + mofid_results.mofkey + "</code></div>";
+              document.getElementById("obresults").innerHTML = mofid_html + mofkey_html;
 
               clearDropdown("cifdownload");
               updateFileLists();  // populate the initial list of files
@@ -129,22 +202,24 @@
 
               clearViewer(stage);
               drawEmPDB(stage, "/Output/orig_mol.pdb");
-
-              var svg = SmilesToSVG(rawToSmiles(mofid), true);
-              document.getElementById("svgimage").innerHTML = svg;
-
-              const raw_rcsr_extract = FS.readFile("/RCSRnets.arc", {'encoding': 'utf8'});
-              const raw_cgd = FS.readFile("/Output/SingleNode/topology.cgd", {'encoding': 'utf8'});
-              alert('Limited SingleNode RCSR topology:' + webGavrog.getRCSRTopology(raw_cgd, raw_rcsr_extract));
-
             } else {
               document.getElementById("obresults").innerHTML = "<pre>Failed to calculate MOFid components</pre>";
               document.getElementById("resultsdownload").classList.add("inactive");
-              document.getElementById("svgimage").innerHTML = "";
               document.getElementById("viewportwrapper").classList.add("inactive");
             }
           };
           cifreader.readAsText(ciffile);
+        }
+
+        getTopology = function(path_to_cgd) {
+          // Extract topology from a generated CGD simplified net
+          const raw_rcsr_extract = FS.readFile("/RCSRnets.arc", {'encoding': 'utf8'});
+          const raw_cgd = FS.readFile(path_to_cgd, {'encoding': 'utf8'});
+          if (!raw_cgd.includes('NODE')) {
+            return "ERROR";  // not a MOF: no node building blocks found!
+          } else {
+            return webGavrog.getRawRCSRTopology(raw_cgd, raw_rcsr_extract);
+          }
         }
 
         clearDropdown = function(select_id) {
@@ -328,9 +403,8 @@ Enter CIF:
 </div>
 
 <div id="identifiers">
-    <span id="obresults"></span>  <!-- TODO: implement as a popup menu for "raw results" -->
-    <span id="svgimage"></span>
-</div>  <!-- MOFid and MOFkey should go here -->
+    <span id="obresults"></span>  <!-- TODO: implement a popup menu for "raw results" -->
+</div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
