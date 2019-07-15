@@ -24,7 +24,6 @@ const processRCSR = (input, options, archives = []) => {
     symmetries.minimalImageWithOrbits(graph);
 
   const key = systreKey(G);
-  //const name = input.name;
   //const countMatches = showAndCountGraphMatches(key, archives, writeInfo);
   const found = archives[0].getByKey(key);
   if (found) {
@@ -38,7 +37,6 @@ const processRCSR = (input, options, archives = []) => {
 
 
 export const getRCSRTopology = (topology_cgd, rcsr_archive) => {
-//export const runSystre = (topology_cgd, rcsr_archive) => {
   // Extract the RCSR topology, similar to systre.processData
   const archive_obj =  new Archive('RCSRnets.arc');
   archive_obj.addAll(rcsr_archive);
@@ -73,9 +71,7 @@ export const getRCSRTopology = (topology_cgd, rcsr_archive) => {
         ));
       }
     } catch(ex) {
-      //systre.reportSystreError('INTERNAL', ex + '\n' + ex.stack, console.log);
-      console.log(`!!! ERROR: (INTERNAL - ${ex})`);
-      console.log(ex.stack);
+      systre.reportSystreError('INTERNAL', ex + '\n' + ex.stack, console.log);
       return "ERROR";
     }
 
@@ -83,61 +79,6 @@ export const getRCSRTopology = (topology_cgd, rcsr_archive) => {
       return topologies[0];
     } else {
       return MISMATCH_TOPOLOGY_CODE;
-    }
-  }
-
-
-//  window.written_prefixed_string = "";  // using a global variable (yuck) to ensure sufficient scoping
-  /*window.written_string = {output: ""};
-  window.prefixedStringWriter = (out_str_obj, prefix='') => (s='') => {
-  //var prefixedStringWriter = (out_str_obj, prefix='') => (s='') => {
-    // Derived closely from prefixedLineWriter from webGavrog:src/scripts/systreCmd.js
-    for (const line of s.split('\n')) {
-      //window.written_prefixed_string += `${prefix}${line}`;
-      //window.written_prefixed_string += '\n';
-      out_str_obj.output += `${prefix}${line}\n`;
-      // NOPE: I'm starting to think this approach won't work, unfortunately.  Need to think of another way.
-    }
-    //console.log(out_str_obj.output);
-  };*/
-
-  //systre.processData(topology_cgd, "topology.cgd", options, archives, prefixedStringWriter(), prefixedStringWriter());
-  //systre.processData(topology_cgd, "topology.cgd", options, archives, window.prefixedStringWriter(written_string));
-  systre.processData(topology_cgd, "topology.cgd", options, archives);
-  //console.log(written_prefixed_string);
-  // TODO: save the info to a variable with two new methods writing strings to global variables instead of
-  // using the default prefixedLineWriter to console.log - nah, just define the overwriting function here
-  // And probably two new global functions of getRCSRTopology and runSystre
-  // Also, need to actually use the topology (other than just printing the Systre results -- start by saving a string and printing it to the thing)
-
-  //const return_string = window.written_prefixed_string;
-  //window.written_prefixed_string = "";
-  //return return_string;
-  //return written_prefixed_string;
-  //console.log(written_string.output);  // nope: it's getting saved in the local variable but not passed back from systre.
-  //return written_string.output;
-};
-
-export const extractTopology = (topology_cgd, rcsr_archive) => {
-  // Adapting Python/id_constructor.py:extract_topology
-  const systre_output = runSystre(topology_cgd, rcsr_archive);
-  let topologies = [];
-  let current_component = 0;
-  let topology_line = False;
-  let repeat_line = False;
-  for (const raw_line of systre_output.split('\n')) {
-    const line = raw_line.trim();
-    if (topology_line) {
-      topology_line = False;
-      let rcsr = line.split(/\s+/);
-      if (rcsr[0] != 'Name:' || rcsr.length != 2) {
-        throw "Could not parse RCSR topology line: " + line;
-      }
-      topologies.push(rcsr[1]);
-    } else if (repeat_line) {
-      repeat_line = False;
-      // This line takes the form 'Name:    refcode_clean_component_x'
-      //if
     }
   }
 };
@@ -183,5 +124,13 @@ const checkGraph = (graph, writeInfo) => {
   }
 
   return true;
+};
+
+const reportSystreError = (errorType, message, writeInfo) => {
+  // Copied from systre.reportSystreError
+  writeInfo("==================================================");
+  writeInfo(`!!! ERROR (${errorType}) - ${message}`);
+  writeInfo("==================================================");
+  writeInfo();
 };
 
