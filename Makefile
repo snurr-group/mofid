@@ -91,25 +91,24 @@ openbabel/embuild/obabel.js:
 	emmake make; \
 	emmake make install
 
-web: embin/sbu.js html embin/webGavrog/main.js
+web: embin/sbu.js embin/webGavrog/main.js html
 
 github-web: web
-	cp embin/sbu* ../web-mofid; \
-	cp embin/searchdb* ../web-mofid; \
-	cp -r embin/kekule/ ../web-mofid; \
-	# TODO: should consider index.html, web-mofid:.gitignore, etc.
-	# Copied the compiled website from mofid:/embin/ to web-mofid:/
+	rm -r ../web-mofid/*; \
+	rm -f embin/*.wast; \
+	cp embin/*.* embin/.gitignore ../web-mofid; \
+	cp -r embin/webGavrog embin/kekule ../web-mofid;
 	# Commit and push the changes in the web-mofid repo to update
 	# the live website on Github.
 
-html: src/Web/*.html src/Web/*.css src/Web/*.md src/Web/favicon.ico src/Web/*.png Resources/ngl.js
+html: src/Web/*.* src/Web/.gitignore Resources/ngl.js
 	cp $^ embin/
 
 embin/webGavrog/main.js: src/Web/gavrog_override/*.js
 	cp -r src/Web/gavrog_override/* embin/webGavrog-build/; \
 	cd embin/webGavrog-build; \
 	npm install; \
-	npm run build-dev; \
+	npm run build; \
 	cp dist/*.js ../webGavrog/
 	# If better debug info is needed for webGavrog, replace `npm run build` with `npm run build-dev`
 
