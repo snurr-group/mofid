@@ -157,7 +157,8 @@ o_identity_core_tob <- tribble(
   "Zr.UEGVXEAWMLARMQ.MOFkey-v1.ftw", "NU-1103", "10.1021/ja512973b",
   "Zr.VSFXBCHNPQPWBX.MOFkey-v1.flu", "MOF-841", "10.1021/ja500330a",
   "Zr.WVBWNURTSYQJFE.MOFkey-v1.ftw", "NU-1004", "10.1021/ja512973b",
-  "Zr.YROTZTMCXKTYMW.MOFkey-v1.fcu", "(UKIBIB)", "10.1002/chem.201505185"
+  "Zr.YROTZTMCXKTYMW.MOFkey-v1.fcu", "(UKIBIB)", "10.1002/chem.201505185",
+  "Mn.RFCSJOKCQCTLNH.MOFkey-v1.bcu", NA, NA  # complicated mismatching node structure
 )
 # Adding in some validation so we can tell when these numbers change and can update the tables above.
 # Anti-join to remove the inner circle (all three databases) and full join to check for any extra entries
@@ -171,6 +172,8 @@ expect_equal(
   nrow(o_identity_core_tob),
   o_core_tob %>% anti_join(o_combined, by="identifier") %>% full_join(o_identity_core_tob, by="identifier") %>% nrow
 )
+# Find missing entries, e.g. via:
+# o_core_tob %>% anti_join(o_combined, by="identifier") %>% anti_join(o_identity_core_tob, by="identifier") %>% View
 
 # TODO: considering a table/figure drawing the chemical structures?
 # Could have boxes for the different nodes and categorize them that way
