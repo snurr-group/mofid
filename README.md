@@ -21,3 +21,13 @@ cif_path = '/path/to/my/mof.cif'
 mofid = cif2mofid(cif_path)
 ```
 The output of the `mofid.cif2mofid` function is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
+
+## Credits
+
+The MOFid command line and web tools are built on top of other open-source software projects:
+
+* [Open Babel](https://github.com/openbabel/openbabel) cheminformatics toolkit
+* [eigen](http://eigen.tuxfamily.org/) is bundled as a dependency for Open Babel
+* Make, [cmake](https://cmake.org/overview/), [Node.js](https://nodejs.org/en/), and [Emscripten](https://emscripten.org/index.html) provide the build infrastructure
+* [Systre](http://www.gavrog.org/) (and [webGavrog](https://github.com/odf/webGavrog) in the online tool) analyze crystal graph data to assign [RCSR topology symbols](http://rcsr.anu.edu.au/) for MOFs
+* [NGL Viewer](https://github.com/arose/ngl) is used to visualize MOF structures and components on the website
