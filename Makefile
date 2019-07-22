@@ -82,7 +82,7 @@ init-web:
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip; \
 	cd ..; \
-	unzip ../Resources/webGavrog-20190709.zip && mv webGavrog-master webGavrog-build; \
+	unzip ../Resources/webGavrog-20190721.zip && mv webGavrog-5649192c38329d8616ce8e2204787bdc945f6dc4 webGavrog-build; \
 	mkdir webGavrog
 
 openbabel/embuild/obabel.js:

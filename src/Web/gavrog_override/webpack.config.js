@@ -21,7 +21,7 @@ fs.writeFileSync(path.resolve(__dirname, 'src', 'version.js'),
 
 
 module.exports = {
-  entry: ['babel-polyfill', './main.js'],
+  entry: ['@babel/polyfill', './main.js'],
   node: { fs: 'empty' },  // per https://github.com/webpack-contrib/css-loader/issues/447 via Google
   plugins: [
     new CleanWebpackPlugin()
