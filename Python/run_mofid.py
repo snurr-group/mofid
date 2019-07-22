@@ -8,6 +8,7 @@ import sys
 import os
 from mofid.id_constructor import (extract_fragments, extract_topology,
 	assemble_mofkey, assemble_mofid, parse_mofid)
+from cpp_cheminformatics import openbabel_GetSpacedFormula
 DEFAULT_OUTPUT_PATH = 'Output'
 
 def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
@@ -66,6 +67,12 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 			f.write('node' + '\t' + smiles + '\n')
 		for smiles in linker_fragments:
 			f.write('linker' + '\t' + smiles + '\n')
+	with open(os.path.join(output_path, 'python_molec_formula.txt'), 'w') as f:
+		f.write(
+			openbabel_GetSpacedFormula(
+				os.path.join(output_path, 'orig_mol.cif'), ' ', False
+			) + '\n'
+		)
 
 	return identifiers
 

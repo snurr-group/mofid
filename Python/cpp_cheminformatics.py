@@ -77,21 +77,27 @@ def openbabel_contains(mol_smiles, query):
 		sys.stderr.write(cpp_run.stderr + '\n')  # Re-fowarding obabel errors
 		return False
 
-def openbabel_formula(mol_smiles):
+def openbabel_formula(mol_smiles, smiles=True):
 	# Extracts a molecular formula without relying on the pybel module
 	# The .txt format prints the title: https://openbabel.org/docs/dev/FileFormats/Title_format.html
 	# Note: it looks like the various --append options are in descriptors/filters.cpp, etc.
-	cpp_run = runcmd([OBABEL_BIN, in_smiles(mol_smiles), '--append',
-		'FORMULA', '-otxt'])
+	if smiles:
+		input_str = in_smiles(mol_smiles)
+	else:
+		input_str = mol_smiles
+	cpp_run = runcmd([OBABEL_BIN, input_str,
+		'-ab',  # disables bonding for non-SMILES formats, otherwise ignored
+		'--title', 'FAKE',  # override title so we can consistently remove it
+		'--append', 'FORMULA', '-otxt'])
 	cpp_output = cpp_run.stdout
 	if (cpp_run.stderr != '1 molecule converted\n'):
 		sys.stderr.write(cpp_run.stderr + '\n')  # Re-fowarding obabel errors
-	return cpp_output.rstrip()
+	return cpp_output.rstrip().split()[1]  # removes the overwritten title
 
-def openbabel_GetSpacedFormula(mol_smiles, delim=' '):
+def openbabel_GetSpacedFormula(mol_smiles, delim=' ', smiles=True):
 	# Re-implements part of OpenBabel's GetSpacedFormula method
-	consolidated_formula = openbabel_formula(mol_smiles)
-	split_formula = re.findall(r'[A-Z][a-z]?|d*', consolidated_formula)
+	consolidated_formula = openbabel_formula(mol_smiles, smiles)
+	split_formula = re.findall(r'[A-Z][a-z]?|\d+', consolidated_formula)
 	if split_formula[-1] == '':
 		split_formula.pop()
 	return delim.join(split_formula)

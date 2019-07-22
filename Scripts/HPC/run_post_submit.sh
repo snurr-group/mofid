@@ -41,6 +41,7 @@ copy_folder_tsv() {
 copy_folder_tsv "mofkey"
 copy_folder_tsv "linker_stats"
 copy_folder_tsv "smiles_parts"
+copy_folder_tsv "molec_formula"
 
 mv Output_*/ "$ORIG_OUTPUTS"
 mv err_*.txt "$ORIG_OUTPUTS"

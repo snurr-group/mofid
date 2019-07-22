@@ -23,10 +23,12 @@ mkdir -p "${OUTPUT_DIR}"
 PYTHON_MOFID="${OUTPUT_DIR}/python_mofid.txt"
 PYTHON_MOFKEY="${OUTPUT_DIR}/python_mofkey.txt"
 PYTHON_SMILES_PARTS="${OUTPUT_DIR}/python_smiles_parts.txt"
+PYTHON_MOLEC_FORMULA="${OUTPUT_DIR}/python_molec_formula.txt"
 
 COPY_MOFID="${OUTPUT_DIR}/folder_mofid.smi"
 COPY_MOFKEY="${OUTPUT_DIR}/folder_mofkey.tsv"
 COPY_SMILES_PARTS="${OUTPUT_DIR}/folder_smiles_parts.tsv"
+COPY_MOLEC_FORMULA="${OUTPUT_DIR}/folder_molec_formula.tsv"
 
 SRC_LINKER_STATS="${OUTPUT_DIR}/MetalOxo/linker_stats.txt"
 COPY_LINKER_STATS="${OUTPUT_DIR}/folder_linker_stats.tsv"
@@ -35,6 +37,7 @@ rm -f "${COPY_MOFID}"
 echo -e "filename\tmofkey" > "${COPY_MOFKEY}"
 echo -e "filename\tinchikey\tconnections_metaloxo_net\tuc_count\tinchi\ttruncated_inchikey\tsmiles\tskeleton" > "${COPY_LINKER_STATS}"
 echo -e "filename\tpart\tsmiles" > "${COPY_SMILES_PARTS}"
+echo -e "filename\tdelim_formula" > "${COPY_MOLEC_FORMULA}"
 
 # Save current git commit to improve traceability
 echo "Analyzing ${CIF_DIR} with MOFid commit:" 1>&2
@@ -64,7 +67,8 @@ do
 	# Also parse the linker stats (deleting blank lines, first) and SMILES parts
 	sed -e '/^$/d' "${SRC_LINKER_STATS}" | sed -e 's/^/'"$(basename "$i")"'\t/' >> "${COPY_LINKER_STATS}"
 	sed -e '/^$/d' "${PYTHON_SMILES_PARTS}" | sed -e 's/^/'"$(basename "$i")"'\t/' >> "${COPY_SMILES_PARTS}"
-	rm -f "${SRC_LINKER_STATS}" "${PYTHON_SMILES_PARTS}"
+	sed -e '/^$/d' "${PYTHON_MOLEC_FORMULA}" | sed -e 's/^/'"$(basename "$i")"'\t/' >> "${COPY_MOLEC_FORMULA}"
+	rm -f "${SRC_LINKER_STATS}" "${PYTHON_SMILES_PARTS}" "${PYTHON_MOLEC_FORMULA}"
 done
 
 echo "----------------------------" 1>&2
