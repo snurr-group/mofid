@@ -41,8 +41,8 @@ ob_changes.patch:
 	# Lists my changes to the main OpenBabel code
 
 test: bin/sbu
-	python Python/check_mof_composition.py
-
+	python tests/check_run_mofid.py
+	python tests/check_mof_composition.py
 
 
 init:
