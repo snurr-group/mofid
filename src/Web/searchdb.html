@@ -56,32 +56,41 @@
 
         var parseMOFid = function(mofid) {
           // Converted from run_mofid.py:parse_mofid
-          var components = mofid.split(/\t| /);
+          var mofid_parts = mofid.split(';');
+          var mofid_data = mofid_parts[0];
+          var mof_name = null;
+          if (mofid_parts.length > 1) {
+            mof_name = mofid_parts.slice(1).join(';');
+          }
+
+          var components = mofid_data.split(/\t| /);
           if (components.length == 1) {
-            throw 'Attempted to parse invalid MOFid ' + mofid;
+            if (mofid_data.trimLeft() != mofid_data) {  // empty SMILES: no MOF found
+              components.push(components[0]);  // move metadata to the right
+              components[0] = '';
+            } else {
+              throw 'MOF metadata required';
+            }
           } else if (components.length > 2) {
-            throw 'FIXME: parseMOFid currently does not support spaces in common names.';
+            throw 'Bad MOFid containing extra spaces before the semicolon: ' + mofid;
           }
           var smiles = components[0];
           var metadata = components[1].split('.');
 
-          var mof_name = null;
           var cat = null;
           var topology = null;
           for (var i=0; i<metadata.length; i++) {
             var tag = metadata[i];
-            if (i == 0 && tag != 'f1') {
-              throw 'MOFid v1 must start with the tag "f1"';
+            if (i == 0 && !tag.startsWith('MOFid')) {
+              throw 'MOFid-v1 must start with the correct tag';
             }
-            if (tag == 'F1') {
-              mof_name = metadata.slice(i+1).join('.');
-              break;
-            }
-            if (tag.toLowerCase().startsWith('cat')) {
-              cat = tag.slice(3);  // end arg is optional.  Extracts through the end
-            } else {
+            if (i == 0 && tag.substr(5) != '-v1') {
+              throw 'Unsupported version of MOFid';
+            } else if (i == 1) {
               topology = tag;
-            }
+            } else if (tag.toLowerCase().startsWith('cat')) {
+              cat = tag.slice(3);  // end arg is optional.  Extracts through the end
+            } // else: ignoring other MOFid tags, at least for now
           }
 
           return {
