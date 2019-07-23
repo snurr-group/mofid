@@ -23,7 +23,7 @@ before_script:
   - pip install .
   - source activate py2
   - pip install .
-  - source deactivate py2
+  - conda deactivate
 
 script:
   #py3 test
@@ -32,4 +32,4 @@ script:
   #py2 test
   - source activate py2
   - make test
-  - source deactivate py2
+  - conda deactivate
