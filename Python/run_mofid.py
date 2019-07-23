@@ -8,7 +8,7 @@ import sys
 import os
 from mofid.id_constructor import (extract_fragments, extract_topology,
 	assemble_mofkey, assemble_mofid, parse_mofid)
-from cpp_cheminformatics import openbabel_GetSpacedFormula
+from mofid.cpp_cheminformatics import openbabel_GetSpacedFormula
 DEFAULT_OUTPUT_PATH = 'Output'
 
 def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
