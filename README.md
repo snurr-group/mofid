@@ -31,3 +31,4 @@ The MOFid command line and web tools are built on top of other open-source softw
 * Make, [cmake](https://cmake.org/overview/), [Node.js](https://nodejs.org/en/), and [Emscripten](https://emscripten.org/index.html) provide the build infrastructure
 * [Systre](http://www.gavrog.org/) (and [webGavrog](https://github.com/odf/webGavrog) in the online tool) analyze crystal graph data to assign [RCSR topology symbols](http://rcsr.anu.edu.au/) for MOFs
 * [NGL Viewer](https://github.com/arose/ngl) is used to visualize MOF structures and components on the website
+* [Kekule.js](http://partridgejiang.github.io/Kekule.js/) enables users to draw molecule substructure queries in the searchdb web tool
