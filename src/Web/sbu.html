@@ -81,7 +81,7 @@
           var ptr = Module._malloc(buflen);
           var buffer= new Uint8Array(Module.HEAPU8.buffer, ptr, buflen); // Get a bytes view on the newly allocated buffer.
           C_obcode(cifdata, ptr, buflen);
-          var ans = Module.Pointer_stringify(ptr);
+          var ans = Module.UTF8ToString(ptr);
           Module._free(ptr);
           return ans;
         };

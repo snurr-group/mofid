@@ -65,19 +65,26 @@ eclipse:
 	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 
 # Emscripten web content below
-# In my current Windows setup, these must all be run within Git Bash
-# Not yet tested cross-platform in Linux
-# Warning: the path to web-data/core.smi has not yet been tested!
+# In my current Windows setup, these must all be run within Git Bash.
+# Emscripten should be installed in /mofid/../emsdk/ using the instructions at
+# https://emscripten.org/docs/getting_started/downloads.html
+# Node.js must also be installed to successfully compile webGavrog.
+#
+# After having some problems in Windows, I switched to the quest Linux computing cluster.
+# The steps are installing emscripten using the link above.  Then you need to load modules and run the make targets:
+# module load clang/3.4.1 && module load gcc/6.4.0 && module load cmake/3.12.0
+# make init-web && make web && make github-web
+
 init-web:
-	source Scripts/setup_web_compiler_paths.sh; \
+	../emsdk/emsdk activate latest && source ../emsdk/emsdk_env.sh; \
 	cd openbabel; \
 	mkdir embuild eminstall; \
 	cd embuild; \
-	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF -DWITH_STATIC_INCHI=ON -DWITH_STATIC_XML=ON -DCMAKE_CXX_FLAGS="-s WASM=1"; \
+	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF -DWITH_STATIC_INCHI=ON -DWITH_STATIC_XML=ON -DCMAKE_CXX_FLAGS="-s WASM=0"; \
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS=\"['_analyzeMOFc', '_runSearchc', '_SmilesToSVG']\" --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1"; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="--preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=0 -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap', 'UTF8ToString']\""; \
 	mkdir kekule; \
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip; \
@@ -86,7 +93,7 @@ init-web:
 	mkdir webGavrog
 
 openbabel/embuild/obabel.js:
-	source Scripts/setup_web_compiler_paths.sh; \
+	../emsdk/emsdk activate latest && source ../emsdk/emsdk_env.sh; \
 	cd openbabel/embuild; \
 	emmake make; \
 	emmake make install
@@ -113,7 +120,7 @@ embin/webGavrog/main.js: src/Web/gavrog_override/*.js
 	# If better debug info is needed for webGavrog, replace `npm run build` with `npm run build-dev`
 
 embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
-	source Scripts/setup_web_compiler_paths.sh; \
+	../emsdk/emsdk activate latest && source ../emsdk/emsdk_env.sh; \
 	cd embin; \
 	emmake make
 

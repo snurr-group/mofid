@@ -28,6 +28,7 @@ ob_changes.patch
 openbabel/installed
 Resources/External/
 emsdk_set_env.bat
+emsdk_set_env.sh
 openbabel/eminstall/
 openbabel/embuild/
 embin/
