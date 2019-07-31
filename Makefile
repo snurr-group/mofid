@@ -80,11 +80,11 @@ init-web:
 	cd openbabel; \
 	mkdir embuild eminstall; \
 	cd embuild; \
-	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF -DWITH_STATIC_INCHI=ON -DWITH_STATIC_XML=ON -DCMAKE_CXX_FLAGS="-s WASM=0"; \
+	emcmake cmake .. -DCMAKE_INSTALL_PREFIX=../eminstall/ -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DENABLE_TESTS=OFF -DBUILD_SHARED=OFF -DWITH_STATIC_INCHI=ON -DWITH_STATIC_XML=ON -DCMAKE_CXX_FLAGS="-O3 -s WASM=1"; \
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="--preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=0 -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap', 'UTF8ToString']\""; \
+	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-O3 --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap', 'UTF8ToString']\""; \
 	mkdir kekule; \
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip; \
