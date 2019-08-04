@@ -64,7 +64,7 @@ eclipse:
 	cd bin; \
 	cmake -G "Eclipse CDT4 - Unix Makefiles" ../src; \
 
-# Emscripten web content below
+# Emscripten compilation notes below, for the web interface:
 # In my current Windows setup, these must all be run within Git Bash.
 # Emscripten should be installed in /mofid/../emsdk/ using the instructions at
 # https://emscripten.org/docs/getting_started/downloads.html
@@ -74,6 +74,9 @@ eclipse:
 # The steps are installing emscripten using the link above.  Then you need to load modules and run the make targets:
 # module load clang/3.4.1 && module load gcc/6.4.0 && module load cmake/3.12.0
 # make init-web && make web && make github-web
+#
+# You can also host this code yourself offline.  For a local copy, run the Emscripten compilation steps above or download the precompiled repository at https://github.com/snurr-group/web-mofid
+# Run a local web server such as `http-server` from Node.js, `python -m SimpleHTTPServer 8080`, or `python3 -m http.server 8080`, then navigate to http://localhost:8080/ in a web browser.
 
 init-web:
 	../emsdk/emsdk activate latest && source ../emsdk/emsdk_env.sh; \
