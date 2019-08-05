@@ -126,5 +126,5 @@ embin/sbu.js: src/sbu.cpp openbabel/embuild/obabel.js src/pre_emscripten.js
 	../emsdk/emsdk activate latest && source ../emsdk/emsdk_env.sh; \
 	cd embin; \
 	emmake make; \
-	sed -i -e 's/\(function _strftime(s, maxsize, format, tm) {\)$/\1 return 0;  \/\/ avoid code bottleneck from (unused?) strftime implementation/' embin/sbu.js
+	sed -i -e 's#\(function _strftime(s, maxsize, format, tm) {\)$$#\1 return 0\;  // avoid code bottleneck from (unused?) strftime implementation#' sbu.js
 
