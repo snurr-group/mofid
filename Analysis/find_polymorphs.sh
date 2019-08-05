@@ -44,10 +44,10 @@ CREATE TABLE polymorphic AS
 
 .headers on
 .output ${OUTPUT_NAMES_FILE}
-SELECT mofs.refcode, mofs.smiles, mofs.sn_topology, polymorphic.qty
+SELECT mofs.filename, mofs.smiles, mofs.sn_topology, polymorphic.qty
 	FROM polymorphic
 	LEFT JOIN mofs ON mofs.smiles = polymorphic.smiles
-	ORDER BY polymorphic.qty DESC, mofs.smiles, mofs.sn_topology, refcode;
+	ORDER BY polymorphic.qty DESC, mofs.smiles, mofs.sn_topology, mofs.filename;
 
 .output ${OUTPUT_SUMMARY_FAMILIES}
 SELECT * FROM polymorphic;

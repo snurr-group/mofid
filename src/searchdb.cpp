@@ -42,8 +42,8 @@ int main(int argc, char* argv[])
 std::string runSearch(std::string pattern, std::string db_file, bool reverse_search) {
 	OBConversion obconv;
 	obconv.SetInFormat("smi");
-	obconv.SetOutFormat("can");
-	obconv.AddOption("i", OBConversion::OUTOPTIONS);
+	obconv.SetOutFormat("copy");
+	// WARNING: the "copy" output format requires non-Windows line endings per http://openbabel.org/docs/current/FileFormats/Copy_raw_text.html
 
 	std::string search_type;
 	if (reverse_search) {

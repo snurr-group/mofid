@@ -1,6 +1,6 @@
 /**********************************************************************
-forcefield.cpp - A OBOp to calculate and minimize the energy using a
-                 forcefield (re-wrap of obminimize and obenergy)
+energy.cpp - A OBOp to calculate and minimize the energy using a
+             forcefield (re-wrap of obminimize and obenergy)
 
 Copyright (C) 2006-2007 by Tim Vandermeersch
           (C) 2009 by Chris Morley

@@ -5,10 +5,12 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <set>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/generic.h>
 #include <openbabel/obiter.h>
 #include <openbabel/elements.h>
@@ -18,6 +20,8 @@
 
 namespace OpenBabel
 {
+
+bool COPY_ALL_CIFS_TO_PDB = false;  // disabled by default, but re-enabled by emscripten within analyzeMOFc
 
 bool importCIF(OBMol* molp, std::string filepath, bool bond_orders, bool makeP1) {
 	// Read the first distinguished molecule from a CIF file
@@ -65,6 +69,54 @@ void writeCIF(OBMol* molp, std::string filepath, bool write_bonds) {
 		conv.AddOption("g");
 	}
 	conv.WriteFile(molp, filepath);
+
+	if (COPY_ALL_CIFS_TO_PDB) {
+		// Make a copy of the molecule for visualization, sans periodic boundaries
+		// First, rename the PDB file extension from the .cif
+		std::size_t path_length = filepath.length();
+		std::string orig_extension = filepath.substr(path_length-4, 4);
+		std::string pdb_filepath = filepath;
+		if (orig_extension == ".cif" || orig_extension == ".CIF") {
+			pdb_filepath = pdb_filepath.substr(0, path_length-4);
+		}
+		pdb_filepath += ".pdb";
+
+		writePDB(molp, pdb_filepath, write_bonds);
+	}
+}
+
+void writePDB(OBMol* orig_molp, std::string pdb_filepath, bool write_bonds, bool exclude_pbc) {
+	// Writes a PDB copy of a molecule, by default removing bonds across unit cell boundaries
+	OBConversion pdb_conv;
+	pdb_conv.SetOutFormat("pdb");
+	if (write_bonds) {
+		pdb_conv.AddOption("s");  // let's start with only single bonds
+	} else {
+		pdb_conv.AddOption("b");
+	}
+
+	OBMol pdb_mol_copy;
+	OBMol* pdb_molp = &pdb_mol_copy;
+	copyMOF(orig_molp, pdb_molp);
+
+	if (exclude_pbc) {
+		std::set<OBBond*> bonds_to_exclude;
+		FOR_BONDS_OF_MOL(b, pdb_mol_copy) {
+			// Similar in concept to the cifformat.cpp code for periodic bonds,
+			// but not the same implementation since we don't wrap coordinates ahead of time.
+			double non_periodic_length = (b->GetBeginAtom()->GetVector() - b->GetEndAtom()->GetVector()).length();
+			if (abs(b->GetLength() - non_periodic_length) > 1.0e-6) {
+				// We could also consider doing this calculation on the X/Y/Z coordinates independently
+				bonds_to_exclude.insert(&*b);
+			}
+		}
+		pdb_mol_copy.BeginModify();
+		for (std::set<OBBond*>::iterator it=bonds_to_exclude.begin(); it!=bonds_to_exclude.end(); ++it) {
+			pdb_mol_copy.DeleteBond(*it);
+		}
+		pdb_mol_copy.EndModify();
+	}
+	pdb_conv.WriteFile(pdb_molp, pdb_filepath);
 }
 
 OBMol initMOFwithUC(OBMol *orig_in_uc) {
