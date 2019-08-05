@@ -75,6 +75,10 @@ eclipse:
 # module load clang/3.4.1 && module load gcc/6.4.0 && module load cmake/3.12.0
 # make init-web && make web && make github-web
 #
+# To avoid potential incompatibilities with an Open Babel implementation detail
+# in the searchdb tool, please ensure that the file src/Web/web_data/core.smi
+# is checked out with UNIX line endings.
+#
 # You can also host this code yourself offline.  For a local copy, run the Emscripten compilation steps above or download the precompiled repository at https://github.com/snurr-group/web-mofid
 # Run a local web server such as `http-server` from Node.js, `python -m SimpleHTTPServer 8080`, or `python3 -m http.server 8080`, then navigate to http://localhost:8080/ in a web browser.
 
