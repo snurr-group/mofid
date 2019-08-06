@@ -22,6 +22,8 @@ mofid = cif2mofid(cif_path)
 ```
 The output of the `mofid.cif2mofid` function is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
 
+Or, you can run some of the tools in your web browser at [https://snurr-group.github.io/web-mofid/](https://snurr-group.github.io/web-mofid/)
+
 ## Credits
 
 The MOFid command line and web tools are built on top of other open-source software projects:
