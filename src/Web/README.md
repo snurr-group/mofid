@@ -8,3 +8,8 @@ The MOFid code has many utilities, two of which can be run in your web browser:
 Please note that the tools may require a few minutes to run the analysis after you click "submit."
 
 The main project [GitHub repository](https://github.com/snurr-group/mofid) includes a downloadable C++/Python code, [example CIFs for analysis](https://github.com/snurr-group/mofid/tree/master/Resources/TestCIFs), and credits for third-party software.
+
+This work is supported by the U.S. Department of Energy, Office of Basic 
+Energy Sciences, Division of Chemical Sciences, Geosciences and 
+Biosciences through the Nanoporous Materials Genome Center under award 
+DE-FG02-17ER16362.
