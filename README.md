@@ -26,6 +26,11 @@ Or, you can run some of the tools in your web browser at [https://snurr-group.gi
 
 ## Credits
 
+This work is supported by the U.S. Department of Energy, Office of Basic 
+Energy Sciences, Division of Chemical Sciences, Geosciences and 
+Biosciences through the Nanoporous Materials Genome Center under award 
+DE-FG02-17ER16362.
+
 The MOFid command line and web tools are built on top of other open-source software projects:
 
 * [Open Babel](https://github.com/openbabel/openbabel) cheminformatics toolkit
