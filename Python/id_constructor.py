@@ -131,7 +131,8 @@ def extract_topology(mof_path):
 		elif 'Processing component ' in line:
 			assert len(topologies) == current_component  # Should extract one topology per component
 			current_component += 1
-			assert line[-2] == str(current_component)
+			line_num = line.split('component')[-1].split(':')[0].strip()
+			assert line_num == str(current_component)
 
 	if len(topologies) == 0:
 		return 'ERROR'  # unexpected format
