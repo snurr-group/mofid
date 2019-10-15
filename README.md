@@ -24,6 +24,9 @@ The output of the `mofid.cif2mofid` function is a dictionary containing eight en
 
 Or, you can run some of the tools in your web browser at [https://snurr-group.github.io/web-mofid/](https://snurr-group.github.io/web-mofid/)
 
+## Reference
+Please cite [DOI: 10.1021/acs.cgd.9b01050](https://pubs.acs.org/doi/abs/10.1021/acs.cgd.9b01050) if you use MOFid in your work.
+
 ## Credits
 
 This work is supported by the U.S. Department of Energy, Office of Basic 
