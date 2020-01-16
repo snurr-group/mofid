@@ -1,6 +1,8 @@
 # MOFid
 A system for rapid identification and analysis of metal-organic frameworks. Check out [https://snurr-group.github.io/web-mofid/](https://snurr-group.github.io/web-mofid/) to quickly and easily run these tools in your browser! No programming skills required.
 
+Please cite [DOI: 10.1021/acs.cgd.9b01050](https://pubs.acs.org/doi/abs/10.1021/acs.cgd.9b01050) if you use MOFid in your work.
+
 ## Objective
 Supplement the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches. Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
@@ -21,9 +23,6 @@ cif_path = '/path/to/my/mof.cif'
 mofid = cif2mofid(cif_path)
 ```
 The output of the `mofid.cif2mofid` function is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
-
-## Reference
-Please cite [DOI: 10.1021/acs.cgd.9b01050](https://pubs.acs.org/doi/abs/10.1021/acs.cgd.9b01050) if you use MOFid in your work.
 
 ## Credits
 
