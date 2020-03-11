@@ -8,7 +8,7 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 
 ## Requirements
 1. A Python environment is required. If you do not have a Python environment installed, we recommend downloading and installing [Anaconda](https://www.anaconda.com/distribution/#download-section). MOFid is compatible with both Python 2/3.
-2. Make sure you have the following: a C++ compiler, [`cmake`](https://cmake.org/), and access to GNU commands (such as `make`). These are all typically available on Linux machines. If running on Windows, we recommend using [Cygwin](https://www.cygwin.com/) and including the `make`, `wget`, and `pkg-config` packages in addition to the default options during the Cygwin installation process.
+2. Make sure you have the following: a C++ compiler, [`cmake`](https://cmake.org/), and access to GNU commands (such as `make`). These are all typically available on Linux machines. If running on Windows, we recommend using [Cygwin](https://www.cygwin.com/) and including the `make`, `wget`, `gcc-core`, `gcc-g++`, and `pkg-config` packages in addition to the default options during the Cygwin installation process.
 3. Make sure you have the [Java Runtime Environment](https://www.java.com/en/download/) installed and included in your system's path. If unsure, try running `java` in the command line to see if it successfully calls Java.
 
 ## Installation
