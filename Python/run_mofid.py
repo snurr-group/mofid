@@ -24,7 +24,7 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 			'SingleNode','topology.cgd'))
 		an_topology = extract_topology(os.path.join(output_path,
 			'AllNode','topology.cgd'))
-		if sn_topology == an_topology:
+		if sn_topology == an_topology or an_topology == 'ERROR':
 			topology = sn_topology
 		else:
 			topology = sn_topology + ',' + an_topology
