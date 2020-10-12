@@ -97,7 +97,7 @@
           let mofid_topology = '';
           if (fragment_info.cat == null) {
             mofid_topology = 'NA'
-          } else if (single_node_topology == all_node_topology) {
+          } else if (single_node_topology == all_node_topology || all_node_topology == 'ERROR') {
             mofid_topology = single_node_topology;
           } else {
             mofid_topology = single_node_topology + ',' + all_node_topology;
