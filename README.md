@@ -8,31 +8,55 @@ Please cite [DOI: 10.1021/acs.cgd.9b01050](https://pubs.acs.org/doi/abs/10.1021/
 ## Objective
 Supplement the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches. Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
-## Requirements
-1. A Python environment is required. If you do not have a Python environment installed, we recommend downloading and installing [Anaconda](https://www.anaconda.com/distribution/#download-section). MOFid is compatible with both Python 2/3.
-2. Make sure you have the following: a C++ compiler, [`cmake`](https://cmake.org/), and access to GNU commands (such as `make`). These are all typically available on Linux machines. If running on Windows, we recommend using [Cygwin](https://www.cygwin.com/) and including the `cmake`, `make`, `wget`, `gcc-core`, `gcc-g++`, and `pkg-config` packages in addition to the default options during the Cygwin installation process.
-3. Make sure you have the [Java Runtime Environment](https://www.java.com/en/download/) installed and included in your system's path. If unsure, try running `java` in the command line to see if it successfully calls Java.
-
 ## Installation
-1. Run `make init` in the base `/mofid` directory.
-2. Run `python set_paths.py` followed by `pip install .` in the base `/mofid` directory.  If you encounter permissions errors (typically not with Anaconda), you may need to run `pip install --user .`
+If you have access to a Linux system or high performance computing cluster, it may be possible to run the MOFid code via [singularity](https://apptainer.org/user-docs/master/quick_start.html), which packages the mofid installer into a portable, reproducible environment. To get started, refer to documentation from your university or computing center ([example](https://kb.northwestern.edu/page.php?id=85614)) for help on singularity. There may be setup instructions specific to your compute environment. (For example, you may need to load modules or bind paths to set up singularity.)
+
+1. Set up singularity and test your installation, e.g. `singularity exec library://ubuntu cat /etc/lsb-release`
+2. Download the pre-compiled singularity container from GitHub, e.g. via `singularity pull mofid.sif GITHUB_URL_TODO`
+3. Test your installation using `singularity test mofid.sif`
+
+See [additional details](https://github.com/snurr-group/mofid/blob/master/containers.md) about alternate installation methods, such as using [Docker](https://www.docker.com/resources/what-container) or compiling the Python package yourself.
 
 ## Usage
-In a Python script, the user simply has to call the `run_mofid.cif2mofid(cif_path,output_path='Output')` function. The first argument is required and is the path to the MOF CIF. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to `/Output` if not specified. An example of how to call MOFid is shown below.
-```python
-from mofid.run_mofid import cif2mofid
-cif_path = '/path/to/my/mof.cif'
-mofid = cif2mofid(cif_path)
+The singularity container wraps all of the MOFid software into a single package.
+
+As a command line tool:
+
+```{bash}
+# Analyzing a single MOF crystal structure
+./mofid.sif file path_to_mof.cif
+# alternatively: singularity run mofid.sif file path_to_mof.cif
+
+# Analyzing a folder
+./mofid.sif folder path_to_input_cif_folder path_to_mofid_output
+# By default, path_to_mofid_output is set to "Output/" in your current directory
 ```
-The output of the `mofid.cif2mofid` function is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
+
+Or, as part of a Python script:
+
+```{python}
+import json
+import sys
+
+import subprocess
+# If using Python 2, you may need to install subprocess32 and import via:
+# import subprocess32 as subprocess
+
+mofid_cmd = ["singularity", "run", "python", "/mofid/Python/mofid_json.py", "path_to_mof.cif"]
+mofid_run = subprocess.run(mofid_cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+sys.stderr.write(mofid_run.stderr)  # Re-forwarding C++ errors
+mofid_output = json.loads(mofid_run.stdout)
+```
+
+The `mofid_output` variable above is a dictionary containing eight entries: the MOFid (`mofid`), MOFkey (`mofkey`), SMILES string (`smiles`, `smiles_nodes`, or `smiles_linkers`), topology (`topology`), catenation (`cat`), and basename of the CIF (`cifname`).
 
 ## Background and Troubleshooting
 Please read the page [here](https://github.com/snurr-group/web-mofid/blob/master/README.md) for a detailed background and for important tips/tricks to help troubleshoot any problematic scenarios.
 
 ## Credits
-This work is supported by the U.S. Department of Energy, Office of Basic 
-Energy Sciences, Division of Chemical Sciences, Geosciences and 
-Biosciences through the Nanoporous Materials Genome Center under award 
+This work is supported by the U.S. Department of Energy, Office of Basic
+Energy Sciences, Division of Chemical Sciences, Geosciences and
+Biosciences through the Nanoporous Materials Genome Center under award
 DE-FG02-17ER16362.
 
 The MOFid command line and web tools are built on top of other open-source software projects:

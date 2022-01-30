@@ -1,0 +1,57 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+
+%files
+    . /mofid  # WARNING: relative path based on where singularity build is called
+
+%post
+    # set up conda and deps, per .travis.yml
+    apt-get update -qq
+    mkdir -p /usr/share/man/man1/  # required to prevent default-jre installation from crashing
+    apt-get install -qq default-jre
+    apt-get install -qq build-essential cmake
+
+    conda config --set always_yes yes --set changeps1 no
+    conda create -q -n py2 python=2.7
+
+    # copy source code from git
+    cd /mofid
+
+    # compile openbabel, C++ analysis code, and Python package
+    make init
+    python set_paths.py
+    pip install .
+
+%runscript
+    if [ $# -lt 2 ]
+    then
+        echo "USAGE: need to specify a command (file or folder), followed by path(s)" 1>&2 && exit
+    fi
+    COMMAND="$1"
+    if [ "$COMMAND" = "file" ]
+    then
+        python /mofid/Python/mofid_json.py "$2"  # writing json to stdout
+    elif [ "$COMMAND" = "folder" ]
+    then
+        MOFID_INPUT_DIR=$(realpath "$2")  # relative path -> abspath
+        if [ $# -lt 3 ]
+        then
+            MOFID_OUTPUT_DIR="$PWD/Output"
+        else
+            MOFID_OUTPUT_DIR=$(realpath "$3")
+        fi
+        cd /mofid  # because run_folder.sh has some hard-coded relative paths
+        Scripts/run_folder.sh "$MOFID_INPUT_DIR" "$MOFID_OUTPUT_DIR"
+    else
+        echo "Unknown command. Select 'file' for a single json output or 'folder' for bulk analysis" 1>&2 && exit
+    fi
+
+%test
+    # Writes to Output/ within a temporary directory
+    TMP_TEST_DIR=$(mktemp -d -t mofid-test-XXXXXXXXXX)
+    echo "Writing test output to $TMP_TEST_DIR/Output"
+    cd "$TMP_TEST_DIR"
+    python /mofid/tests/check_run_mofid.py
+    python /mofid/tests/check_mof_composition.py
+    cd
+    rm -r "$TMP_TEST_DIR"
