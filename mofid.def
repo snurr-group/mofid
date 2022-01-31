@@ -30,7 +30,7 @@ From: continuumio/miniconda3
     COMMAND="$1"
     if [ "$COMMAND" = "file" ]
     then
-        python /mofid/Python/mofid_json.py "$2"  # writing json to stdout
+        python /mofid/Python/run_mofid.py "$2" "Output" json  # writing json to stdout
     elif [ "$COMMAND" = "folder" ]
     then
         MOFID_INPUT_DIR=$(realpath "$2")  # relative path -> abspath

@@ -1,5 +1,5 @@
 # How to run MOFid
-TODO: PUBLISHING THE SIF AS A RELEASE, AND UPDATING PATH IN THE MAIN README
+TODO: PUBLISHING THE SIF AS A RELEASE, AND UPDATING URL IN THE MAIN README
 
 This document provides additional information about alternative installation methods for the MOFid package. Some of these commands may require adjustments to run on your system.
 
@@ -20,10 +20,15 @@ To start a shell within the Docker container, run `docker run -it mofid /bin/bas
 To analyze a single MOF crystal structure:
 
 ```{bash}
-docker run -i mofid python Python/mofid_json.py < path_to_input.cif > output.json
-```
+# Configure paths in the first two lines, then run this block
+MOFID_IN_FILENAME="P1-Cu-BTC.cif"
+MOFID_IN_DIR="$PWD"  # absolute path to parent directory, e.g. current directory via $PWD
 
-This invocation of Docker currently uses a temporary input file, so the output.json file will have a fake MOF name for the "cifname" and "mofid" that will need to be replaced.
+docker run \
+    --mount type=bind,source="$MOFID_IN_DIR",target="$MOFID_IN_DIR",readonly \
+    mofid \
+    python /mofid/Python/run_mofid.py "$MOFID_IN_DIR/$MOFID_IN_FILENAME" /mofid/TempOutput json
+```
 
 Or, for analyzing an entire folder:
 
@@ -36,7 +41,8 @@ mkdir -p "$MOFID_OUT_DIR"
 docker run \
     --mount type=bind,source="$MOFID_IN_DIR",target=/data,readonly \
     --mount type=bind,source="$MOFID_OUT_DIR",target=/out \
-    mofid Scripts/run_folder.sh /data /out
+    mofid \
+    Scripts/run_folder.sh /data /out
 ```
 
 
@@ -75,7 +81,7 @@ mofid_instance = Client.instance("mofid.sif")
 # depending on your HPC environment, you may need to add options=["--bind", "/project_dir:/project_dir"]
 
 # Analyzing a single file
-mofid_command = ["python", "/mofid/Python/mofid_json.py", "path_to_mof.cif"]
+mofid_command = ["python", "/mofid/Python/run_mofid.py", "path_to_mof.cif", "json"]
 mofid_stdout_and_stderr = Client.execute(mofid_instance, mofid_command)
 
 # Analyzing a folder is possible, but the output is not as clean
