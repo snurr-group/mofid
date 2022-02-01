@@ -16,7 +16,7 @@ There are three main ways in which you can use MOFid:
 Visit [https://snurr-group.github.io/web-mofid](https://snurr-group.github.io/web-mofid/) to quickly and easily run MOFid in your browser! No programming skills are required.
 
 ### Compiling from Source
-See the [compiling.md](compiling.md) for how to compile and run MOFid from source.
+See [compiling.md](compiling.md) for how to compile and run MOFid from source.
 
 ### Containerized MOFid
 See [singnularity.md](signularity.md) for instructions on how to run MOFid via a Singularity container.
