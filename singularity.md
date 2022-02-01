@@ -6,6 +6,8 @@ If you have access to a Linux system or high-performance computing cluster, it m
 1. Download the pre-compiled singularity container (`mofid.sif`) from the [most recent release](https://github.com/snurr-group/mofid/releases).
 2. Test your installation using `singularity test mofid.sif`. Your installation is successful if you receive the message `Results: 0 errors in 28 MOFs` at the end of the run.
 
+Alternatively, if you wish to use Docker see [docker.md](docker.md).
+
 ## Usage
 The singularity container wraps all of the MOFid software into a single package.
 
