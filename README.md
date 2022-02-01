@@ -6,20 +6,20 @@ Please cite [DOI: 10.1021/acs.cgd.9b01050](https://pubs.acs.org/doi/abs/10.1021/
 ## Objective
 Supplement the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches. Accomplish this goal by representing MOFs according to their nodes + linkers + topology
 
-## Usage
+## Usage and Installation Instructions
 There are three main ways in which you can use MOFid:
 1. From your browser.
-2. By using Singularity or Docker to run a pre-built image of the MOFid code locally.
-3. By compiling the MOFid source code and running it locally.
+2. By compiling the MOFid source code and running it locally.
+3. By using Singularity or Docker to run a pre-built image of the MOFid code locally.
 
 ### Browser-Based MOFid
-Visit [https://snurr-group.github.io/web-mofid/](https://snurr-group.github.io/web-mofid/) to quickly and easily run MOFid in your browser! No programming skills are required.
+Visit [https://snurr-group.github.io/web-mofid](https://snurr-group.github.io/web-mofid/) to quickly and easily run MOFid in your browser! No programming skills are required.
+
+### Compiling from Source
+See the instructions [here](compiling.md) for how to compile and run MOFid from source.
 
 ### Containerized MOFid
-See the instructions [here](singularity.md) for how to set up and use the container via Singularity or Docker.
-
-### Compilign from Source
-See the instructions [here](compiling.md) for how to compile and run MOFid from source.
+Instructions for how to run MOFid via [Singularity](singularity.md) (recommended) or [Docker](docker.md).
 
 ## Background and Troubleshooting
 Please read the page [here](https://github.com/snurr-group/web-mofid/blob/master/README.md) for a detailed background and for important tips/tricks to help troubleshoot any problematic scenarios.
