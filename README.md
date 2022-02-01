@@ -12,7 +12,7 @@ Supplement the current MOF naming conventions with a canonical, machine-readable
 If you have access to a Linux system or high performance computing cluster, it may be possible to run the MOFid code via [singularity](https://apptainer.org/user-docs/master/quick_start.html), which packages the mofid installer into a portable, reproducible environment. To get started, refer to documentation from your university or computing center ([example](https://kb.northwestern.edu/page.php?id=85614)) for help on singularity. There may be setup instructions specific to your compute environment. (For example, you may need to load modules or bind paths to set up singularity.)
 
 1. Set up singularity and test your installation, e.g. `singularity exec library://ubuntu cat /etc/lsb-release`
-2. Download the pre-compiled singularity container from GitHub, e.g. via `singularity pull mofid.sif GITHUB_URL_TODO`
+2. Download the pre-compiled singularity container from GitHub, e.g. via `wget -O mofid.sif https://github.com/snurr-group/mofid/releases/download/v1.1.0/mofid.sif`
 3. Test your installation using `singularity test mofid.sif`
 
 See [additional details](https://github.com/snurr-group/mofid/blob/master/containers.md) about alternate installation methods, such as using [Docker](https://www.docker.com/resources/what-container) or compiling the Python package yourself.

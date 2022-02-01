@@ -1,5 +1,4 @@
 # How to run MOFid
-TODO: PUBLISHING THE SIF AS A RELEASE, AND UPDATING URL IN THE MAIN README
 
 This document provides additional information about alternative installation methods for the MOFid package. Some of these commands may require adjustments to run on your system.
 
