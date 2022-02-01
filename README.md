@@ -19,7 +19,7 @@ Visit [https://snurr-group.github.io/web-mofid](https://snurr-group.github.io/we
 See [compiling.md](compiling.md) for how to compile and run MOFid from source.
 
 ### Containerized MOFid
-See [singnularity.md](signularity.md) for instructions on how to run MOFid via a Singularity container.
+See [singularity.md](singularity.md) for how to run MOFid via a Singularity container.
 
 ## Background and Troubleshooting
 Please read the page [here](https://github.com/snurr-group/web-mofid/blob/master/README.md) for a detailed background and for important tips/tricks to help troubleshoot any problematic scenarios.
