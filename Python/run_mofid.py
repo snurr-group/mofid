@@ -6,6 +6,7 @@ Parent module for obtaining MOFid data for a single .cif
 
 import sys
 import os
+import json
 from mofid.id_constructor import (extract_fragments, extract_topology,
 	assemble_mofkey, assemble_mofid, parse_mofid)
 from mofid.cpp_cheminformatics import openbabel_GetSpacedFormula
@@ -42,7 +43,7 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 	all_fragments.extend(node_fragments)
 	all_fragments.extend(linker_fragments)
 	all_fragments.sort()
-	mofid = assemble_mofid(all_fragments, topology, cat, 
+	mofid = assemble_mofid(all_fragments, topology, cat,
 			mof_name=mof_name)
 	parsed = parse_mofid(mofid)
 
@@ -56,7 +57,7 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 		'cat' : parsed['cat'],
 		'cifname' : parsed['name']
 	}
-	
+
 	# Write MOFid and MOFkey output to files, as well as node/linker info
 	with open(os.path.join(output_path, 'python_mofid.txt'), 'w') as f:
 		f.write(identifiers['mofid'] + '\n')
@@ -78,13 +79,22 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 
 if __name__ == '__main__':
 	args = sys.argv[1:]
-	if len(args) != 1 and len(args) != 2:
-		raise SyntaxError('Usage: python run_mofid.py path_to_cif_for_analysis.cif OutputPathIfNonstandard')
+	if len(args) not in [1, 2, 3]:
+		raise SyntaxError('Usage: python run_mofid.py path_to_cif_for_analysis.cif OutputPathIfNonstandard OutputMofidOrJson')
 	cif_file = args[0]
 	output_path = DEFAULT_OUTPUT_PATH
-	if len(args) == 2:
+	output_json = False  # printing the MOFid by default, unless json is explicitly requested
+	if len(args) >= 2:
 		output_path = args[1]
+	if len(args) == 3:
+		if args[2] == "json":
+			output_json = True
+		elif args[2] != "mofid":
+			raise SyntaxError('Third argument must be json, mofid, or not provided')
 
 	identifiers = cif2mofid(cif_file, output_path)
-	print(identifiers['mofid'])
-	#print(identifiers['mofkey'])  # but incompatible with the use of stdout in run_folder.sh
+	if output_json:
+		print(json.dumps(identifiers))
+	else:
+		print(identifiers['mofid'])
+		#print(identifiers['mofkey'])  # but incompatible with the use of stdout in run_folder.sh
