@@ -42,7 +42,9 @@ import subprocess
 # If using Python 2, you may need to install subprocess32 and import via:
 # import subprocess32 as subprocess
 
-mofid_cmd = ["singularity", "run", "python", "/mofid/Python/run_mofid.py", "path_to_mof.cif"]
+MOFID_SIF = "path_to_mofid.sif"
+MOF_CIF_TO_ANALYZE = "path_to_mof.cif"
+mofid_cmd = ["singularity", "run", MOFID_SIF, "file", MOF_CIF_TO_ANALYZE]
 mofid_run = subprocess.run(mofid_cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 sys.stderr.write(mofid_run.stderr)  # Re-forwarding C++ errors
 mofid_output = json.loads(mofid_run.stdout)
