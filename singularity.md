@@ -13,7 +13,7 @@ The singularity container wraps all of the MOFid software into a single package.
 
 As a command line tool:
 
-```{bash}
+```bash
 # Analyzing a single MOF crystal structure
 ./mofid.sif file path_to_mof.cif
 # alternatively: singularity run mofid.sif file path_to_mof.cif
@@ -25,7 +25,7 @@ As a command line tool:
 
 Or, as part of a Python script:
 
-```{python}
+```python
 import json
 import sys
 
