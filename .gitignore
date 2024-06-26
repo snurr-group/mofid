@@ -1,3 +1,7 @@
+.venv/
+venv/
+.env/
+env/
 *.pyc
 Data/
 !README.md
