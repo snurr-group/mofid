@@ -768,7 +768,7 @@ if __name__ == '__main__':
 	json.dump(results_summary, sys.stdout, indent=4)
 	num_mofs = results_summary['errors']['total_cifs']
 	num_errors = num_mofs - results_summary['errors']['error_types']['success']
-    # Test failure
-    num_errors += 1
+	# Test failure
+	num_errors += 1
 	mof_log(' '.join(['\nResults:', str(num_errors), 'errors in', str(num_mofs), 'MOFs\n']))
 	sys.exit(num_errors)
