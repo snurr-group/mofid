@@ -13,5 +13,6 @@ jobs:
         run: make init
       - name: Test with Python
         run: |
+          python set_paths.py
           pip install .
           make test
