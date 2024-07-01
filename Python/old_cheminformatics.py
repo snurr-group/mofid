@@ -14,29 +14,29 @@ os.environ['BABEL_DATADIR'] = os.path.join(openbabel_path,'data')  # directory w
 import pybel  # Read SMILES to calculate molecular formulas, run SMARTS-based OBChemTsfm, etc.
 
 def ob_normalize(smiles):
-	# Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
-	ob_mol = pybel.readstring('smi', smiles)
-	return ob_mol.write('can', opt={'i': True}).rstrip()
+    # Normalizes an arbitrary SMILES string with the same format and parameters as sbu.cpp
+    ob_mol = pybel.readstring('smi', smiles)
+    return ob_mol.write('can', opt={'i': True}).rstrip()
 
 def openbabel_replace(mol_smiles, query, replacement):
-	# Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
-	# With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
-	# See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
-	# and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
-	transform = pybel.ob.OBChemTsfm()
-	success = transform.Init(query, replacement)
-	assert success
-	mol = pybel.readstring('smi', mol_smiles)
-	transform.Apply(mol.OBMol)
-	mol.OBMol.UnsetAromaticPerceived()
-	mol.OBMol.Kekulize()
-	return ob_normalize(mol.write('can'))
+    # Perform Open Babel transforms, deletions, and/or replacements on a SMILES molecule.
+    # With help from on http://baoilleach.blogspot.com/2012/08/transforming-molecules-intowellother.html
+    # See also the [Daylight manual on SMARTS](http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html)
+    # and phmodel.cpp:208, which clarifies the possibilities of Open Babel replacements
+    transform = pybel.ob.OBChemTsfm()
+    success = transform.Init(query, replacement)
+    assert success
+    mol = pybel.readstring('smi', mol_smiles)
+    transform.Apply(mol.OBMol)
+    mol.OBMol.UnsetAromaticPerceived()
+    mol.OBMol.Kekulize()
+    return ob_normalize(mol.write('can'))
 
 def openbabel_contains(mol_smiles, query):
-	# Checks if a molecule (including multi-fragment contains a SMARTS match
-	matcher = pybel.ob.OBSmartsPattern()
-	success = matcher.Init(query)
-	assert success
-	mol = pybel.readstring('smi', mol_smiles)
-	return matcher.Match(mol.OBMol)
+    # Checks if a molecule (including multi-fragment contains a SMARTS match
+    matcher = pybel.ob.OBSmartsPattern()
+    success = matcher.Init(query)
+    assert success
+    mol = pybel.readstring('smi', mol_smiles)
+    return matcher.Match(mol.OBMol)
 
