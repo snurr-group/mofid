@@ -1,5 +1,14 @@
 name: run_tests
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    paths:
+      - "**.py"
+      - "Makefile"
+      - "openbabel/**"
+      - "eigen/**"
+      - "src/**"
+  pull_request:
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
