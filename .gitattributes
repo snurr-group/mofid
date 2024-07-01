@@ -5,3 +5,6 @@ openbabel/data/* text eol=lf
 openbabel/data/*.png binary
 Makefile text eol=lf
 *.sh text eol=lf
+
+# Apply spabs filter
+*.py filter=spabs
