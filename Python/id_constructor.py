@@ -33,7 +33,7 @@ except EnvironmentError:
     raise AssertionError('You must have Java in your path!')
 
 # Some default paths
-GAVROG_LOC = os.path.join(resources_path,'Systre-19.6.0.jar')
+GAVROG_LOC = os.path.join(resources_path,'Systre-experimental-20.8.0.jar')
 JAVA_LOC = 'java'
 RCSR_PATH = os.path.join(resources_path,'RCSRnets.arc')
 DEFAULT_SYSTRE_CGD = os.path.join('Output','SingleNode','topology.cgd')
