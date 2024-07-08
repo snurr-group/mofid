@@ -5,8 +5,8 @@
 
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)  # Hide Cygwin error
 
-# This line is required for cmake backwards compatibility.
-cmake_minimum_required(VERSION 2.8.10)
+# Minimum version required for FetchContent
+cmake_minimum_required(VERSION 3.11)
 
 # Name of your project
 project(sbu)
@@ -15,6 +15,12 @@ project(sbu)
 # Set the name for the executable
 # set(executable_target sbu)
 # Use a loop like openbabel/tools/CMakeLists.txt
+
+# GoogleTest requires at least C++14
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+enable_testing()
+add_subdirectory(test)
 
 # tools that do not require external MOFid headers/sources:
 set(tools
@@ -63,8 +69,14 @@ include_directories(${OpenBabel2_INCLUDE_DIRS})
 # Dependencies
 #find_package(LibXml2)
 
-# Set compiler flags similar to Open Babel's CMAKE_CXX_FLAGS_RELWITHDEBINFO
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
+# Two build types are available: Release (DEFAULT), Debug
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -fno-inline")
+endif()
 
 foreach(tool ${tools})
   # The executable
