@@ -8,6 +8,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+# Set the path containing OpenBabel2Config.cmake, needed for find_package below.
+find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
+    ${OpenBabel2_DIR}
+    "${CMAKE_SOURCE_DIR}/../openbabel/build"
+    "/usr/lib/openbabel"
+    "/usr/local/lib/openbabel"
+)
+
 #
 # Find and setup OpenBabel2.
 #
