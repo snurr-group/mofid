@@ -34,3 +34,19 @@ TEST(IsMetalTest, HandlesNonMetal) {
         EXPECT_FALSE(OpenBabel::isMetal(&nonMetalAtom2));
     }
 }
+
+TEST (RTrimWhiteSpaceTest, HandlesEmptyString) {
+    EXPECT_EQ("", OpenBabel::rtrimWhiteSpace(""));
+}
+
+TEST (RTrimWhiteSpaceTest, HandlesTrimmedString) {
+    EXPECT_EQ("Hi", OpenBabel::rtrimWhiteSpace("Hi"));
+    EXPECT_EQ("Bye", OpenBabel::rtrimWhiteSpace("Bye"));
+}
+
+TEST (RTrimWhiteSpaceTest, HandlesUntrimmedString) {
+    EXPECT_EQ("Hi", OpenBabel::rtrimWhiteSpace("Hi       "));
+    EXPECT_EQ("Bye", OpenBabel::rtrimWhiteSpace("Bye "));
+    EXPECT_EQ("     Hi", OpenBabel::rtrimWhiteSpace("     Hi"));
+    EXPECT_EQ(" Bye", OpenBabel::rtrimWhiteSpace(" Bye"));
+}
