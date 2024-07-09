@@ -9,18 +9,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_executable(
-    example
-    example.cpp
+    alltests
+    alltests.cpp
 )
 target_include_directories(
-    example
+    alltests
     PRIVATE
     ${CMAKE_SOURCE_DIR}
 )
 target_link_libraries(
-    example
+    alltests
     GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(example)
+gtest_discover_tests(alltests)
