@@ -8,6 +8,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+#
+# Find and setup OpenBabel2.
+#
+find_package(OpenBabel2 REQUIRED)
+include_directories(${OpenBabel2_INCLUDE_DIRS})
+
 add_executable(
     alltests
     alltests.cpp
@@ -19,6 +25,8 @@ target_include_directories(
 )
 target_link_libraries(
     alltests
+    mofidtest
+    openbabel
     GTest::gtest_main
 )
 
