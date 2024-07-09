@@ -21,6 +21,10 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 add_subdirectory(test)
+add_library(mofidtest
+    STATIC
+    obdetails.cpp
+)
 
 # tools that do not require external MOFid headers/sources:
 set(tools
