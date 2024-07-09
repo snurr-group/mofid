@@ -20,7 +20,10 @@ jobs:
           python-version: "3.10"
       - name: Build project
         run: make init
-      - name: Test with Python
+      - name: Unit Tests
+        run: |
+          ctest --output-on-failure --test-dir bin/test
+      - name: Integration Tests
         run: |
           python set_paths.py
           pip install .
