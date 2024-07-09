@@ -17,7 +17,7 @@ bin/tsfm_smiles: src/tsfm_smiles.cpp openbabel/build/lib/cifformat.so
 	cd bin && make tsfm_smiles
 
 exe:
-	cd bin && make
+	cd bin && make -j$$(nproc)
 
 one:
 	cd bin && make; \
