@@ -50,13 +50,13 @@ init:
 	mkdir build installed; \
 	cd build; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
-	make -j6 || exit 2; \
+	make -j$$(nproc) || exit 2; \
 	make install; \
 	cd ../../; \
 	mkdir bin; \
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	make -j6
+	make -j$$(nproc)
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
 
