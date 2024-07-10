@@ -1,10 +1,16 @@
 #include <gtest/gtest.h>
 #include <array>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <map>
 
 #include "obdetails.h"
 
+#include <openbabel/math/vector3.h>
+#include <openbabel/obconversion.h>
 #include <openbabel/atom.h>
+#include <openbabel/mol.h>
 
 namespace OBDetailsTest {
     constexpr int numElements{118};
@@ -23,8 +29,7 @@ TEST(IsMetalTest, HandlesMetal) {
             ++idx;
         else {
             metalAtom.SetAtomicNum(atomicNum);
-            const OpenBabel::OBAtom metalAtom2{metalAtom};
-            EXPECT_TRUE(OpenBabel::isMetal(&metalAtom2));
+            EXPECT_TRUE(OpenBabel::isMetal(&metalAtom));
         }
     }
 }
@@ -33,9 +38,49 @@ TEST(IsMetalTest, HandlesNonMetal) {
     OpenBabel::OBAtom nonMetalAtom{};
     for (int atomicNum : nonMetalAtomicNums) {
         nonMetalAtom.SetAtomicNum(atomicNum);
-        const OpenBabel::OBAtom nonMetalAtom2{nonMetalAtom};
-        EXPECT_FALSE(OpenBabel::isMetal(&nonMetalAtom2));
+        EXPECT_FALSE(OpenBabel::isMetal(&nonMetalAtom));
     }
+}
+
+TEST (FormBondTest, HandlesNullAtom) {
+    OpenBabel::OBMol mol{};
+    OpenBabel::OBAtom atom{};
+    constexpr int bondOrder{1};
+    EXPECT_EQ(nullptr, OpenBabel::formBond(&mol, nullptr, &atom, bondOrder));
+    EXPECT_EQ(nullptr, OpenBabel::formBond(&mol, &atom, nullptr, bondOrder));
+}
+
+TEST(FormBondTest, HandlesBondExists) {
+    std::string N2SMILES{"N#N"};
+    std::stringstream ss{N2SMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    OpenBabel::OBBond* bond{*(mol.BeginBonds())};
+    OpenBabel::OBAtom* nitrogen1{bond->GetBeginAtom()};
+    OpenBabel::OBAtom* nitrogen2{bond->GetEndAtom()};
+    constexpr int bondOrder{3};
+    EXPECT_EQ(nullptr, OpenBabel::formBond(&mol, nitrogen1, nitrogen2, bondOrder)); 
+    EXPECT_EQ(nullptr, OpenBabel::formBond(&mol, nitrogen2, nitrogen1, bondOrder)); 
+}
+
+TEST(FormBondTest, HandlesCreateBond) {
+    OpenBabel::OBMol mol{};
+    OpenBabel::OBAtom* atom1{mol.NewAtom()};
+    OpenBabel::OBAtom* atom2{mol.NewAtom()};
+    constexpr int bondOrder{1};
+    OpenBabel::OBBond* bond{OpenBabel::formBond(&mol, atom1, atom2, bondOrder)};
+    EXPECT_EQ(bondOrder, bond->GetBondOrder());
+    EXPECT_EQ(atom1, bond->GetBeginAtom());
+    EXPECT_EQ(atom2, bond->GetEndAtom());
+    EXPECT_EQ(&mol, bond->GetParent());
+    EXPECT_EQ(bond, atom1->GetBond(atom2));
+    EXPECT_EQ(bond, atom2->GetBond(atom1));
+}
+
+TEST (FormAtomTest, HandlesAtom) {
+
 }
 
 TEST (ChangeAtomElementTest, HandlesAtom) {
@@ -49,10 +94,55 @@ TEST (ChangeAtomElementTest, HandlesAtom) {
     }
 }
 
-TEST (AtomsEqualTest, HandlesUnequal) {
+TEST (AtomsEqualTest, HandlesUnequalNum) {
+    OpenBabel::OBAtom titanium{};
+    titanium.SetAtomicNum(22);
+    OpenBabel::OBAtom vanadium{};
+    vanadium.SetAtomicNum(23);
+    EXPECT_FALSE(OpenBabel::atomsEqual(titanium, vanadium));
 }
 
-TEST (AtomsEqualTest, HandlesEqual) {
+TEST (AtomsEqualTest, HandlesEqualNum) {
+    OpenBabel::OBAtom germanium{};
+    germanium.SetAtomicNum(32);
+    OpenBabel::OBAtom germanium2{};
+    germanium2.SetAtomicNum(32);
+    EXPECT_TRUE(OpenBabel::atomsEqual(germanium, germanium2));
+}
+
+TEST (AtomsEqualTest, HandlesUnequalVector) {
+    OpenBabel::OBAtom atom1{};
+    atom1.SetVector(0.12345, 0.67891, 0.31415);
+    OpenBabel::OBAtom atom2{};
+    atom2.SetVector(0.12345, 0.678912, 0.31415);
+    EXPECT_FALSE(OpenBabel::atomsEqual(atom1, atom2));
+}
+
+TEST (AtomsEqualTest, HandlesEqualVector) {
+    OpenBabel::OBAtom atom1{};
+    atom1.SetVector(0.12345, 0.67891, 0.31415);
+    OpenBabel::OBAtom atom2{};
+    atom2.SetVector(0.12345, 0.67891, 0.31415);
+    EXPECT_TRUE(OpenBabel::atomsEqual(atom1, atom2));
+    atom1.SetVector(0.12345, 0.6789103, 0.31415);
+    atom2.SetVector(0.12345, 0.6789109, 0.31415);
+    EXPECT_TRUE(OpenBabel::atomsEqual(atom1, atom2));
+}
+
+TEST (AtomsEqualTest, HandlesUnequalIsotope) {
+    OpenBabel::OBAtom atom1{};
+    atom1.SetIsotope(0);
+    OpenBabel::OBAtom atom2{};
+    atom2.SetIsotope(1);
+    EXPECT_FALSE(OpenBabel::atomsEqual(atom1, atom2));
+}
+
+TEST (AtomsEqualTest, HandlesEqualIsotope) {
+    OpenBabel::OBAtom atom1{};
+    atom1.SetIsotope(0);
+    OpenBabel::OBAtom atom2{};
+    atom2.SetIsotope(0);
+    EXPECT_TRUE(OpenBabel::atomsEqual(atom1, atom2));
 }
 
 TEST (RTrimWhiteSpaceTest, HandlesEmptyString) {
