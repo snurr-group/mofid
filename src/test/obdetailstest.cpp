@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <array>
-#include <iostream>
 #include <sstream>
 #include <string>
 #include <map>
@@ -18,6 +17,15 @@ namespace OBDetailsTest {
     constexpr int numNonMetals{23};
     constexpr std::array<int, numNonMetals> nonMetalAtomicNums{1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 32, 33, 34, 35, 36, 52, 53, 54, 85, 86};
     const std::map<int, const char*> elements{{1, "Hydro"}, {2, "Heliu"}, {3, "Lithi"}, {8, "Oxyge"}, {14, "Silic"}, {29, "Coppe"}, {39, "Yttri"}, {48, "Cadmi"}, {54, "Xenon"}, {81, "Thall"}, {101, "Mende"}};
+}
+
+OpenBabel::OBMol getMolFromSMILES(const std::string& SMILES) {
+    std::stringstream ss{SMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    return mol;
 }
 
 using namespace OBDetailsTest;
@@ -52,12 +60,7 @@ TEST(FormBondTest, HandlesNullAtom) {
 }
 
 TEST(FormBondTest, HandlesBondExists) {
-    std::string N2SMILES{"N#N"};
-    std::stringstream ss{N2SMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("N#N")};
     OpenBabel::OBBond* bond{*(mol.BeginBonds())};
     OpenBabel::OBAtom* nitrogen1{bond->GetBeginAtom()};
     OpenBabel::OBAtom* nitrogen2{bond->GetEndAtom()};
@@ -103,12 +106,7 @@ TEST(ChangeAtomElementTest, HandlesAtom) {
 }
 
 TEST(DeleteBondsTest, HandlesNonMetal) {
-    std::string N2SMILES{"N#N"};
-    std::stringstream ss{N2SMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("N#N")};
     constexpr bool onlyMetals{false}; 
     EXPECT_EQ(1, OpenBabel::deleteBonds(&mol, onlyMetals));
     EXPECT_EQ(0, mol.NumBonds());
@@ -119,12 +117,7 @@ TEST(DeleteBondsTest, HandlesNonMetal) {
 }
 
 TEST(DeleteBondsTest, HandlesMetalOnly) {
-    std::string N2SMILES{"N#N"};
-    std::stringstream ss{N2SMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("N#N")};
     constexpr bool onlyMetals{true}; 
     EXPECT_EQ(0, OpenBabel::deleteBonds(&mol, onlyMetals));
     EXPECT_EQ(1, mol.NumBonds());
@@ -135,12 +128,7 @@ TEST(DeleteBondsTest, HandlesMetalOnly) {
 }
 
 TEST(DeleteBondsTest, HandlesMetal) {
-    std::string ClCuSMILES{"Cl[Cu]"};
-    std::stringstream ss{ClCuSMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("Cl[Cu]")};
     constexpr bool onlyMetals{true};
     EXPECT_EQ(1, OpenBabel::deleteBonds(&mol, onlyMetals));
     EXPECT_EQ(0, mol.NumBonds());
@@ -148,6 +136,24 @@ TEST(DeleteBondsTest, HandlesMetal) {
     FOR_ATOMS_OF_MOL(a, mol) {
         EXPECT_EQ(a->BeginBonds(), a->EndBonds());
     }
+}
+
+TEST(SubtractMolsTest, HandlesExtraAtom) {
+    OpenBabel::OBMol O3{getMolFromSMILES("[O-][O+]=O")};
+    OpenBabel::OBMol ClCu{getMolFromSMILES("Cl[Cu]")};
+    EXPECT_FALSE(OpenBabel::subtractMols(&O3, &ClCu));
+    EXPECT_EQ(3, O3.NumAtoms());
+    EXPECT_EQ(2, O3.NumBonds());
+}
+
+TEST(SubtractMolsTest, HandlesSubtract) {
+    OpenBabel::OBMol O3{getMolFromSMILES("[O-][O+]=O")};
+    OpenBabel::OBAtom* O{O3.GetFirstAtom()};
+    OpenBabel::OBMol O1{};
+    O1.AddAtom(*O);
+    EXPECT_TRUE(OpenBabel::subtractMols(&O3, &O1));
+    EXPECT_EQ(2, O3.NumAtoms());
+    EXPECT_EQ(1, O3.NumBonds());
 }
 
 TEST(AtomsEqualTest, HandlesUnequalNum) {
@@ -202,12 +208,7 @@ TEST(AtomsEqualTest, HandlesEqualIsotope) {
 }
 
 TEST(AtomInOtherMolTest, HandlesIn) {
-    std::string MnO4SMILES{"[O-][Mn](=O)(=O)=O"};
-    std::stringstream ss{MnO4SMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("[O-][Mn](=O)(=O)=O")};
     OpenBabel::OBAtom oxygen{};
     oxygen.SetAtomicNum(8);
     OpenBabel::OBAtom* copycatOxygen{OpenBabel::atomInOtherMol(&oxygen, &mol)};
@@ -219,18 +220,34 @@ TEST(AtomInOtherMolTest, HandlesIn) {
 }
 
 TEST(AtomInOtherMolTest, HandlesNotIn) {
-    std::string MICSMILES{"CN=C=O"};
-    std::stringstream ss{MICSMILES};
-    OpenBabel::OBConversion conv{&ss};
-    conv.SetInFormat("SMI");
-    OpenBabel::OBMol mol{};
-    conv.Read(&mol);
+    OpenBabel::OBMol mol{getMolFromSMILES("CN=C=O")};
     OpenBabel::OBAtom fluorine{};
     fluorine.SetAtomicNum(9);
     EXPECT_EQ(nullptr, OpenBabel::atomInOtherMol(&fluorine, &mol));
     OpenBabel::OBAtom boron{};
     boron.SetAtomicNum(5);
     EXPECT_EQ(nullptr, OpenBabel::atomInOtherMol(&boron, &mol));
+}
+
+TEST(IsSubMolTest, HandlesSubset) {
+    OpenBabel::OBMol super{getMolFromSMILES("[O-][Mn](=O)(=O)=O")};
+    OpenBabel::OBMol subset{getMolFromSMILES("O=O")};
+    EXPECT_TRUE(OpenBabel::isSubMol(&subset, &super));
+}
+
+TEST(IsSubMolTest, HandlesNotSubset) {
+    OpenBabel::OBMol super{getMolFromSMILES("O=Cc1ccc(O)c(OC)c1")};
+    OpenBabel::OBMol subset{getMolFromSMILES("[O-][Mn](=O)(=O)=O")};
+    EXPECT_FALSE(OpenBabel::isSubMol(&subset, &super));
+}
+
+TEST(GetNumericFormulaTest, HandlesMol) {
+    OpenBabel::OBMol mol{getMolFromSMILES("[O-][Mn](=O)(=O)=O")};
+    std::map<int, int> formula{OpenBabel::getNumericFormula(&mol)};
+    constexpr int oxygenNum{8};
+    EXPECT_EQ(4, formula[oxygenNum]);
+    constexpr int manganeseNum{25};
+    EXPECT_EQ(1, formula[manganeseNum]);
 }
 
 TEST(RTrimWhiteSpaceTest, HandlesEmptyString) {
