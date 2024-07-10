@@ -1,13 +1,16 @@
 #include <gtest/gtest.h>
 #include <array>
-#include <openbabel/atom.h>
+#include <map>
 
 #include "obdetails.h"
+
+#include <openbabel/atom.h>
 
 namespace OBDetailsTest {
     constexpr int numElements{118};
     constexpr int numNonMetals{23};
     constexpr std::array<int, numNonMetals> nonMetalAtomicNums{1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 32, 33, 34, 35, 36, 52, 53, 54, 85, 86};
+    const std::map<int, const char*> elements{{1, "Hydro"}, {2, "Heliu"}, {3, "Lithi"}, {8, "Oxyge"}, {14, "Silic"}, {29, "Coppe"}, {39, "Yttri"}, {48, "Cadmi"}, {54, "Xenon"}, {81, "Thall"}, {101, "Mende"}};
 }
 
 using namespace OBDetailsTest;
@@ -33,6 +36,23 @@ TEST(IsMetalTest, HandlesNonMetal) {
         const OpenBabel::OBAtom nonMetalAtom2{nonMetalAtom};
         EXPECT_FALSE(OpenBabel::isMetal(&nonMetalAtom2));
     }
+}
+
+TEST (ChangeAtomElementTest, HandlesAtom) {
+    OpenBabel::OBAtom atom{};
+    for (const auto& p : OBDetailsTest::elements) {
+        const int atomicNum{p.first};
+        const char* type{p.second};
+        OpenBabel::changeAtomElement(&atom, atomicNum);
+        EXPECT_EQ(atomicNum, atom.GetAtomicNum());
+        EXPECT_STREQ(type, atom.GetType());
+    }
+}
+
+TEST (AtomsEqualTest, HandlesUnequal) {
+}
+
+TEST (AtomsEqualTest, HandlesEqual) {
 }
 
 TEST (RTrimWhiteSpaceTest, HandlesEmptyString) {
