@@ -72,7 +72,6 @@ int deleteBonds(OBMol *mol, bool only_metals) {
 	// and use deletebonds(...).size() to get the int version
 	// Deletes bonds in a molecule, optionally only deleting bonds to metal atoms.
 	// Returns the number of bond deletions.
-	std::vector<OBMol> fragments;
 	obErrorLog.ThrowError(__FUNCTION__, "Bond deletion enabled", obDebug);
 	// Same spirit as OBMol::DeleteHydrogens()
 	std::vector<OBBond*> delbonds;
