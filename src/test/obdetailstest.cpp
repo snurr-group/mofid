@@ -9,6 +9,7 @@
 
 #include <openbabel/math/vector3.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/obiter.h>
 #include <openbabel/atom.h>
 #include <openbabel/mol.h>
 
@@ -42,7 +43,7 @@ TEST(IsMetalTest, HandlesNonMetal) {
     }
 }
 
-TEST (FormBondTest, HandlesNullAtom) {
+TEST(FormBondTest, HandlesNullAtom) {
     OpenBabel::OBMol mol{};
     OpenBabel::OBAtom atom{};
     constexpr int bondOrder{1};
@@ -79,11 +80,18 @@ TEST(FormBondTest, HandlesCreateBond) {
     EXPECT_EQ(bond, atom2->GetBond(atom1));
 }
 
-TEST (FormAtomTest, HandlesAtom) {
-
+TEST(FormAtomTest, HandlesAtom) {
+    OpenBabel::OBMol mol{};
+    const OpenBabel::vector3 loc{3.14159, 2.65358, 9.79323};
+    constexpr int atomicNum{8};
+    OpenBabel::OBAtom* atom{OpenBabel::formAtom(&mol, loc, atomicNum)};
+    EXPECT_EQ(atomicNum, atom->GetAtomicNum());
+    EXPECT_EQ(&mol, atom->GetParent());
+    EXPECT_EQ(loc, atom->GetVector());
+    EXPECT_EQ(atom, mol.GetFirstAtom());
 }
 
-TEST (ChangeAtomElementTest, HandlesAtom) {
+TEST(ChangeAtomElementTest, HandlesAtom) {
     OpenBabel::OBAtom atom{};
     for (const auto& p : OBDetailsTest::elements) {
         const int atomicNum{p.first};
@@ -94,7 +102,55 @@ TEST (ChangeAtomElementTest, HandlesAtom) {
     }
 }
 
-TEST (AtomsEqualTest, HandlesUnequalNum) {
+TEST(DeleteBondsTest, HandlesNonMetal) {
+    std::string N2SMILES{"N#N"};
+    std::stringstream ss{N2SMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    constexpr bool onlyMetals{false}; 
+    EXPECT_EQ(1, OpenBabel::deleteBonds(&mol, onlyMetals));
+    EXPECT_EQ(0, mol.NumBonds());
+    EXPECT_EQ(2, mol.NumAtoms());
+    FOR_ATOMS_OF_MOL(a, mol) {
+        EXPECT_EQ(a->BeginBonds(), a->EndBonds());
+    }
+}
+
+TEST(DeleteBondsTest, HandlesMetalOnly) {
+    std::string N2SMILES{"N#N"};
+    std::stringstream ss{N2SMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    constexpr bool onlyMetals{true}; 
+    EXPECT_EQ(0, OpenBabel::deleteBonds(&mol, onlyMetals));
+    EXPECT_EQ(1, mol.NumBonds());
+    EXPECT_EQ(2, mol.NumAtoms());
+    FOR_ATOMS_OF_MOL(a, mol) {
+        EXPECT_NE(a->BeginBonds(), a->EndBonds());
+    }
+}
+
+TEST(DeleteBondsTest, HandlesMetal) {
+    std::string ClCuSMILES{"Cl[Cu]"};
+    std::stringstream ss{ClCuSMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    constexpr bool onlyMetals{true};
+    EXPECT_EQ(1, OpenBabel::deleteBonds(&mol, onlyMetals));
+    EXPECT_EQ(0, mol.NumBonds());
+    EXPECT_EQ(2, mol.NumAtoms());
+    FOR_ATOMS_OF_MOL(a, mol) {
+        EXPECT_EQ(a->BeginBonds(), a->EndBonds());
+    }
+}
+
+TEST(AtomsEqualTest, HandlesUnequalNum) {
     OpenBabel::OBAtom titanium{};
     titanium.SetAtomicNum(22);
     OpenBabel::OBAtom vanadium{};
@@ -102,7 +158,7 @@ TEST (AtomsEqualTest, HandlesUnequalNum) {
     EXPECT_FALSE(OpenBabel::atomsEqual(titanium, vanadium));
 }
 
-TEST (AtomsEqualTest, HandlesEqualNum) {
+TEST(AtomsEqualTest, HandlesEqualNum) {
     OpenBabel::OBAtom germanium{};
     germanium.SetAtomicNum(32);
     OpenBabel::OBAtom germanium2{};
@@ -110,7 +166,7 @@ TEST (AtomsEqualTest, HandlesEqualNum) {
     EXPECT_TRUE(OpenBabel::atomsEqual(germanium, germanium2));
 }
 
-TEST (AtomsEqualTest, HandlesUnequalVector) {
+TEST(AtomsEqualTest, HandlesUnequalVector) {
     OpenBabel::OBAtom atom1{};
     atom1.SetVector(0.12345, 0.67891, 0.31415);
     OpenBabel::OBAtom atom2{};
@@ -118,7 +174,7 @@ TEST (AtomsEqualTest, HandlesUnequalVector) {
     EXPECT_FALSE(OpenBabel::atomsEqual(atom1, atom2));
 }
 
-TEST (AtomsEqualTest, HandlesEqualVector) {
+TEST(AtomsEqualTest, HandlesEqualVector) {
     OpenBabel::OBAtom atom1{};
     atom1.SetVector(0.12345, 0.67891, 0.31415);
     OpenBabel::OBAtom atom2{};
@@ -129,7 +185,7 @@ TEST (AtomsEqualTest, HandlesEqualVector) {
     EXPECT_TRUE(OpenBabel::atomsEqual(atom1, atom2));
 }
 
-TEST (AtomsEqualTest, HandlesUnequalIsotope) {
+TEST(AtomsEqualTest, HandlesUnequalIsotope) {
     OpenBabel::OBAtom atom1{};
     atom1.SetIsotope(0);
     OpenBabel::OBAtom atom2{};
@@ -137,7 +193,7 @@ TEST (AtomsEqualTest, HandlesUnequalIsotope) {
     EXPECT_FALSE(OpenBabel::atomsEqual(atom1, atom2));
 }
 
-TEST (AtomsEqualTest, HandlesEqualIsotope) {
+TEST(AtomsEqualTest, HandlesEqualIsotope) {
     OpenBabel::OBAtom atom1{};
     atom1.SetIsotope(0);
     OpenBabel::OBAtom atom2{};
@@ -145,16 +201,48 @@ TEST (AtomsEqualTest, HandlesEqualIsotope) {
     EXPECT_TRUE(OpenBabel::atomsEqual(atom1, atom2));
 }
 
-TEST (RTrimWhiteSpaceTest, HandlesEmptyString) {
+TEST(AtomInOtherMolTest, HandlesIn) {
+    std::string MnO4SMILES{"[O-][Mn](=O)(=O)=O"};
+    std::stringstream ss{MnO4SMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    OpenBabel::OBAtom oxygen{};
+    oxygen.SetAtomicNum(8);
+    OpenBabel::OBAtom* copycatOxygen{OpenBabel::atomInOtherMol(&oxygen, &mol)};
+    EXPECT_EQ(copycatOxygen->GetAtomicNum(), oxygen.GetAtomicNum());
+    OpenBabel::OBAtom manganese{};
+    manganese.SetAtomicNum(25);
+    OpenBabel::OBAtom* copycatManganese{OpenBabel::atomInOtherMol(&manganese, &mol)};
+    EXPECT_EQ(copycatManganese->GetAtomicNum(), manganese.GetAtomicNum());
+}
+
+TEST(AtomInOtherMolTest, HandlesNotIn) {
+    std::string MICSMILES{"CN=C=O"};
+    std::stringstream ss{MICSMILES};
+    OpenBabel::OBConversion conv{&ss};
+    conv.SetInFormat("SMI");
+    OpenBabel::OBMol mol{};
+    conv.Read(&mol);
+    OpenBabel::OBAtom fluorine{};
+    fluorine.SetAtomicNum(9);
+    EXPECT_EQ(nullptr, OpenBabel::atomInOtherMol(&fluorine, &mol));
+    OpenBabel::OBAtom boron{};
+    boron.SetAtomicNum(5);
+    EXPECT_EQ(nullptr, OpenBabel::atomInOtherMol(&boron, &mol));
+}
+
+TEST(RTrimWhiteSpaceTest, HandlesEmptyString) {
     EXPECT_EQ("", OpenBabel::rtrimWhiteSpace(""));
 }
 
-TEST (RTrimWhiteSpaceTest, HandlesTrimmedString) {
+TEST(RTrimWhiteSpaceTest, HandlesTrimmedString) {
     EXPECT_EQ("Hi", OpenBabel::rtrimWhiteSpace("Hi"));
     EXPECT_EQ("Bye", OpenBabel::rtrimWhiteSpace("Bye"));
 }
 
-TEST (RTrimWhiteSpaceTest, HandlesUntrimmedString) {
+TEST(RTrimWhiteSpaceTest, HandlesUntrimmedString) {
     EXPECT_EQ("Hi", OpenBabel::rtrimWhiteSpace("Hi       "));
     EXPECT_EQ("Bye", OpenBabel::rtrimWhiteSpace("Bye "));
     EXPECT_EQ("     Hi", OpenBabel::rtrimWhiteSpace("     Hi"));
