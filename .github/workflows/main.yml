@@ -21,10 +21,9 @@ jobs:
       - name: Build project
         run: make init
       - name: Unit Tests
-        run: |
-          ctest --output-on-failure --test-dir bin/test
+        run: make test
       - name: Integration Tests
         run: |
           python set_paths.py
           pip install .
-          make test
+          make pytest
