@@ -1,4 +1,4 @@
-.PHONY: all backup test diff ob_changes.patch init eclipse web init-web github-web html one exe btc
+.PHONY: all backup test pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -40,10 +40,15 @@ ob_changes.patch:
 	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' ':!openbabel/test/*' > $@
 	# Lists my changes to the main OpenBabel code
 
-test: bin/sbu
+test: 
+	cd bin; \
+	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
+	make -j$$(nproc)
+	ctest --output-on-failure --test-dir bin/test;
+
+pytest:
 	python tests/check_run_mofid.py
 	python tests/check_mof_composition.py
-
 
 init:
 	cd openbabel; \
@@ -55,7 +60,22 @@ init:
 	cd ../../; \
 	mkdir bin; \
 	cd bin; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build ../src/; \
+	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Release ../src/; \
+	make -j$$(nproc)
+	# Sets up all the cmake details, so that usage is as simple as
+	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
+
+debug:
+	cd openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
+	make -j$$(nproc) || exit 2; \
+	make install; \
+	cd ../../; \
+	mkdir bin; \
+	cd bin; \
+	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build ../src/ -DCMAKE_BUILD_TYPE=Debug;\
 	make -j$$(nproc)
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
