@@ -24,6 +24,7 @@ jobs:
         run: make test
       - name: Integration Tests
         run: |
+          mkdir Output
           tests/check_intermediate.sh
           python set_paths.py
           pip install .
