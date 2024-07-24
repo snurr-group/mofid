@@ -29,8 +29,10 @@ for path_to_cif in Resources/KnownCIFs/*.cif; do
             file="$(basename $path_to_file)"
             diff -b <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) > /dev/null
             if [[ $? -ne 0 ]]; then
-                echo -e "${RED}WARNING:${NC} $dir/$file is different"
+                echo -e "${RED}WARNING:${NC} $cif/$dir/$file is different"
                 diff -yb --suppress-common-lines <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) | colordiff
+            else
+                echo -e "${GREEN}SUCCESS:${NC} $cif/$dir/$file is identical"
             fi
         done
     done
