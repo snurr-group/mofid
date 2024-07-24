@@ -5,12 +5,11 @@ GREEN="\033[0;92m"
 RED="\033[0;31m"
 NC="\033[0m" # No color
 
-# (Remove lines startign with "#" as these are comments?)
-# Sort both files and check diff
 for path_to_cif in Resources/KnownCIFs/*.cif; do
     cif="$(basename $path_to_cif | sed 's/.cif//g')"
-    bin/sbu $path_to_cif Output/$cif
-    echo "\n"
+    echo -e "${GREEN}RUNNING${NC} bin/sbu $path_to_cif Output/$cif..."
+    # TODO: make sbu output condition on verbose flag
+    bin/sbu $path_to_cif Output/$cif &> /dev/null
 done
 for path_to_cif in Resources/KnownCIFs/*.cif; do
     cif="$(basename $path_to_cif | sed 's/.cif//g')"
@@ -24,15 +23,17 @@ for path_to_cif in Resources/KnownCIFs/*.cif; do
     fi
     for path_to_dir in $(find $known_path/* -type d); do
         dir="$(basename $path_to_dir)"
+        # In order, ELEMENT# -> ELEMENT, NODE# -> "", Lines with # -> "", # -> 1 decimal place
+        pattern="s/([a-zA-Z]+)[0-9]+/\1/g; s/NODE [0-9]+/NODE/g; s/^[ \t]*#.*//g; s/([0-9]+)(.[0-9])?[0-9]+/\1\2/g"
         for path_to_file in $path_to_dir/*; do
             file="$(basename $path_to_file)"
-            #echo $output_path/$dir/$file
-            diff <(sort $path_to_file) <(sort $output_path/$dir/$file) > /dev/null
+            diff -b <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) > /dev/null
             if [[ $? -ne 0 ]]; then
                 echo -e "${RED}WARNING:${NC} $dir/$file is different"
-                diff -y <(sort $path_to_file) <(sort $output_path/$dir/$file)
+                diff -yb --suppress-common-lines <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) | colordiff
             fi
         done
     done
 done
-
+# TODO: remove this once the script is complete
+exit 0
