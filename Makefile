@@ -1,4 +1,4 @@
-.PHONY: all backup test diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
+.PHONY: all backup test pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
 
 mofid-dir := $(shell pwd)
 python-packages-dir := $(shell find /usr/lib/python* -type d -iname "site-packages")
@@ -59,7 +59,9 @@ test:
 	make -j$$(nproc); \
 	ctest --output-on-failure --test-dir test; \
 	cd $(mofid-dir); \
-	tests/check_intermediate.sh; \
+	tests/check_intermediate.sh; 
+
+pytest:
 	python tests/check_run_mofid.py; \
 	python tests/check_mof_composition.py
 

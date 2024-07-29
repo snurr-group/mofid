@@ -22,9 +22,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install colordiff 
-      - name: Build Project and Run All Tests
+      - name: Build Project and Run Tests
         run: |
           mkdir Output
+          make test
+      - name: Run Integration Tests
           python set_paths.py
           pip install .
-          make test
+          make pytest
