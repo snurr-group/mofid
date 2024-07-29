@@ -27,6 +27,7 @@ jobs:
           mkdir Output
           make test
       - name: Run Integration Tests
+        run: |
           python set_paths.py
           pip install .
           make pytest
