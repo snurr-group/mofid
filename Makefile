@@ -57,7 +57,8 @@ test:
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
 	make -j$$(nproc); \
-	ctest --output-on-failure --test-dir bin/test; \
+	ctest --output-on-failure --test-dir test; \
+	cd $(mofid-dir); \
 	python tests/check_run_mofid.py; \
 	python tests/check_mof_composition.py
 
