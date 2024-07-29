@@ -25,7 +25,6 @@ jobs:
       - name: Build Project and Run Tests
         run: |
           mkdir Output
-          python -m site
           make test
       - name: Run Integration Tests
         run: |

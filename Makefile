@@ -1,7 +1,7 @@
 .PHONY: all backup test pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
 
 mofid-dir := $(shell pwd)
-python-packages-dir := $(shell find /usr/lib/python* -type d -iname "site-packages")
+python-packages-dir := $(shell python -m site | grep -o "/.*/site-packages" | head --lines 1) 
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
