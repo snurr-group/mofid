@@ -20,16 +20,14 @@ jobs:
           python-version: "3.10"
       - name: Build project
         run: make init
-      - name: Unit Tests
-        run: make test
       - name: Install colordiff
         run: |
           sudo apt-get update
           sudo apt-get install colordiff 
-      - name: Integration Tests
+      - name: Run All Tests
         run: |
           mkdir Output
           tests/check_intermediate.sh
           python set_paths.py
           pip install .
-          make pytest
+          make test
