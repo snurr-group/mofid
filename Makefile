@@ -1,4 +1,7 @@
-.PHONY: all backup test pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
+.PHONY: all backup test diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
+
+mofid-dir := $(shell pwd)
+python-packages-dir := $(shell find /usr/lib/python* -type d -iname "site-packages")
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -21,7 +24,7 @@ exe:
 
 one:
 	cd bin && make; \
-	cd ..; \
+	cd $(mofid-dir); \
 	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
 
 btc:
@@ -41,13 +44,21 @@ ob_changes.patch:
 	# Lists my changes to the main OpenBabel code
 
 test: 
+	cd openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON ..; \
+	make -j$$(nproc) || exit 2; \
+	make install; \
+	cd $(python-packages-dir); \
+	test -f openbabel.pth || echo $(mofid-dir)/openbabel/installed/lib/python*/site-packages > openbabel.pth; \
+	cd $(mofid-dir); \
+	mkdir bin; \
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
-	make -j$$(nproc)
-	ctest --output-on-failure --test-dir bin/test;
-
-pytest:
-	python tests/check_run_mofid.py
+	make -j$$(nproc); \
+	ctest --output-on-failure --test-dir bin/test; \
+	python tests/check_run_mofid.py; \
 	python tests/check_mof_composition.py
 
 init:
@@ -57,7 +68,7 @@ init:
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
 	make -j$$(nproc) || exit 2; \
 	make install; \
-	cd ../../; \
+	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release ../src/; \
@@ -72,7 +83,7 @@ debug:
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
 	make -j$$(nproc) || exit 2; \
 	make install; \
-	cd ../../; \
+	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build ../src/ -DCMAKE_BUILD_TYPE=Debug;\
