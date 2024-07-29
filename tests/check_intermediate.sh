@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # ANSI
-GREEN="\033[0;92m"
 RED="\033[0;31m"
+YELLOW="\033[0;33m"
+GREEN="\033[0;92m"
 NC="\033[0m" # No color
 
 # FLAGS
@@ -13,7 +14,6 @@ while getopts "v" flag; do
         v) verbose=true ;;
     esac
 done
-
 for path_to_cif in Resources/KnownCIFs/*.cif; do
     cif="$(basename $path_to_cif | sed 's/.cif//g')"
     echo -e "${GREEN}RUNNING${NC} bin/sbu $path_to_cif Output/$cif..."
@@ -38,19 +38,17 @@ for path_to_cif in Resources/KnownCIFs/*.cif; do
         dir="$(basename $path_to_dir)"
         # In order, a-zA-Z# -> a-zA-Z, NODE# -> "", Lines with # -> "", # -> 1 decimal place
         pattern="s/([a-zA-Z]+)[0-9]+/\1/g; s/NODE [0-9]+/NODE/g; s/^[ \t]*#.*//g; s/([0-9]+)(.[0-9])?[0-9]+/\1\2/g"
-        for path_to_file in $path_to_dir/*; do
+        # Currently only checks CIF files
+        for path_to_file in $path_to_dir/*.cif; do
             file="$(basename $path_to_file)"
             diff -b <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) > /dev/null
             exit_code="$?"
-            if [[ $exit_code -ne 0 ]] && [[ $verbose = true ]] ; then
-                echo -e "${RED}WARNING:${NC} $cif/$dir/$file is different"
-                diff -yb --suppress-common-lines <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) | colordiff
-            elif [[ $exit_code -ne 0 ]]; then
-                # This pattern tests simpler equality
-                simple_pattern="s/[ \t0-9.\-]e?//g; s/^[ \t]*#.*//g;"
-                diff -b <(sed -E "$simple_pattern" $path_to_file | sort) <(sed -E "$simple_pattern" $output_path/$dir/$file | sort) > /dev/null
+            if [[ $exit_code -ne 0 ]]; then
+                echo -e "${YELLOW}INVESTIGATING:${NC} $cif/$dir/$file may be different..."
+                python tests/check_file.py "$path_to_file" "$output_path/$dir/$file"
                 if [[ $? -ne 0 ]]; then
-                    diff -yb --suppress-common-lines <(sed -E "$simple_pattern" $path_to_file | sort) <(sed -E "$simple_pattern" $output_path/$dir/$file | sort) | colordiff
+                    echo -e "${RED}WARNING:${NC} $cif/$dir/$file is different"
+                    diff -yb --suppress-common-lines <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) | colordiff
                 else
                     echo -e "${GREEN}SUCCESS:${NC} $cif/$dir/$file is identical"
                 fi

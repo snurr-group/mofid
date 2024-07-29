@@ -59,6 +59,7 @@ test:
 	make -j$$(nproc); \
 	ctest --output-on-failure --test-dir test; \
 	cd $(mofid-dir); \
+	tests/check_intermediate.sh; \
 	python tests/check_run_mofid.py; \
 	python tests/check_mof_composition.py
 
