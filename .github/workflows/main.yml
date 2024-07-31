@@ -22,10 +22,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install colordiff 
-      - name: Build Project and Run Tests
+      - name: Build Project 
         run: |
           mkdir Output
           make test
+      - name: Run Unit Tests
+        run: make unittest
+      - name: Run Intermediate Tests
+        run : make intermediatetest
       - name: Run Integration Tests
         run: |
           python set_paths.py

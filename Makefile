@@ -1,4 +1,4 @@
-.PHONY: all backup test pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
+.PHONY: all backup test unittest intermediatetest pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
 
 mofid-dir := $(shell pwd)
 python-packages-dir := $(shell python -m site | grep -o "/.*/site-packages" | head --lines 1) 
@@ -57,9 +57,12 @@ test:
 	cd bin; \
 	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
 	make -j$$(nproc); \
-	ctest --output-on-failure --test-dir test; \
-	cd $(mofid-dir); \
-	tests/check_intermediate.sh; 
+
+unittest:
+	ctest --output-on-failure --test-dir bin/test
+
+intermediatetest:
+	tests/check_intermediate.sh
 
 pytest:
 	python tests/check_run_mofid.py; \
