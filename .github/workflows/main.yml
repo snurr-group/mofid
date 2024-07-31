@@ -30,6 +30,13 @@ jobs:
         run: make unittest
       - name: Run Intermediate Tests
         run : make intermediatetest
+      - name: Archive Mismatch Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mismatch
+          path: Mismatch
+          if-no-files-found: ignore
+          retention-days: 1
       - name: Run Integration Tests
         run: |
           python set_paths.py
