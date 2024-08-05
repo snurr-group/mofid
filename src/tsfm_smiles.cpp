@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 		exit(2);
 	}
 	tsfm.Apply(orig_mol);
-	orig_mol.UnsetAromaticPerceived();
+	orig_mol.SetAromaticPerceived(false);
 	OBKekulize(&orig_mol);
 
 	// Write the output SMILES

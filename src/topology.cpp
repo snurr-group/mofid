@@ -528,14 +528,14 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 	if (simplify_two_conn) {
 		FOR_ATOMS_OF_MOL(a, simplified_net) {
 			if (IsConnection(&*a)) { continue; }
-			if (a->GetValence() == 2) {
+			if (a->GetExplicitDegree() == 2) {
 				two_coordinated.AddAtom(&*a);
 				multi_coordinated.RemoveAtom(&*a);
 				AtomSet connectors = conns.GetAtomConns(&*a);
 				for (AtomSet::iterator it=connectors.begin(); it!=connectors.end(); ++it) {
 					two_xs.AddAtom(*it);
 					if (!multi_xs.HasAtom(*it)) {  // connection was already deleted
-						if (conns.GetOtherEndpoint(*it, &*a)->GetValence() != 2) {
+						if (conns.GetOtherEndpoint(*it, &*a)->GetExplicitDegree() != 2) {
 							obErrorLog.ThrowError(__FUNCTION__, "Unexpected double deletion of connector, not caused by a 2c-X-2c.  This code should not be reachable.", obError);
 						}
 						obErrorLog.ThrowError(__FUNCTION__, "Found two neighboring 2-c sites.  Flagging the cgd output to get an error instead of the incorrect topology.\nNote: Rerun ExportSystre() with simplify_two_conn=false if an unsimplified net is useful.", obError);
@@ -558,7 +558,7 @@ void Topology::WriteSystre(const std::string &filepath, bool write_centers, bool
 		++current_node;
 		vector3 frac_coords = uc->CartesianToFractional((*node)->GetVector());
 		ofs << indent << "NODE " << current_node
-			<< " " << (*node)->GetValence()  // coordination of the atom
+			<< " " << (*node)->GetExplicitDegree()  // coordination of the atom
 			<< " " << frac_coords[0]
 			<< " " << frac_coords[1]
 			<< " " << frac_coords[2]
@@ -697,7 +697,7 @@ int Topology::SplitFourVertexIntoTwoThree(PseudoAtom site) {
 	// This step satisfies the convention used for MIL-47-like topologies.
 	// All of the original atoms will be randomly assigned to one of the two PA's.
 	// This function returns the number of simplified linkers
-	if (site->GetValence() != 4) {
+	if (site->GetExplicitDegree() != 4) {
 		obErrorLog.ThrowError(__FUNCTION__, "Cannot process site with incorrect valence.", obError);
 		return 0;
 	}
