@@ -1,6 +1,6 @@
 from math import isclose, isnan
+from openbabel import pybel
 import sys
-import pybel
 
 if __name__ == "__main__":
     if (len(sys.argv) != 3):
