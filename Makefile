@@ -47,7 +47,7 @@ test:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON ..; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON ..; \
 	make -j$$(nproc) || exit 2; \
 	make install; \
 	cd $(python-packages-dir); \
@@ -55,7 +55,7 @@ test:
 	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel2_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
 	make -j$$(nproc); \
 
 unittest:
@@ -72,13 +72,13 @@ init:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
 	make -j$$(nproc) || exit 2; \
 	make install; \
 	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release ../src/; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel2_DIR=../openbabel/build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release ../src/; \
 	make -j$$(nproc)
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
@@ -87,13 +87,13 @@ debug:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
 	make -j$$(nproc) || exit 2; \
 	make install; \
 	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
-	cmake -DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10 -DOpenBabel2_DIR=../openbabel/build ../src/ -DCMAKE_BUILD_TYPE=Debug;\
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel2_DIR=../openbabel/build ../src/ -DCMAKE_BUILD_TYPE=Debug;\
 	make -j$$(nproc)
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
