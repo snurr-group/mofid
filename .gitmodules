@@ -1,0 +1,3 @@
+[submodule "openbabel"]
+	path = openbabel
+	url = https://github.com/openbabel/openbabel.git
