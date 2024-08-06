@@ -8,19 +8,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
-# Set the path containing OpenBabel2Config.cmake, needed for find_package below.
-find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
-    ${OpenBabel2_DIR}
+# Set the path containing OpenBabel3Config.cmake, needed for find_package below.
+find_path(OpenBabel3_DIR OpenBabel3Config.cmake PATHS
+    ${OpenBabel3_DIR}
     "${CMAKE_SOURCE_DIR}/../openbabel/build"
     "/usr/lib/openbabel"
     "/usr/local/lib/openbabel"
 )
 
 #
-# Find and setup OpenBabel2.
+# Find and setup OpenBabel3.
 #
-find_package(OpenBabel2 REQUIRED)
-include_directories(${OpenBabel2_INCLUDE_DIRS})
+find_package(Threads REQUIRED)
+find_package(OpenBabel3 REQUIRED)
+include_directories(${OpenBabel3_INCLUDE_DIRS})
 
 add_executable(
     alltests

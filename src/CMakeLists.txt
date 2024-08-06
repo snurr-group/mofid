@@ -1,6 +1,6 @@
 #
 # This script is based on the example used to create static executables
-# linking to the static OpenBabel2 library.
+# linking to the static OpenBabel3 library.
 #
 
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)  # Hide Cygwin error
@@ -60,18 +60,19 @@ configure_file(${CMAKE_SOURCE_DIR}/config_sbu.h.cmake
 include_directories(${CMAKE_BINARY_DIR}/includes/)
 
 
-# Set the path containing OpenBabel2Config.cmake, needed for find_package below.
-find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
-          ${OpenBabel2_DIR}
+# Set the path containing OpenBabel3Config.cmake, needed for find_package below.
+find_path(OpenBabel3_DIR OpenBabel3Config.cmake PATHS
+          ${OpenBabel3_DIR}
           "${CMAKE_SOURCE_DIR}/../openbabel/build"
           "/usr/lib/openbabel"
          "/usr/local/lib/openbabel")
 
 #
-# Find and setup OpenBabel2.
+# Find and setup OpenBabel3.
 #
-find_package(OpenBabel2 REQUIRED)
-include_directories(${OpenBabel2_INCLUDE_DIRS})
+find_package(Threads REQUIRED)
+find_package(OpenBabel3 REQUIRED)
+include_directories(${OpenBabel3_INCLUDE_DIRS})
 
 # Dependencies
 #find_package(LibXml2)
@@ -109,7 +110,7 @@ IF (CYGWIN)
     add_custom_command(
       TARGET sbu POST_BUILD COMMAND
       ${CMAKE_COMMAND} -E copy_if_different
-      "${OpenBabel2_DIR}/bin/${ob_dll}" ${CMAKE_BINARY_DIR}
+      "${OpenBabel3_DIR}/bin/${ob_dll}" ${CMAKE_BINARY_DIR}
     )
   ENDFOREACH()
 ENDIF (CYGWIN)
