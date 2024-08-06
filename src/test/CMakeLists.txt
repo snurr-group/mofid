@@ -31,12 +31,13 @@ target_include_directories(
     alltests
     PRIVATE
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/includes
 )
 target_link_libraries(
     alltests
     mofidtest
     openbabel
-    GTest::gtest_main
+    gtest
 )
 
 include(GoogleTest)

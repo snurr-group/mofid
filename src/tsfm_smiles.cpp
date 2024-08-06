@@ -20,14 +20,18 @@ int main(int argc, char* argv[])
 	std::string query(argv[2]);
 	std::string replacement(argv[3]);
 
-	// Set up the babel data directory
+	// Set up the babel data directory and shared libraries
 	std::stringstream dataMsg;
 	dataMsg << "Using local Open Babel data saved in " << LOCAL_OB_DATADIR << std::endl;
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
+	dataMsg << "Using local Open Babel shared libraries saved in " << LOCAL_OB_LIBDIR << std::endl;
+	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
 #ifdef _WIN32
 	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+	_putenv_s("BABEL_LIBDIR", LOCAL_OB_LIBDIR);
 #else
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+	setenv("BABEL_LIBDIR", LOCAL_OB_LIBDIR, 1);
 #endif
 
 	// Read input SMILES

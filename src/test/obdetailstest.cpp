@@ -11,6 +11,7 @@
 #include <openbabel/obiter.h>
 #include <openbabel/atom.h>
 #include <openbabel/mol.h>
+#include <openbabel/bond.h>
 
 namespace OBDetailsTest {
     constexpr int numElements{118};

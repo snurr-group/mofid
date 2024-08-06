@@ -35,6 +35,8 @@ int main(int argc, char* argv[])
 	// Set up the babel data directory to use a local copy customized for MOFs
 	// (instead of system-wide Open Babel data) for this particular program
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
+    // Set up the babel shared libraries
+    setenv("BABEL_LIBDIR", LOCAL_OB_LIBDIR, 1);
 
 	std::cout << runSearch(pattern, db_file, exclusion_search);
 }
