@@ -166,8 +166,8 @@ void copyMOF(OBMol *src, OBMol *dest) {
 		dest->UnsetFlag(OB_ATOMTYPES_MOL);
 	}
 	if (!src_charges) {
-		src->UnsetPartialChargesPerceived();
-		dest->UnsetPartialChargesPerceived();
+		src->SetPartialChargesPerceived(false);
+		dest->SetPartialChargesPerceived(false);
 	}
 }
 

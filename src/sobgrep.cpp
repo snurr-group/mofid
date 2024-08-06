@@ -16,10 +16,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/generic.h>
+#include <openbabel/atom.h>
 #include <openbabel/mol.h>
 #include <openbabel/obiter.h>
 #include <openbabel/babelconfig.h>
 #include <openbabel/elements.h>
+#include <openbabel/parsmart.h>
 #include "config_sbu.h"
 
 

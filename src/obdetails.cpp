@@ -6,6 +6,8 @@
 #include "invector.h"
 
 #include <openbabel/babelconfig.h>
+#include <openbabel/oberror.h>
+#include <openbabel/obiter.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
 #include <openbabel/bond.h>
