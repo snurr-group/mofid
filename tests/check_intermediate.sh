@@ -29,15 +29,18 @@ for path_to_cif in Resources/KnownCIFs/*.cif; do
     echo -e "${GREEN}CHECKING${NC} $cif..."
     output_path="Output/$cif"
     known_path="Resources/KnownCIFs/Outputs/$cif"
+    # In order, a-zA-Z# -> a-zA-Z, NODE# -> "", Lines with # -> "", # -> 1 decimal place
+    pattern="s/([a-zA-Z]+)[0-9]+/\1/g; s/NODE [0-9]+/NODE/g; s/^[ \t]*#.*//g; s/([0-9]+)(.[0-9])?[0-9]+/\1\2/g"
     # Check orig_mol.cif
-    diff <(sort $known_path/orig_mol.cif) <(sort $output_path/orig_mol.cif) > /dev/null
+    diff -b <(sed -E "$pattern" $known_path/orig_mol.cif | sort) <(sed -E "$pattern" $output_path/orig_mol.cif | sort) > /dev/null
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}WARNING:${NC} orig_mol.cif is different" 
+        diff -yb --suppress-common-lines <(sed -E "$pattern" $known_path/orig_mol.cif | sort) <(sed -E "$pattern" $output_path/orig_mol.cif | sort) | colordiff
+        mkdir -p Mismatch/$cif/
+        cp -u Output/$cif/orig_mol.cif Mismatch/$cif/orig_mol.cif
     fi
     for path_to_dir in $(find $known_path/* -type d); do
         dir="$(basename $path_to_dir)"
-        # In order, a-zA-Z# -> a-zA-Z, NODE# -> "", Lines with # -> "", # -> 1 decimal place
-        pattern="s/([a-zA-Z]+)[0-9]+/\1/g; s/NODE [0-9]+/NODE/g; s/^[ \t]*#.*//g; s/([0-9]+)(.[0-9])?[0-9]+/\1\2/g"
         # Currently only checks CIF files
         for path_to_file in $path_to_dir/*.cif; do
             file="$(basename $path_to_file)"
