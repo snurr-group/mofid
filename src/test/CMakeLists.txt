@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG f8d7d77c06936315286eb55f8de22cd23c188571 # Release-1.14.0
+    GIT_TAG b514bdc898e2951020cbdca1304b75f5950d1f59 # Release-1.15.2
 )
 FetchContent_MakeAvailable(googletest)
 
