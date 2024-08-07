@@ -1,0 +1,47 @@
+language: cpp
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake .. -DMAEPARSER_RIGOROUS_BUILD=ON  -DCMAKE_BUILD_TYPE=Debug
+
+script:
+  - make
+  - ctest -V -T memcheck --output-on-failure || (cat Testing/Temporary/MemoryChecker.*.log && exit 29)
+
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      env: CC="gcc-4.8" CXX="g++-4.8"
+      addons:
+        apt:
+          packages:
+            - gcc-4.8
+            - g++-4.8
+            - libboost-all-dev
+            - valgrind
+
+    - os: linux
+      dist: xenial
+      env: CC="gcc-5" CXX="g++-5"
+      addons:
+        apt:
+          packages:
+            - gcc-5
+            - g++-5
+            - libboost1.58-all-dev
+            - valgrind
+
+    - os: linux
+      dist: bionic
+      env: CC="gcc-7" CXX="g++-7"
+      addons:
+        apt:
+          packages:
+            - gcc-7
+            - g++-7
+            - libboost1.62-all-dev
+            - valgrind
+
