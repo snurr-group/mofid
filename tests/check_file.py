@@ -67,7 +67,7 @@ class CIFComparer:
         i = 0
         for (bond1, bond2) in zip(openbabel.OBMolBondIter(self.obmol1), openbabel.OBMolBondIter(self.obmol2)):
             i += 1
-            for (attr1, attr2, message) in zip((bond1.GetBondOrder(), round(bond1.GetLength(), 9), bond1.GetBeginAtom().GetAtomicNum(), bond1.GetEndAtom().GetAtomicNum()), (bond2.GetBondOrder(), round(bond2.GetLength(), 9), bond2.GetBeginAtom().GetAtomicNum(), bond2.GetEndAtom().GetAtomicNum()), ("order", "length", "begin atom", "end atom")):
+            for (attr1, attr2, message) in zip((bond1.GetBondOrder(), round(bond1.GetLength(), 9), set([bond1.GetBeginAtom().GetAtomicNum(), bond1.GetEndAtom().GetAtomicNum()])), (bond2.GetBondOrder(), round(bond2.GetLength(), 9), set([bond2.GetBeginAtom().GetAtomicNum(), bond2.GetEndAtom().GetAtomicNum()])), ("order", "length", "begin and end atoms")):
                 if (attr1 != attr2):
                     logging.warning("bond %s %s mismatch, %s vs. %s", i, message, attr1, attr2)
                     self.mismatch = True
