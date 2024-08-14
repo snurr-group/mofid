@@ -48,14 +48,15 @@ for path_to_cif in Resources/KnownCIFs/*.cif; do
             exit_code="$?"
             if [[ $exit_code -ne 0 ]]; then
                 echo -e "${YELLOW}INVESTIGATING:${NC} $cif/$dir/$file may be different..."
-                python tests/check_file.py "$path_to_file" "$output_path/$dir/$file"
+                #python tests/check_file.py "$path_to_file" "$output_path/$dir/$file"
+                bin/compare "$path_to_file" "$output_path/$dir/$file"
                 if [[ $? -ne 0 ]]; then
                     echo -e "${RED}WARNING:${NC} $cif/$dir/$file is different"
                     diff -yb --suppress-common-lines <(sed -E "$pattern" $path_to_file | sort) <(sed -E "$pattern" $output_path/$dir/$file | sort) | colordiff
                     mkdir -p Mismatch/$cif/$dir/
                     cp -u Output/$cif/$dir/$file Mismatch/$cif/$dir/$file
                 else
-                    echo -e "${GREEN}SUCCESS:${NC} $cif/$dir/$file is identical (check_file.py)"
+                    echo -e "${GREEN}SUCCESS:${NC} $cif/$dir/$file is identical (bin/compare)"
                 fi
             else
                 echo -e "${GREEN}SUCCESS:${NC} $cif/$dir/$file is identical (diff)"

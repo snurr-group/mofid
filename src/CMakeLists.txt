@@ -34,6 +34,7 @@ set(tools
         sobgrep
         searchdb
         tsfm_smiles
+        compare
    )
 if (EMSCRIPTEN)
   set (tools searchdb)  # disable extraneous tools from JS build
