@@ -1,0 +1,275 @@
+{"0": {
+    "doc": "About",
+    "title": "MOFid",
+    "content": "A system for rapid identification and analysis of metal-organic frameworks. Please cite DOI: 10.1021/acs.cgd.9b01050 if you use MOFid in your work. ",
+    "url": "/mofid/#mofid",
+    
+    "relUrl": "/#mofid"
+  },"1": {
+    "doc": "About",
+    "title": "Table of Contents",
+    "content": ". | Objective | Usage and Installation Instructions . | Browser-based MOFid | Compiling from Source | Containerized MOFid | . | Output Overview | Repository Overview | Background and Troubleshooting | Credits | . ",
+    "url": "/mofid/#table-of-contents",
+    
+    "relUrl": "/#table-of-contents"
+  },"2": {
+    "doc": "About",
+    "title": "Objective",
+    "content": "Supplement the current MOF naming conventions with a canonical, machine-readable identifier to facilitate data mining and searches. Accomplish this goal by representing MOFs according to their nodes and linkers and topology. ",
+    "url": "/mofid/#objective",
+    
+    "relUrl": "/#objective"
+  },"3": {
+    "doc": "About",
+    "title": "Usage and Installation Instructions",
+    "content": "There are three main ways in which you can use MOFid. | From your browser. | By compiling the MOFid source code and running it locally. | By using Singularity or Docker to run a pre-built image of the MOFid code locally. | . Browser-based MOFid . Visit Web MOFid to quickly and easily run MOFid in your browser! No programming skills are required. Compiling from Source . See Compiling for how to compile and run MOFid from source. Containerized MOFid . See Singularity for how to run MOFid via a Singularity container. ",
+    "url": "/mofid/#usage-and-installation-instructions",
+    
+    "relUrl": "/#usage-and-installation-instructions"
+  },"4": {
+    "doc": "About",
+    "title": "Output Overview",
+    "content": "By default, the SBU binary and utility scripts write files to a user-specified Output directory. The base directory contains the original adjacency matrix of single bonds for the MOF in orig_mol.txt. If a single structure is analyzed in Python by invoking Python/run_mofid.py or the Python API, two files containing the MOFid and MOFkey are written to this directory. Similar files are written for an entire folder of CIFs by Scripts/run_folder.sh. The results of four MOF deconstruction algorithms are written to labeled subdirectories (MetalOxo, SingleNode, AllNode, StandardIsolated) and contain information about… . | MOF building blocks (nodes, linkers). | Solvents (bound/free). | The MOF structure with only free solvent removed (FSR). | The MOF structure with all solvent removed (ASR). | . | The simplified net. | A topology.cgd file for Systre. | A simplified topology CIF. | . | Statistics about MOF linkers. | . The directory for the SingleNode and AllNode simplification algorithms additionally contain the crystal structures of the node SBUs (including carboxylates or bound heterocycles) and the AllNode directory contains the identities of branch points in the simplified net. Results from the standard simplification algorithm are written to Output/StandardIsolated but have not been analyzed for the paper. ",
+    "url": "/mofid/#output-overview",
+    
+    "relUrl": "/#output-overview"
+  },"5": {
+    "doc": "About",
+    "title": "Repository Overview",
+    "content": ". | Resources: contains data files for testing and continuous integration using GitHub Actions. | Scripts: provides contains utilities for studying folders of structures. | Analysis: contains supplementary information source code for figures in the paper. | Python: contains wrappers for the SBU binary and Systre that assemble the MOFid and MOFkey. | Tests: contains intermediate and integration test scripts. | . ",
+    "url": "/mofid/#repository-overview",
+    
+    "relUrl": "/#repository-overview"
+  },"6": {
+    "doc": "About",
+    "title": "Background and Troubleshooting",
+    "content": "Please read this page for a detailed background and for important tips and tricks in troubleshooting problematic scenarios. ",
+    "url": "/mofid/#background-and-troubleshooting",
+    
+    "relUrl": "/#background-and-troubleshooting"
+  },"7": {
+    "doc": "About",
+    "title": "Credits",
+    "content": "This work is supported by the U.S. Department of Energy, Office of Basic Energy Sciences, Division of Chemical Sciences, Geosciences and Biosciences through the Nanoporous Materials Genome Center under award DE-FG02-17ER16362. The MOFid command line and web tools are built on top of other open-source software projects. | Open Babel cheminformatics toolkit | Eigen as a dependency for Open Babel | GoogleTest C++ testing framework | Make, CMake, Node.js, and Emscripten for build infrastructure | Systre and webGavrog to analyze crystal graph data and assign RCSR topology symbols for MOFs | NGL Viewer to visualize MOF structures and components on the website | Kekule.js to draw molecule substructure queries in the SearchDB web tool | . You can find the source code for Jekyll at GitHub: jekyll / jekyll . ",
+    "url": "/mofid/#credits",
+    
+    "relUrl": "/#credits"
+  },"8": {
+    "doc": "About",
+    "title": "About",
+    "content": " ",
+    "url": "/mofid/",
+    
+    "relUrl": "/"
+  },"9": {
+    "doc": "Classes",
+    "title": "Classes",
+    "content": "Built on top of Open Babel classes to facilitate the analysis of complex MOF structures. ",
+    "url": "/mofid/classes/",
+    
+    "relUrl": "/classes/"
+  },"10": {
+    "doc": "Compiling",
+    "title": "Compiling",
+    "content": " ",
+    "url": "/mofid/compiling/",
+    
+    "relUrl": "/compiling/"
+  },"11": {
+    "doc": "Compiling",
+    "title": "Table of Contents",
+    "content": ". | Requirements | Installation | Usage | . ",
+    "url": "/mofid/compiling/#table-of-contents",
+    
+    "relUrl": "/compiling/#table-of-contents"
+  },"12": {
+    "doc": "Compiling",
+    "title": "Requirements",
+    "content": ". | A Python environment is required. If you do not have a Python environment installed, we recommend downloading and installing Anaconda. MOFid is compatible with Python 3. | Make sure you have the following: a C++ compiler (the latest version of GCC 10 is recommended), CMake, and GNU Make. If running on Windows, we recommend using Cygwin and including the cmake, make, wget, gcc-core, gcc-g++, and pkg-config packages in addition to the default options during the installation process. | Make sure you have the Java Runtime Environment installed and included in your system’s path. If unsure, try running java in the command line to see if it successfully calls Java. | . ",
+    "url": "/mofid/compiling/#requirements",
+    
+    "relUrl": "/compiling/#requirements"
+  },"13": {
+    "doc": "Compiling",
+    "title": "Installation",
+    "content": ". | Run make init in the base mofid directory. | Run python set_paths.py followed by pip install . in the base mofid directory. If you encounter permissions errors (typically not with Anaconda), try running pip install --user . | . ",
+    "url": "/mofid/compiling/#installation",
+    
+    "relUrl": "/compiling/#installation"
+  },"14": {
+    "doc": "Compiling",
+    "title": "Usage",
+    "content": "In a Python script, the user simply has to call the run_mofid.cif2mofid(cif_path, output_path=\"Output\") function. The first argument is required and is the path to the MOF file. The second argument is optional and is the directory to store the MOFid decomposition information, which defaults to Output if not specified. An example of how to call MOFid is shown below. from mofid.run_mofid import cif2mofid cif_path = \"/path/to/my/mof.cif\" mofid = cif2mofid(cif_path) . The output of the mofid.cif2mofid function is a dictionary containing eight entries: the MOFid (mofid), MOFkey (mofkey), SMILES string (smiles, smiles_nodes, or smiles_linkers), topology (topology), catenation (cat), and basename of the CIF (cifname). ",
+    "url": "/mofid/compiling/#usage",
+    
+    "relUrl": "/compiling/#usage"
+  },"15": {
+    "doc": "ConnectionTable",
+    "title": "ConnectionTable",
+    "content": " ",
+    "url": "/mofid/docs/classes/connectiontable.html",
+    
+    "relUrl": "/docs/classes/connectiontable.html"
+  },"16": {
+    "doc": "ConnectionTable",
+    "title": "Diagram",
+    "content": "classDiagram note for ConnectionTable \"Tracks connection PseudoAtoms and their endpoints.\" note for ConnectionTable \"PseudoAtom : OBAtom#42; AtomSet : set&amp;lt;OBAtom#42;&gt;\" class ConnectionTable { - OBMol#42; parent_net - map&amp;lt;PseudoAtom, pair&amp;lt;PseudoAtom, PseudoAtom&gt;&gt; conn2endpts - map&amp;lt;PseudoAtom, set&amp;lt;PseudoAtom&gt;&gt; endpt_conns + ConnectionTable(OBMol#42; parent=NULL) ConnectionTable + AddConn(PseduoAtom conn, PseudoAtom begin, PseudoAtom end) void + RemoveConn(PseudoAtom conn) void + IsConn(PseudoAtom atom) bool + GetAtomConns(PseudoAtom endpt) AtomSet + HasNeighbor(PseudoAtom begin, PseudoAtom end) bool + GetConnEndpointSet(PseudoAtom conn) AtomSet + GetConnEndpoints(PseudoAtom conn) pair&amp;lt;PseudoAtom, PseudoAtom&gt; + GetInternalConns(VirtualMol atoms) VirtualMol } . ",
+    "url": "/mofid/docs/classes/connectiontable.html#diagram",
+    
+    "relUrl": "/docs/classes/connectiontable.html#diagram"
+  },"17": {
+    "doc": "Deconstructor",
+    "title": "Deconstructor",
+    "content": " ",
+    "url": "/mofid/docs/classes/deconstructor.html",
+    
+    "relUrl": "/docs/classes/deconstructor.html"
+  },"18": {
+    "doc": "Deconstructor",
+    "title": "Diagram",
+    "content": "classDiagram note for Deconstructor \"Base class for MOF deconstruction algorithms to go from an OBMol to its simplified net, topology, and mapping of net PseudoAtoms back to the MOF.\" class Deconstructor { - string output_dir - Deconstructor(const Deconstructor&amp; other) Deconstructor - operator=(const Deconstructor&amp;) Deconstructor&amp; # OBMol#42; parent_molp # Topology simplified_net # OBConersion obconv # bool infinite_node_detected # VirtualMol points_of_extension # virtual InitOutputFormat() void # static GetBasicSMILES(OBMol fragment) string # virtual DetectInitialNodesAndLinkers() void # virtual CollapseLinkers() void # virtual CollapseNodes() bool # virtual SimplifyTopology() void # virtual PostSimplification() void # CheckCatenation() int # GetCatenationInfo(int num_nets) string + Deconstructor(OBMol#42; orig_mof) Deconstructor + virtual ~Deconstructor() + SimplifyMOF(bool write_intermediate_cifs=true) void + SetOutputDir(const string&amp; path) void + virtual WriteCIFs() void + virtual GetMOFInfo() string + GetOutputPath(const string&amp; filename) string + WriteSimplifiedNet(const strnig&amp; base_filename) void + WriteAtomsOfRole(const string&amp; simplified_role, const string&amp; base_filename=\"\") void } . ",
+    "url": "/mofid/docs/classes/deconstructor.html#diagram",
+    
+    "relUrl": "/docs/classes/deconstructor.html#diagram"
+  },"19": {
+    "doc": "Docker",
+    "title": "Docker",
+    "content": " ",
+    "url": "/mofid/docker/",
+    
+    "relUrl": "/docker/"
+  },"20": {
+    "doc": "Docker",
+    "title": "Table of Contents",
+    "content": ". | Installation | Usage | . ",
+    "url": "/mofid/docker/#table-of-contents",
+    
+    "relUrl": "/docker/#table-of-contents"
+  },"21": {
+    "doc": "Docker",
+    "title": "Installation",
+    "content": "Installation instructions for Docker are beyond the scope of this document. Two potentially helpful links for Linux include the installation and configuration pages. | Once Docker is set up, clone the MOFid repository. | Build the container by running docker build -t mofid path_to_mofid_repo | . ",
+    "url": "/mofid/docker/#installation",
+    
+    "relUrl": "/docker/#installation"
+  },"22": {
+    "doc": "Docker",
+    "title": "Usage",
+    "content": "To start a shell within the Docker container, run docker run -it mofid /bin/bash . To analyze a single MOF crystal structure… . # Configure paths in the first two lines, then run this block MOFID_IN_FILENAME=\"P1-Cu-BTC.cif\" MOFID_IN_DIR=\"$PWD\" # absolute path to parent directory, e.g. current directory via $PWD docker run \\ --mount type=bind,source=\"$MOFID_IN_DIR\",target=\"$MOFID_IN_DIR\",readonly \\ mofid \\ python /mofid/Python/run_mofid.py \"$MOFID_IN_DIR/$MOFID_IN_FILENAME\" /mofid/TempOutput json . or to analyze an entire folder… . # Configure the paths in the first two lines, then run this block MOFID_IN_DIR=\"$PWD/Resources/TestCIFs\" MOFID_OUT_DIR=\"$PWD/mofid_output\" mkdir -p \"$MOFID_OUT_DIR\" docker run \\ --mount type=bind,source=\"$MOFID_IN_DIR\",target=/data,readonly \\ --mount type=bind,source=\"$MOFID_OUT_DIR\",target=/out \\ mofid \\ Scripts/run_folder.sh /data /out . ",
+    "url": "/mofid/docker/#usage",
+    
+    "relUrl": "/docker/#usage"
+  },"23": {
+    "doc": "MappedMol",
+    "title": "MappedMol",
+    "content": " ",
+    "url": "/mofid/docs/classes/mappedmol.html",
+    
+    "relUrl": "/docs/classes/mappedmol.html"
+  },"24": {
+    "doc": "MappedMol",
+    "title": "Diagram",
+    "content": "classDiagram note for MappedMol \"OBMol copy with a one-to-one mapping between original and copied OBAtom objects.\" note for MappedMol \"atom_map_t : map&amp;lt;OBAtom#42;, OBAtom#42;&gt;\" class MappedMol { - MappedMol(const MappedMol&amp; other) MappedMol - operator=(const MappedMol&amp;) MappedMol&amp; + OBMol mol_copy + OBMol#42; origin_molp + atom_map_t origin_to_copy + atom_map_t copy_to_orign + map&amp;lt;OBAtom#42;, VirtualMol&gt; copy_pa_to_multiple + MappedMol() MappedMol + virtual ~MappedMol() } . ",
+    "url": "/mofid/docs/classes/mappedmol.html#diagram",
+    
+    "relUrl": "/docs/classes/mappedmol.html#diagram"
+  },"25": {
+    "doc": "MetalOxoDeconstructor",
+    "title": "MetalOxoDeconstructor",
+    "content": " ",
+    "url": "/mofid/docs/classes/metaloxodeconstructor.html",
+    
+    "relUrl": "/docs/classes/metaloxodeconstructor.html"
+  },"26": {
+    "doc": "MetalOxoDeconstructor",
+    "title": "Diagram",
+    "content": "classDiagram class MetalOxoDeconstructor { # virtual PostSimplification() void # PAsToUniqueInChIs(VirtualMol pa, const string&amp; format) vector&amp;lt;string&gt; + MetalOxoDeconstructor(OBMol#42; orig_mof=NULL) MetalOxoDeconstructor + virtual ~MetalOxoDeconstructor() + GetMOFkey(const string&amp; topology=DEFAULT_MOFKEY_TOPOLOGY) string + GetLinkerInChIs() string + GetLinkerStats(string sep=\"\\t\") string } . ",
+    "url": "/mofid/docs/classes/metaloxodeconstructor.html#diagram",
+    
+    "relUrl": "/docs/classes/metaloxodeconstructor.html#diagram"
+  },"27": {
+    "doc": "PseudoAtomMap",
+    "title": "PseudoAtomMap",
+    "content": " ",
+    "url": "/mofid/docs/classes/pseudoatommap.html",
+    
+    "relUrl": "/docs/classes/pseudoatommap.html"
+  },"28": {
+    "doc": "PseudoAtomMap",
+    "title": "Diagram",
+    "content": "classDiagram note for PseudoAtomMap \"Maps PseudoAtoms in a simplified _pseudo_mol to sets of atoms in the original _full_mol\" note for PseudoAtomMap \"PseudoAtom : OBAtom#42;\" class PseudoAtomMap { - OBMol#42; _pseudo_mol - OBMol#42; _full_mol - map&amp;lt;PseudoAtom, VirtualMol&gt; _mapping + PseudoAtomMap(OBMol#42; pseudo=NULL, OBMol#42; orig=NULL) PseudoAtomMap + ToCombinedMol(bool export_bonds=true, bool copy_bonds=true) OBMol + operator[](PseudoAtom i) VirtualMol&amp; + RemoveAtom(PseudoAtom atom) void } . ",
+    "url": "/mofid/docs/classes/pseudoatommap.html#diagram",
+    
+    "relUrl": "/docs/classes/pseudoatommap.html#diagram"
+  },"29": {
+    "doc": "Singularity",
+    "title": "Singularity",
+    "content": " ",
+    "url": "/mofid/singularity/",
+    
+    "relUrl": "/singularity/"
+  },"30": {
+    "doc": "Singularity",
+    "title": "Table of Contents",
+    "content": ". | Installation | Usage | . ",
+    "url": "/mofid/singularity/#table-of-contents",
+    
+    "relUrl": "/singularity/#table-of-contents"
+  },"31": {
+    "doc": "Singularity",
+    "title": "Installation",
+    "content": "If you have access to a Linux machine or HPC cluster, it may be possible to run MOFid via Singularity, which packages the MOFid installer into a portable and reproducible environment. To get started, refer to documentation from your university or computing center (example) for help on singularity. There may be setup instructions specific to your compute environment. E.g. you may need to load modules or bind paths to set up Singularity. | Download the pre-compiled Singularity container mofid.sif from the most recent release. | Test your installation using singularity test mofid.sif. Your installation is successful if you receive the message Results: 0 errors in 28 MOFs. | . Alternatively, if you wish to use Docker see docker.md. ",
+    "url": "/mofid/singularity/#installation",
+    
+    "relUrl": "/singularity/#installation"
+  },"32": {
+    "doc": "Singularity",
+    "title": "Usage",
+    "content": "The Singularity container wraps all of MOFid into a single package. As a command line tool… . # Analyzing a single MOF crystal structure ./mofid.sif file path_to_mof.cif # alternatively: singularity run mofid.sif file path_to_mof.cif # Analyzing a folder ./mofid.sif folder path_to_input_cif_folder path_to_mofid_output # By default, path_to_mofid_output is set to \"Output/\" in your current directory . or as part of a Python script… . import json import sys import subprocess MOFID_SIF = \"path_to_mofid.sif\" MOF_CIF_TO_ANALYZE = \"path_to_mof.cif\" mofid_cmd = [\"singularity\", \"run\", MOFID_SIF, \"file\", MOF_CIF_TO_ANALYZE] mofid_run = subprocess.run(mofid_cmd, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) sys.stderr.write(mofid_run.stderr) # Re-forwarding C++ errors mofid_output = json.loads(mofid_run.stdout) . The mofid_output variable above is a dictionary containing eight entries: the MOFid (mofid), MOFkey (mofkey), SMILES string (smiles, smiles_nodes, or smiles_linkers), topology (topology), catenation (cat), and basename of the CIF (cifname). ",
+    "url": "/mofid/singularity/#usage",
+    
+    "relUrl": "/singularity/#usage"
+  },"33": {
+    "doc": "StandardIsolatedDeconstructor",
+    "title": "StandardIsolatedDeconstructor",
+    "content": " ",
+    "url": "/mofid/docs/classes/standardisolateddeconstructor.html",
+    
+    "relUrl": "/docs/classes/standardisolateddeconstructor.html"
+  },"34": {
+    "doc": "StandardIsolatedDeconstructor",
+    "title": "Diagram",
+    "content": "classDiagram note for StandardIsolatedDeconstructor \"Same approach as ToposPro standard representation, which considers each metal atom as a vertex in the simplified net.\" class StandardIsolatedDeconstructor { # virtual DetectInitialNodesAndLinkers() void } . ",
+    "url": "/mofid/docs/classes/standardisolateddeconstructor.html#diagram",
+    
+    "relUrl": "/docs/classes/standardisolateddeconstructor.html#diagram"
+  },"35": {
+    "doc": "Topology",
+    "title": "Topology",
+    "content": " ",
+    "url": "/mofid/docs/classes/topology.html",
+    
+    "relUrl": "/docs/classes/topology.html"
+  },"36": {
+    "doc": "Topology",
+    "title": "Diagram",
+    "content": "classDiagram note for Topology \"A simplified net including explicit connections of PseudoAtoms, initially copied and mapped back to an original parent OBMol. Unlike an OBMol, PseudoAtoms are connected by an explicit connector OBAtom#42; that allows two PseudoAtoms to be connected in different directions.\" note for Topology \"PseudoAtom : OBAtom#42;\" class Topology { - static const int DEFAULT_ELEMENT=6 - static const int CONNECTION_ELEMENT=118 - OBMol#42; orig_molp - OBMol simplified_net - ConnectionTable conns - map&amp;lt;string, VirtualMol&gt; deleted_atoms - PseudoAtomMap pa_to_act - map&amp;lt;OBAtom#42;, string&gt; pa_roles - map&amp;lt;OBAtom#42;, PseudoAtom&gt; act_to_pa - Topology(const Topology&amp; other) Topology - operator=(const Topology&amp;) Topology&amp; + Topology(OBMol#42; parent_mol=NULL) Topology + GetOrigMol() OBMol#42; + AtomHasRole(PseudoAtom atom, const string&amp; role) bool + GetAtomsOfRole(const string&amp; role) VirtualMol + SetRoleToAtom(const string&amp; role, PseudoAtom atom) void + SetRoleToAtoms(const string&amp; role, VirtualMol atoms) void + GetRoleFromAtom(PseudoAtom atom) string + GetAtoms(bool include_conn=true) VirtualMol + FragmentToOBMolNoConn(VirtualMol pa_fragment) OBMol + GetDeletedOrigAtoms(const string&amp; deletion_reason=ALL_DELETED_ORIG_ATOMS) VirtualMol + GetConnectors() VirtualMol + IsConnection(PseudoAtom a) bool + GetOtherEndpoint(PseudoAtom conn, PseudoAtom begin) PseudoAtom + OrigToPseudo(VirtualMol orig_atoms) VirtualMol + PseudoToOrig(VirtualMol pa_atoms) VirtualMol + FragmentWithoutConns(VirtualMol fragment) VirtualMol + FragmentWithIntConns(VirtualMol fragment) VirtualMol + ConnectAtoms(PseudoAtom begin, PseudoAtom end, vector3#42; pos=NULL) PseudoAtom + DeleteConnection(PseudoAtom conn) void + DeleteAtomAndConns(PseudoAtom atom, const string&amp; role_for_orig_atoms=DELETE_ORIG_ATOM_ERROR) void + CollapseFragment(VirtualMol pa_fragment) PseudoAtom + MergeAtomToAnother(PseudoAtom from, PseudoAtom to) void + SimplifyAxB() int + SplitFourVertexIntoTwoThree(PseudoAtom site) int + ConnTo2cPA(PseudoAtom conn_pa, int element=DEFAULT_ELEMENT) PseudoAtom + ToOBMol() OBMol + ToSimplifiedCIF(const string&amp; filename) void + WriteSystre(const string&amp; filepath, bool write_centers=true, bool simplify_two_conn=true) void } . ",
+    "url": "/mofid/docs/classes/topology.html#diagram",
+    
+    "relUrl": "/docs/classes/topology.html#diagram"
+  },"37": {
+    "doc": "VirtualMol",
+    "title": "VirtualMol",
+    "content": " ",
+    "url": "/mofid/docs/classes/virtualmol.html",
+    
+    "relUrl": "/docs/classes/virtualmol.html"
+  },"38": {
+    "doc": "VirtualMol",
+    "title": "Diagram",
+    "content": "classDiagram note for VirtualMol \"A lightweight subset of OBAtom#42; in a molecule. An alternative to copying OBMol objects, which undesirably creates new OBAtom objects.\" note for VirtualMol \"AtomPair : pair&amp;lt;OBAtom#42;, OBAtom#42;&gt; ConnIntToExt : set&amp;lt;AtomPair&gt; AtomSet : set&amp;lt;OBAtom#42;&gt;\" class VirtualMol { - set&amp;lt;OBAtom#42;&gt; _atoms - OBMol#42; _parent_mol + VirtualMol(OBMol#42; parent=NULL) VirtualMol + VirtualMol(OBAtom#42; single_atom) VirtualMol + GetParent() OBMol#42; + NumAtoms() int + GetAtoms() set&amp;lt;OBAtom#42;&gt; + HasAtom(OBAtom#42; a) bool + AddAtom(OBAtom#42; a) bool + RemoveAtom(OBAtom#42; a) bool + AddVirtualMol(VirtualMol addition) bool + ImportCopiedFragment(OBMol#42; fragment) int + GetExternalBondsOrConns() ConnIntToExt + CopyToMappedMol(MappedMol#42; dest, bool export_bonds=true, bool copy_bonds=true) void + ToOBMol(bool export_bonds=true, bool copy_bonds=true) OBMol + ToCIF(const string&amp; filename, bool write_bonds=true) void + Separate() vector&amp;lt;VirtualMol&gt; } . ",
+    "url": "/mofid/docs/classes/virtualmol.html#diagram",
+    
+    "relUrl": "/docs/classes/virtualmol.html#diagram"
+  }
+}
