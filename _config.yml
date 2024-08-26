@@ -21,7 +21,7 @@
 title: MOFid Docs
 description: >- # this means to ignore newlines until "baseurl:"
   A system for rapid identification and analysis of metal-organic frameworks.
-baseurl: "/mofid2024" # the subpath of your site, e.g. /blog
+baseurl: "/mofid" # the subpath of your site, e.g. /blog
 url: "https://snurr-group.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 
 # Build settings
