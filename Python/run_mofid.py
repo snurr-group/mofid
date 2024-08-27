@@ -34,17 +34,19 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 
     mof_name = os.path.splitext(os.path.basename(cif_path))[0]
     mofkey = base_mofkey
+    with open('.git/ORIG_HEAD', mode='r') as f:
+        commit_ref = f.read()[:8]
 
     if topology != 'NA':
         base_topology = topology.split(',')[0]
-        mofkey = assemble_mofkey(mofkey, base_topology)
+        mofkey = assemble_mofkey(mofkey, base_topology, commit_ref=commit_ref)
 
     all_fragments = []
     all_fragments.extend(node_fragments)
     all_fragments.extend(linker_fragments)
     all_fragments.sort()
-    mofid = assemble_mofid(all_fragments, topology, cat,
-            mof_name=mof_name)
+    mofid = assemble_mofid(all_fragments, topology, cat=cat,
+            mof_name=mof_name, commit_ref=commit_ref)
     parsed = parse_mofid(mofid)
 
     identifiers = {

@@ -142,7 +142,7 @@ def extract_topology(mof_path):
             return 'MISMATCH'
     return first_net
 
-def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE'):
+def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE', commit_ref = "NO_REF"):
     # Assemble the MOFid string from its components
     mofid = '.'.join(fragments) + ' '
     mofid = mofid + 'MOFid-v1' + '.'
@@ -155,12 +155,13 @@ def assemble_mofid(fragments, topology, cat = None, mof_name='NAME_GOES_HERE'):
         mofid = mofid + 'NA'
     if mofid.startswith(' '):  # Null linkers.  Make .smi compatible
         mofid = '*' + mofid + 'no_mof'
+    mofid = mofid + '.' + commit_ref
     mofid = mofid + ';' + mof_name
     return mofid
 
-def assemble_mofkey(base_mofkey, base_topology):
+def assemble_mofkey(base_mofkey, base_topology, commit_ref="NO_REF"):
     # Add a topology to an existing MOFkey
-    return base_mofkey.replace('MOFkey-v1', 'MOFkey-v1.' + base_topology)
+    return base_mofkey.replace('MOFkey-v1', 'MOFkey-v1.' + base_topology + '.' + commit_ref)
 
 def parse_mofid(mofid):
     # Deconstruct a MOFid string into its pieces
