@@ -34,8 +34,11 @@ def cif2mofid(cif_path,output_path=DEFAULT_OUTPUT_PATH):
 
     mof_name = os.path.splitext(os.path.basename(cif_path))[0]
     mofkey = base_mofkey
-    with open('.git/ORIG_HEAD', mode='r') as f:
-        commit_ref = f.read()[:8]
+    try:
+        with open('.git/ORIG_HEAD', mode='r') as f:
+            commit_ref = f.read()[:8]
+    except OSError:
+        commit_ref = 'NO_REF'
 
     if topology != 'NA':
         base_topology = topology.split(',')[0]
