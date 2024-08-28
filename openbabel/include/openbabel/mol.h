@@ -24,8 +24,18 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 
-#ifndef EXTERN
-#  define EXTERN extern
+#ifndef OB_EXTERN
+#  define OB_EXTERN extern
+#endif
+#ifndef THREAD_LOCAL
+#ifdef SWIG
+# define THREAD_LOCAL
+# elif (__cplusplus >= 201103L)
+//this is required for correct multi-threading
+#  define THREAD_LOCAL thread_local
+# else
+#  define THREAD_LOCAL
+# endif
 #endif
 
 #include <math.h>
@@ -35,32 +45,26 @@ GNU General Public License for more details.
 #include <string>
 #include <map>
 
-// Currently includes many headers for 2.x backwards compatibility
-// \deprecated -- this will be cleaned up in 3.0 efforts
-//      to improve compile time significantly.
-// Only include necessary headers and class declaration stubs.
-#include <openbabel/atom.h>
-#include <openbabel/bond.h>
 #include <openbabel/base.h>
-#include <openbabel/data.h>
-#include <openbabel/chains.h>
-#include <openbabel/math/vector3.h>
-#include <openbabel/bitvec.h>
-#include <openbabel/residue.h>
-#include <openbabel/ring.h>
-#include <openbabel/generic.h>
-#include <openbabel/typer.h>
-#include <openbabel/oberror.h>
-#include <openbabel/obiter.h>
-#include <openbabel/internalcoord.h>
+
 
 namespace OpenBabel
 {
-
   class OBAtom;
   class OBBond;
+  class OBResidue;
+  class OBRing;
   class OBInternalCoord;
   class OBConversion; //used only as a pointer
+
+  class vector3;
+  class OBBitVec;
+  class OBMolAtomDFSIter;
+  class OBChainsParser;
+
+  typedef std::vector<OBAtom*>::iterator OBAtomIterator;
+  typedef std::vector<OBBond*>::iterator OBBondIterator;
+  typedef std::vector<OBResidue*>::iterator OBResidueIterator;
 
   // Class OBMol
   //MOL Property Macros (flags) -- 32+ bits
@@ -72,7 +76,7 @@ namespace OpenBabel
 #define OB_AROMATIC_MOL          (1<<3)
   //! Atom typing has been performed. See OBAtomTyper
 #define OB_ATOMTYPES_MOL         (1<<4)
-  //! Chirality detection has been performed. See OBMol::IsChiral
+  //! Chirality detection has been performed.
 #define OB_CHIRALITY_MOL         (1<<5)
   //! Partial charges have been set or percieved
 #define OB_PCHARGE_MOL           (1<<6)
@@ -103,6 +107,11 @@ namespace OpenBabel
   //! Molecule is repeating in a periodic unit cell
 #define OB_PERIODIC_MOL          (1<<23)
   // flags 24-32 unspecified
+
+#define SET_OR_UNSET_FLAG(X) \
+  if (value) SetFlag(X); \
+  else     UnsetFlag(X);
+
 #define OB_CURRENT_CONFORMER	 -1
 
 enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
@@ -131,9 +140,6 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     std::vector<OBInternalCoord*> _internals;   //!< Internal Coordinates (if applicable)
     unsigned short int            _mod;	        //!< Number of nested calls to BeginModify()
 
-    bool  HasFlag(int flag)    { return((_flags & flag) ? true : false); }
-    void  SetFlag(int flag)    { _flags |= flag; }
-
   public:
 
     //! \name Initialization and data (re)size methods
@@ -159,15 +165,6 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
       }
     }
 
-    //! Create a new OBAtom pointer. Does no bookkeeping
-    //! \deprecated Use NewAtom instead, which ensures internal connections
-    virtual OBAtom *CreateAtom(void);
-    //! Create a new OBBond pointer. Does no bookkeeping
-    //! \deprecated Use NewBond instead, which ensures internal connections
-    virtual OBBond *CreateBond(void);
-    //! Create a new OBResidue pointer. Does no bookkeeping
-    //! \deprecated Use NewResidue instead, which ensures internal connections
-    virtual OBResidue *CreateResidue(void);
     //! Free an OBAtom pointer if defined. Does no bookkeeping
     //! \see DeleteAtom which ensures internal connections
     virtual void DestroyAtom(OBAtom*);
@@ -189,7 +186,7 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     //! Add a new bond to the molecule with the specified parameters
     //! \param beginIdx  the atom index of the "start" atom
     //! \param endIdx    the atom index of the "end" atom
-    //! \param order     the bond order (see OBBond::GetBO())
+    //! \param order     the bond order (see OBBond::GetBondOrder())
     //! \param flags     any bond flags such as stereochemistry (default = none)
     //! \param insertpos the position index to insert the bond (default = none)
     //! \return Whether the new bond creation was successful
@@ -370,53 +367,43 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     { _autoPartialCharge=val; }
 
     //! Mark that aromaticity has been perceived for this molecule (see OBAromaticTyper)
-    void   SetAromaticPerceived()    { SetFlag(OB_AROMATIC_MOL);    }
+    void   SetAromaticPerceived(bool value = true)    { SET_OR_UNSET_FLAG(OB_AROMATIC_MOL);    }
     //! Mark that Smallest Set of Smallest Rings has been run (see OBRing class)
-    void   SetSSSRPerceived()        { SetFlag(OB_SSSR_MOL);        }
+    void   SetSSSRPerceived(bool value = true)        { SET_OR_UNSET_FLAG(OB_SSSR_MOL);        }
     //! Mark that Largest Set of Smallest Rings has been run (see OBRing class)
-    void   SetLSSRPerceived()        { SetFlag(OB_LSSR_MOL);        }
+    void   SetLSSRPerceived(bool value = true)        { SET_OR_UNSET_FLAG(OB_LSSR_MOL);        }
     //! Mark that rings have been perceived (see OBRing class for details)
-    void   SetRingAtomsAndBondsPerceived(){SetFlag(OB_RINGFLAGS_MOL);}
+    void   SetRingAtomsAndBondsPerceived(bool value = true) { SET_OR_UNSET_FLAG(OB_RINGFLAGS_MOL); }
     //! Mark that atom types have been perceived (see OBAtomTyper for details)
-    void   SetAtomTypesPerceived()   { SetFlag(OB_ATOMTYPES_MOL);   }
+    void   SetAtomTypesPerceived(bool value = true)   { SET_OR_UNSET_FLAG(OB_ATOMTYPES_MOL);   }
     //! Mark that ring types have been perceived (see OBRingTyper for details)
-    void   SetRingTypesPerceived()   { SetFlag(OB_RINGTYPES_MOL);   }
+    void   SetRingTypesPerceived(bool value = true)   { SET_OR_UNSET_FLAG(OB_RINGTYPES_MOL);   }
     //! Mark that chains and residues have been perceived (see OBChainsParser)
-    void   SetChainsPerceived(bool is_perceived=true)
-    {
-      if (is_perceived)      SetFlag(OB_CHAINS_MOL);
-      else                 UnsetFlag(OB_CHAINS_MOL);
-    }
+    void   SetChainsPerceived(bool value = true)      { SET_OR_UNSET_FLAG(OB_CHAINS_MOL);      }
     //! Mark that chirality has been perceived
-    void   SetChiralityPerceived()   { SetFlag(OB_CHIRALITY_MOL);   }
+    void   SetChiralityPerceived(bool value = true)   { SET_OR_UNSET_FLAG(OB_CHIRALITY_MOL);   }
     //! Mark that partial charges have been assigned
-    void   SetPartialChargesPerceived(){ SetFlag(OB_PCHARGE_MOL);   }
+    void   SetPartialChargesPerceived(bool value = true) { SET_OR_UNSET_FLAG(OB_PCHARGE_MOL);  }
     //! Mark that hybridization of all atoms has been assigned
-    void   SetHybridizationPerceived() { SetFlag(OB_HYBRID_MOL);    }
+    void   SetHybridizationPerceived(bool value = true)  { SET_OR_UNSET_FLAG(OB_HYBRID_MOL);   }
     //! Mark that ring closure bonds have been assigned by graph traversal
-    void   SetClosureBondsPerceived(){ SetFlag(OB_CLOSURE_MOL);     }
+    void   SetClosureBondsPerceived(bool value = true)   { SET_OR_UNSET_FLAG(OB_CLOSURE_MOL);  }
     //! Mark that explicit hydrogen atoms have been added
-    void   SetHydrogensAdded()       { SetFlag(OB_H_ADDED_MOL);     }
-    void   SetCorrectedForPH()       { SetFlag(OB_PH_CORRECTED_MOL);}
-    void   SetSpinMultiplicityAssigned(){ SetFlag(OB_ATOMSPIN_MOL);    }
-    void   SetIsReaction(bool val=true) {
-      if (val)  SetFlag(OB_REACTION_MOL);
-      else    UnsetFlag(OB_REACTION_MOL);
-    }
+
+    void   SetHydrogensAdded(bool value = true) { SET_OR_UNSET_FLAG(OB_H_ADDED_MOL); }
+    void   SetCorrectedForPH(bool value = true) { SET_OR_UNSET_FLAG(OB_PH_CORRECTED_MOL); }
+    void   SetSpinMultiplicityAssigned(bool value = true) { SET_OR_UNSET_FLAG(OB_ATOMSPIN_MOL); }
+    //! The OBMol is a pattern, not a complete molecule. Left unchanged by Clear().
+    void   SetIsPatternStructure(bool value = true) { SET_OR_UNSET_FLAG(OB_PATTERN_STRUCTURE); }
+    void   SetIsReaction(bool value = true)               { SET_OR_UNSET_FLAG(OB_REACTION_MOL); }
     //! Mark that distance calculations, etc., should apply periodic boundary conditions through the minimimum image convention.
     //! Does not automatically recalculate bonding.
-    void   SetPeriodicMol(){ SetFlag(OB_PERIODIC_MOL);    }
-    void   SetFlags(int flags)       { _flags = flags;              }
+    void   SetPeriodicMol(bool value = true){ SET_OR_UNSET_FLAG(OB_PERIODIC_MOL); }
+    bool   HasFlag(int flag)   { return (_flags & flag) ? true : false; }
+    void   SetFlag(int flag)   { _flags |= flag; }
+    void   UnsetFlag(int flag) { _flags &= (~(flag)); }
+    void   SetFlags(int flags) { _flags = flags; }
 
-    void   UnsetAromaticPerceived()  { _flags &= (~(OB_AROMATIC_MOL));   }
-    //! Mark that chains perception will need to be run again if required
-    void   UnsetSSSRPerceived()  { _flags &= (~(OB_SSSR_MOL));   }
-    //! Mark that Largest Set of Smallest Rings will need to be run again if required (see OBRing class)
-    void   UnsetLSSRPerceived()  { _flags &= (~(OB_LSSR_MOL));   }
-    void   UnsetRingTypesPerceived()  { _flags &= (~(OB_RINGTYPES_MOL));   }
-    void   UnsetPartialChargesPerceived(){ _flags &= (~(OB_PCHARGE_MOL));}
-    void   UnsetHydrogensAdded()       { UnsetFlag(OB_H_ADDED_MOL);     }
-    void   UnsetFlag(int flag)       { _flags &= (~(flag));              }
     //@}
 
     //! \name Molecule modification methods
@@ -450,37 +437,37 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     void Rotate(const double m[9],int nconf);
     //! Translate to the center of all coordinates (for this conformer)
     void Center();
-    //! Delete all hydrogens from the molecule
+    //! Suppress hydrogens by converting explicit hydrogen atoms to implicit
     //! \return Success
     bool DeleteHydrogens();
-    //! Delete all hydrogens from the supplied atom
+    //! Suppress explicit hydrogen atoms on the supplied atom
     //! \return Success
     bool DeleteHydrogens(OBAtom*);
-    //! Delete all hydrogen atoms connected to a polar atom
+    //! Suppress explicit hydrogen atoms connected to a polar atom
     //! \see OBAtom::IsPolarHydrogen
     //! \since version 2.4
     bool DeletePolarHydrogens();
-    //! Delete all hydrogen atoms connected to a non-polar atom
+    //! Suppress explicit hydrogen atoms connected to a non-polar atom
     //! \see OBAtom::IsNonPolarHydrogen
     bool DeleteNonPolarHydrogens();
-    //! Delete the supplied atom if it is a hydrogen
+    //! Suppress the supplied atom if it is a hydrogen
     //! (Helper function for DeleteHydrogens)
     bool DeleteHydrogen(OBAtom*);
-    //! Add hydrogens to the entire molecule to fill out implicit valence spots
+    //! Convert implicit hydrogens to explicit atoms in the molecular graph
     //! \param polaronly    Whether to add hydrogens only to polar atoms
     //! (i.e., not to C atoms)
     //! \param correctForPH Whether to call CorrectForPH() first
     //! \param pH The pH to use for CorrectForPH() modification
     //! \return Whether any hydrogens were added
     bool AddHydrogens(bool polaronly=false,bool correctForPH=false, double pH=7.4);
-    //! Add hydrogens only to the supplied atom to fill out implicit valence
+    //! For a particular atom, convert implicit hydrogens to explicit atoms in the molecular graph
     bool AddHydrogens(OBAtom*);
-    //! Add only polar hydrogens (i.e., attached to polar atoms, not C)
+    //! For polar atoms only, convert implicit hydrogens to explicit atoms in the molecular graph
     bool AddPolarHydrogens();
-    //! Add only nonpolar hydrogens (i.e., attached to C)
+    //! For non-polar atoms only, convert implicit hydrogens to explicit atoms in the molecular graph
     //! \since version 2.4
     bool AddNonPolarHydrogens();
-    //! Add polar and/or nonpolar hydrogens
+    //! For polar and/or non-polar atoms, convert implicit hydrogens to explicit atoms in the molecular graph
     //! \since verison 2.4
     bool AddNewHydrogens(HydrogenType whichHydrogen, bool correctForPH=false, double pH=7.4);
 
@@ -493,10 +480,10 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     //! Iterative component of Separate to copy one fragment at a time
     bool GetNextFragment( OpenBabel::OBMolAtomDFSIter& iter, OBMol& newMol );
     // docs in mol.cpp
-    bool CopySubstructure(OBMol& newmol, OBBitVec *includeatoms, OBBitVec *excludebonds = (OBBitVec*)0,
+    bool CopySubstructure(OBMol& newmol, OBBitVec *includeatoms, OBBitVec *excludebonds = (OBBitVec*)nullptr,
       unsigned int correctvalence=1,
-      std::vector<unsigned int> *atomorder=(std::vector<unsigned int>*)0,
-      std::vector<unsigned int> *bondorder=(std::vector<unsigned int>*)0);
+      std::vector<unsigned int> *atomorder=(std::vector<unsigned int>*)nullptr,
+      std::vector<unsigned int> *bondorder=(std::vector<unsigned int>*)nullptr);
     //! Converts the charged form of coordinate bonds, e.g.[N+]([O-])=O to N(=O)=O
     bool ConvertDativeBonds();
     //! Converts 5-valent N and P only. Return true if conversion occurred.
@@ -520,9 +507,6 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     //! \since version 2.4
     bool AssignTotalChargeToAtoms(int charge);
 
-    //! The OBMol is a pattern, not a complete molecule. Left unchanged by Clear().
-    void   SetIsPatternStructure()       { SetFlag(OB_PATTERN_STRUCTURE);}
-
     //! \return the center of the supplied conformer @p nconf
     //! \see Center() to actually center all conformers at the origin
     vector3 Center(int nconf);
@@ -542,9 +526,6 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     void FindLSSR();
     //! Find all ring atoms and bonds. Does not need to call FindSSSR().
     void FindRingAtomsAndBonds();
-    //! Find all chiral atom centers. See OBAtom::IsChiral() for more details
-    //! \deprecated See FindStereogenicUnits
-    void FindChiralCenters() { IsChiral(); }
     // documented in mol.cpp -- locates all atom indexes which can reach 'end'
     void FindChildren(std::vector<int> & children,int bgnIdx,int endIdx);
     // documented in mol.cpp -- locates all atoms which can reach 'end'
@@ -613,10 +594,9 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     bool HasSpinMultiplicityAssigned() { return(HasFlag(OB_ATOMSPIN_MOL)); }
     //! Does this OBMol represent a reaction?
     bool IsReaction()                  { return HasFlag(OB_REACTION_MOL); }
-    //! Is this molecule chiral?
-    bool IsChiral();
     //! Is this molecule periodic? Should periodic boundary conditions be applied?
     bool IsPeriodic() { return(HasFlag(OB_PERIODIC_MOL)); }
+
     //! Are there any atoms in this molecule?
     bool Empty()                       { return(_natoms == 0);          }
     //@}
@@ -650,12 +630,12 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     //! \return the array of coordinates for the first conformer
     double  *BeginConformer(std::vector<double*>::iterator&i)
     { i = _vconf.begin();
-      return((i == _vconf.end()) ? NULL:*i); }
+      return((i == _vconf.end()) ? nullptr:*i); }
     //! Advance the iterator to the next confomer, if possible
     //! \return The array of coordinates for the next conformer, or NULL if none exist
     double  *NextConformer(std::vector<double*>::iterator&i)
     { ++i;
-      return((i == _vconf.end()) ? NULL:*i); }
+      return((i == _vconf.end()) ? nullptr:*i); }
     //! \return the entire set of conformers for this molecule as a vector of floating point arrays
     std::vector<double*> &GetConformers() {   return(_vconf);     }
     //@}
@@ -692,14 +672,14 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     OBResidue *BeginResidue(OBResidueIterator &i)
     {
       i = _residue.begin();
-      return((i == _residue.end()) ? NULL:*i);
+      return((i == _residue.end()) ? nullptr:*i);
     }
     //! Advance the iterator @p i to the next residue in the molecule
     //! \return the next residue (if any, or NULL if not possible)
     OBResidue *NextResidue(OBResidueIterator &i)
     {
       ++i;
-      return((i == _residue.end()) ? NULL:*i);
+      return((i == _residue.end()) ? nullptr:*i);
     }
     //! Set the iterator to the beginning of the internal coordinate list
     //! \return the first internal coordinate record, or NULL if none exist
@@ -707,7 +687,7 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     OBInternalCoord *BeginInternalCoord(std::vector<OBInternalCoord*>::iterator &i)
     {
       i = _internals.begin();
-      return((i == _internals.end()) ? NULL:*i);
+      return((i == _internals.end()) ? nullptr:*i);
     }
     //! Advance the iterator to the next internal coordinate record
     //! \return the next first internal coordinate record, or NULL if none exist
@@ -715,7 +695,7 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
     OBInternalCoord *NextInternalCoord(std::vector<OBInternalCoord*>::iterator &i)
     {
       ++i;
-      return((i == _internals.end()) ? NULL:*i);
+      return((i == _internals.end()) ? nullptr:*i);
     }
     //@}
 
@@ -733,22 +713,6 @@ enum HydrogenType { AllHydrogen, PolarHydrogen, NonPolarHydrogen };
   OBAPI void InternalToCartesian(std::vector<OBInternalCoord*>&,OBMol&);
   // Replace the last extension in str with a new one (docs in obutil.cpp)
   OBAPI std::string NewExtension(std::string&,char*);
-
-  //global definitions
-  //! Global OBTypeTable for translating between different atom types
-  //! (e.g., Sybyl <-> MM2)
-  EXTERN  OBTypeTable      ttab;
-  //! Global OBAromaticTyper for detecting aromatic atoms and bonds
-  EXTERN  OBAromaticTyper  aromtyper;
-  //! Global OBAtomTyper for marking internal valence, hybridization,
-  //!  and atom types (for internal and external use)
-  EXTERN  OBAtomTyper      atomtyper;
-  //! Global OBChainsParser for detecting macromolecular chains and residues
-  EXTERN  OBChainsParser   chainsparser;
-  //! Global OBMessageHandler error handler
-  OBERROR extern  OBMessageHandler obErrorLog;
-  //! Global OBResidueData biomolecule residue database
-  EXTERN  OBResidueData    resdat;
 
   //! \brief Nested namespace for max_value templates
   namespace detail {

@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #ifdef WIN32
 #define USING_OBDLL
 #endif
-
+#include <cstdlib>
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
@@ -39,7 +39,7 @@ int main(int argc,char **argv)
 {
   char *program_name= argv[0];
   int c;
-  char *FileIn = NULL;
+  char *FileIn = nullptr;
 
   if (argc != 2) {
     cerr << " Usage: " << program_name << " <input file>\n";

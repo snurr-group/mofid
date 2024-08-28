@@ -1,4 +1,7 @@
-.PHONY: all backup test diff ob_changes.patch init eclipse web init-web github-web html one exe btc
+.PHONY: all backup test unittest intermediatetest pytest diff ob_changes.patch init debug eclipse web init-web github-web html one exe btc
+
+mofid-dir := $(shell pwd)
+python-packages-dir := $(shell python -m site | grep -o "/.*/site-packages" | head --lines 1) 
 
 all:
 	@echo "Sample make file for experimentation.  Still needs work.  Only backup implemented"
@@ -17,11 +20,11 @@ bin/tsfm_smiles: src/tsfm_smiles.cpp openbabel/build/lib/cifformat.so
 	cd bin && make tsfm_smiles
 
 exe:
-	cd bin && make
+	cd bin && make -j$$(nproc)
 
 one:
 	cd bin && make; \
-	cd ..; \
+	cd $(mofid-dir); \
 	bin/sbu Resources/TestCIFs/P1-IRMOF-1.cif
 
 btc:
@@ -40,23 +43,58 @@ ob_changes.patch:
 	git diff --no-prefix 7810ca7bb1beef14b2a62cf5bad3a8551b187824 -- openbabel/*.cpp openbabel/*.h ':!openbabel/data/*' ':!openbabel/test/*' > $@
 	# Lists my changes to the main OpenBabel code
 
-test: bin/sbu
-	python tests/check_run_mofid.py
-	python tests/check_mof_composition.py
+test: 
+	cd openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DENABLE_TESTS=OFF -DEIGEN3_INCLUDE_DIR=../eigen -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON ..; \
+	make -j$$(nproc) || exit 2; \
+	make install; \
+	cd $(python-packages-dir); \
+	test -f openbabel.pth || echo $(mofid-dir)/openbabel/installed/lib/python*/site-packages > openbabel.pth; \
+	cd $(mofid-dir); \
+	mkdir bin; \
+	cd bin; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel3_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
+	make -j$$(nproc); \
 
+unittest:
+	ctest --output-on-failure --test-dir bin/test
+
+intermediatetest:
+	tests/check_intermediate.sh
+
+pytest:
+	python tests/check_run_mofid.py; \
+	python tests/check_mof_composition.py
 
 init:
 	cd openbabel; \
 	mkdir build installed; \
 	cd build; \
-	cmake -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
-	make -j2 || exit 2; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DENABLE_TESTS=OFF -DBUILD_GUI=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
+	make -j$$(nproc) || exit 2; \
 	make install; \
-	cd ../../; \
+	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
-	cmake -DOpenBabel2_DIR=../openbabel/build ../src/; \
-	make
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel3_DIR=../openbabel/build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release ../src/; \
+	make -j$$(nproc)
+	# Sets up all the cmake details, so that usage is as simple as
+	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
+
+debug:
+	cd openbabel; \
+	mkdir build installed; \
+	cd build; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_INSTALL_PREFIX=../installed -DBUILD_GUI=OFF -DENABLE_TESTS=OFF -DEIGEN3_INCLUDE_DIR=../eigen ..; \
+	make -j$$(nproc) || exit 2; \
+	make install; \
+	cd $(mofid-dir); \
+	mkdir bin; \
+	cd bin; \
+	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel3_DIR=../openbabel/build ../src/ -DCMAKE_BUILD_TYPE=Debug;\
+	make -j$$(nproc)
 	# Sets up all the cmake details, so that usage is as simple as
 	# `bin/sbu MOF.cif` and re-compilation is as easy as `make exe`
 
@@ -91,7 +129,7 @@ init-web:
 	cd ../..; \
 	mkdir embin; \
 	cd embin; \
-	emcmake cmake -DOpenBabel2_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-O3 --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap', 'UTF8ToString']\""; \
+	emcmake cmake -DOpenBabel3_DIR=../openbabel/embuild -static ../src/ -DCMAKE_CXX_FLAGS="-O3 --preload-file ../openbabel/data@/ob_datadir/ --preload-file ../src/Web/web_data@/web_data/ --preload-file ../Resources/RCSRnets.arc@/RCSRnets.arc --pre-js ../src/pre_emscripten.js -s TOTAL_MEMORY=128MB -s WASM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap', 'UTF8ToString']\""; \
 	mkdir kekule; \
 	cd kekule; \
 	unzip ../../Resources/kekule.release.0.7.5.170624.zip; \

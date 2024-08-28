@@ -13,6 +13,15 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -62,7 +71,7 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -83,7 +92,7 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
       if (buffer[0] == '#')
         continue; // comment line
 
-      if (strstr(buffer, "atom") != NULL) {
+      if (strstr(buffer, "atom") != nullptr) {
         // atom X Y Z element (in real-space Angstroms)
         tokenize(vs,buffer);
         if (vs.size() < 5)
@@ -98,7 +107,7 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
         int atomicNum = OBElements::GetAtomicNum(vs[4].c_str());
         atom->SetAtomicNum(atomicNum);
 
-      } else if (strstr(buffer, "lattice_vector") != NULL) {
+      } else if (strstr(buffer, "lattice_vector") != nullptr) {
         // lattice_vector X Y Z (in real-space Angstroms)
         tokenize(vs,buffer);
         if (vs.size() < 4)
@@ -143,7 +152,7 @@ bool FHIaimsFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 bool FHIaimsFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names

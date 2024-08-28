@@ -23,7 +23,6 @@ GNU General Public License for more details.
 #ifndef OB_GROUPCONTRIB_H
 #define OB_GROUPCONTRIB_H
 
-#include <openbabel/mol.h>
 #include <openbabel/parsmart.h>
 #include <openbabel/descriptor.h>
 
@@ -63,7 +62,7 @@ public:
   }
 
 
-  virtual double Predict(OBBase* pOb, std::string* param=NULL);
+  virtual double Predict(OBBase* pOb, std::string* param=nullptr);
 
  private:
   bool ParseFile();

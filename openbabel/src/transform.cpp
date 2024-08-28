@@ -18,8 +18,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <sstream>
 #include <openbabel/mol.h>
+#include <openbabel/generic.h>
+#include <openbabel/oberror.h>
 #include <openbabel/descriptor.h>
 #include <openbabel/op.h>
+#include <openbabel/parsmart.h>
+
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -54,7 +59,7 @@ namespace OpenBabel
     // should delete the molecule itself (unlike the -s, --filter options,
     // which delete it in this function).
     if(!OBOp::DoOps(this, pOptions, pConv))
-      return (OBBase *)NULL;
+      return nullptr;
 
     bool ret=true;
 
@@ -80,9 +85,18 @@ namespace OpenBabel
 
     itr = pOptions->find("p");
     if(itr!=pOptions->end()) {
-      double pH = strtod(itr->second.c_str(), 0);
-      if(!AddHydrogens(false, true, pH))
-        ret=false;
+      if(pOptions->find("h")!=pOptions->end()){
+        stringstream errorMsg;
+        errorMsg << "Both -p and -h options are set. "
+                 << "All implicit hydrogens (-h) will be added without considering pH."
+                 << endl;
+        obErrorLog.ThrowError(__FUNCTION__, errorMsg.str(), obWarning);
+      }
+      else {
+        double pH = strtod(itr->second.c_str(), nullptr);
+        if(!AddHydrogens(false, true, pH))
+          ret=false;
+      }
     }
 
     if(pOptions->find("c")!=pOptions->end())
@@ -214,7 +228,7 @@ namespace OpenBabel
       {
         //filter failed: delete OBMol and return NULL
         delete this;
-        return NULL;
+        return nullptr;
       }
     else
       {
@@ -222,7 +236,7 @@ namespace OpenBabel
           {
             obErrorLog.ThrowError(__FUNCTION__, "Error executing an option", obError);
             delete this; //added 9March2006
-            return NULL;
+            return nullptr;
           }
         else
           return this;

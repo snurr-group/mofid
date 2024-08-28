@@ -8,7 +8,6 @@
 
 
 #include <openbabel/obutil.h>
-#include <openbabel/rand.h>
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/math/transform3d.h>
@@ -18,6 +17,7 @@
 #include <openbabel/griddata.h>
 
 #include <openbabel/base.h>
+#include <openbabel/elements.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
 #include <openbabel/bond.h>
@@ -57,6 +57,9 @@
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/stereo/squareplanar.h>
 #include <openbabel/stereo/bindings.h>
+
+#include <openbabel/chains.h>
+#include <openbabel/obiter.h>
 %}
 
 #ifdef HAVE_EIGEN
@@ -91,7 +94,6 @@ namespace std {
 %feature("ignore") vector< vector<T> >::push_back;
 %feature("ignore") vector< vector<T> >::rbegin;
 %feature("ignore") vector< vector<T> >::rend;
-%feature("ignore") vector< vector<T> >::reserve;
 %feature("ignore") vector< vector<T> >::resize;
 %feature("ignore") vector< vector<T> >::swap;
 %template(vectorv ## name) vector< vector<T> >;
@@ -115,7 +117,6 @@ namespace std {
 %feature("ignore") vector<T>::push_back;
 %feature("ignore") vector<T>::rbegin;
 %feature("ignore") vector<T>::rend;
-%feature("ignore") vector<T>::reserve;
 %feature("ignore") vector<T>::resize;
 %feature("ignore") vector<T>::swap;
 %template(vector ## vectorname) vector<T>;
@@ -139,7 +140,6 @@ namespace std {
 %feature("ignore") vector< pair<T1, T2> >::push_back;
 %feature("ignore") vector< pair<T1, T2> >::rbegin;
 %feature("ignore") vector< pair<T1, T2> >::rend;
-%feature("ignore") vector< pair<T1, T2> >::reserve;
 %feature("ignore") vector< pair<T1, T2> >::resize;
 %feature("ignore") vector< pair<T1, T2> >::swap;
 %template(vpair ## vectorname) vector< pair<T1, T2> >;
@@ -178,7 +178,6 @@ OpenBabel::AliasData *toAliasData(OpenBabel::OBGenericData *data) {
 }
 %}
 CAST_GENERICDATA_TO(AngleData)
-CAST_GENERICDATA_TO(ChiralData)
 CAST_GENERICDATA_TO(CommentData)
 CAST_GENERICDATA_TO(ConformerData)
 CAST_GENERICDATA_TO(ExternalBondData)
@@ -221,7 +220,6 @@ CAST_GENERICDATA_TO(VirtualBond)
 
 %warnfilter(516) OpenBabel::OBElementTable; // Ignoring std::string methods in favour of char* ones
 %include <openbabel/data.h>
-%include <openbabel/rand.h>
 %include <openbabel/obutil.h>
 %warnfilter(516) OpenBabel::vector3; // Using the const x(), y() and z() in favour of the non-const
 %include <openbabel/math/vector3.h>
@@ -265,8 +263,14 @@ namespace std { class stringbuf {}; }
 %ignore OpenBabel::OBConversion::FindFormat(const char *);
 %ignore OpenBabel::OBConversion::FormatFromExt(const char *);
 %include <openbabel/obconversion.h>
+
+//avoid conflicts with OBElement
+%rename(resC) OpenBabel::OBResidueIndex::C;
+%rename(resI) OpenBabel::OBResidueIndex::I;
+%rename(resU) OpenBabel::OBResidueIndex::U;
 %include <openbabel/residue.h>
 %include <openbabel/internalcoord.h>
+%include <openbabel/elements.h>
 
 %typemap(javacode) OpenBabel::OBAtom
 %{

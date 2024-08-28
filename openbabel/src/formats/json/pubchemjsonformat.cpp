@@ -19,6 +19,12 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <openbabel/json.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
 #include <openbabel/stereo/stereo.h>
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/stereo/tetrahedral.h>
@@ -74,7 +80,7 @@ class PubChemJSONFormat : public OBMoleculeFormat
   bool PubChemJSONFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol *pmol = pOb->CastAndClear<OBMol>();
-    if (pmol == NULL) return false;
+    if (pmol == nullptr) return false;
     istream &ifs = *pConv->GetInStream();
 
     if (!ifs.good())
@@ -663,7 +669,7 @@ class PubChemJSONFormat : public OBMoleculeFormat
   bool PubChemJSONFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol *pmol = dynamic_cast<OBMol *>(pOb);
-    if (pmol == NULL)
+    if (pmol == nullptr)
       return false;
     ostream &ofs = *pConv->GetOutStream();
 

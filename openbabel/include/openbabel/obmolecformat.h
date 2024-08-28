@@ -32,20 +32,18 @@ GNU General Public License for more details.
   #include <boost/tr1/unordered_map.hpp>
 #endif
 
-#include <typeinfo>
-
-#include <openbabel/mol.h>
-#ifdef HAVE_SHARED_POINTER
-  #include <openbabel/reaction.h>
-#endif
 #include <openbabel/babelconfig.h>
 #include <openbabel/obconversion.h>
 #include <typeinfo>
-#include <openbabel/descriptor.h>
-#include <openbabel/elements.h>
-#include <set>
+#include <cstdlib>
 
 namespace OpenBabel {
+
+  class OBMol;
+  class OBDescriptor;
+#ifdef HAVE_SHARED_POINTER
+  class OBReaction;
+#endif
 
 // This macro is used in DLL builds. If it has not
 // been set in babelconfig.h, define it as nothing.
@@ -92,19 +90,19 @@ public:
       //But here isn't entirely appropriate either, since one could have
       //OBMol formats loaded but which don't derived from this class.
       //However, this possibility is remote.
-      OBConversion::RegisterOptionParam("s", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("v", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("h", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("d", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("b", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("c", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("p", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("t", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("k", NULL, 0,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("filter", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("add", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("delete", NULL, 1,OBConversion::GENOPTIONS);
-      OBConversion::RegisterOptionParam("append", NULL, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("s", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("v", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("h", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("d", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("b", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("c", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("p", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("t", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("k", nullptr, 0,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("filter", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("add", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("delete", nullptr, 1,OBConversion::GENOPTIONS);
+      OBConversion::RegisterOptionParam("append", nullptr, 1,OBConversion::GENOPTIONS);
     }
   }
 

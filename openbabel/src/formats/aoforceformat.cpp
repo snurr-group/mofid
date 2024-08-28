@@ -15,6 +15,13 @@ GNU General Public License for more details.
 ***********************************************************************/
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 namespace OpenBabel {
 
@@ -43,7 +50,7 @@ AoforceFormat theAoforceFormat;
 
 bool AoforceFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv) {
   OBMol* pmol = pOb->CastAndClear<OBMol>();
-  if (pmol == NULL) return false;
+  if (pmol == nullptr) return false;
 
   std::istream &ifs = *pConv->GetInStream();
   std::string line;

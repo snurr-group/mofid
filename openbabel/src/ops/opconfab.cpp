@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include<openbabel/forcefield.h>
 #include <openbabel/obconversion.h>
 #include<openbabel/generic.h>
+#include <cstdlib>
 
 #define CONFAB_VER "1.1.0"
 
@@ -66,7 +67,7 @@ namespace OpenBabel
 
       virtual bool WorksWith(OBBase* pOb) const
       {
-        return dynamic_cast<OBMol*>(pOb) != NULL;
+        return dynamic_cast<OBMol*>(pOb) != nullptr;
       }
       virtual bool Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*);
       
@@ -87,7 +88,7 @@ namespace OpenBabel
 
 
   //////////////////////////////////////////////////////////
-  bool OpConfab::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* pConv=NULL)
+  bool OpConfab::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* pConv=nullptr)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
     if(!pmol)

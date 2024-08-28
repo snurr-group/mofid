@@ -57,7 +57,7 @@ namespace OpenBabel
 
     public:
       //! Constructor
-      OBGlobalDataBase(): _init(false), _dataptr(NULL) { }
+      OBGlobalDataBase(): _init(false), _dataptr(nullptr) { }
       //! Destructor
       virtual ~OBGlobalDataBase()                  {}
       //! Read in the data file, falling back as needed
@@ -90,7 +90,7 @@ namespace OpenBabel
 
   public:
     /** \brief Initialize Heat of Formation for atom
-        
+
      @param element The element string
      @param charge  The formal charge of the particle (if an ion)
      @param method  The method used for determining the value
@@ -159,7 +159,7 @@ namespace OpenBabel
       //! \return the number of elements in the Atomic Heat Of Formation table
       size_t GetSize() { return _atomhof.size(); }
 
-      /** \brief Read one line in the file and parse it 
+      /** \brief Read one line in the file and parse it
           @param Unnamed the line to be parsed
       */
       void	ParseLine(const char*);
@@ -175,7 +175,7 @@ namespace OpenBabel
        is known at temperature T. If 1 the values
        including all corrections are returned in the dhof variable.
       */
-      int	GetHeatOfFormation(std::string elem, 
+      int	GetHeatOfFormation(std::string elem,
                                int charge,
                                std::string method,
                                double T, double *dhof0,
@@ -220,6 +220,10 @@ namespace OpenBabel
       std::string GetToType();
     };
 
+  //! Global OBTypeTable for translating between different atom types
+  //! (e.g., Sybyl <-> MM2)
+  OB_EXTERN  OBTypeTable      ttab;
+
   /** \class OBResidueData data.h <openbabel/data.h>
       \brief Table of common biomolecule residues (for PDB or other files).
 
@@ -262,8 +266,12 @@ namespace OpenBabel
       bool AssignBonds(OBMol &);
     };
 
+  //! Global OBResidueData biomolecule residue database
+  OB_EXTERN  OBResidueData    resdat;
+
+
 } // end namespace OpenBabel
-  
+
 #endif //DATA_H
 
 //! \file data.h

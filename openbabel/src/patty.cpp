@@ -20,7 +20,11 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/oberror.h>
 #include <openbabel/patty.h>
+
+#include <cstring>
+#include <cstdlib>
 
 // Simple programmable atom typer
 // WPW - 070199
@@ -81,7 +85,7 @@ namespace OpenBabel
     ifsP= &ifs;
     if (!ifs)
       {
-        if (getenv("BABEL_DATADIR") == NULL)
+        if (getenv("BABEL_DATADIR") == nullptr)
           {
             stringstream errorMsg;
             errorMsg << "The BABEL_DATADIR environment variable is not defined" << endl;

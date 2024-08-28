@@ -70,10 +70,12 @@ int main(int argc, char* argv[])
 	try_mkdir(output_dir + ALL_NODE_SUFFIX);
 	try_mkdir(output_dir + STANDARD_ISOLATED_SUFFIX);
 
-	// Set up the babel data directory to use a local copy customized for MOFs
+    // Set up the babel data directory to use a local copy customized for MOFs
 	// (instead of system-wide Open Babel data)
 	std::stringstream dataMsg;
 	dataMsg << "Using local Open Babel data saved in " << LOCAL_OB_DATADIR << std::endl;
+	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
+	dataMsg << "Using local Open Babel shared libraries saved in " << LOCAL_OB_LIBDIR << std::endl;
 	obErrorLog.ThrowError(__FUNCTION__, dataMsg.str(), obAuditMsg);
 	// Use setenv instead of putenv, per advice about string copies vs. pointers: http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv/5876818#5876818
 	// This is similar to the approach of cryos/avogadro:main.cpp:127
@@ -81,10 +83,10 @@ int main(int argc, char* argv[])
 	// But Windows defines a separate _putenv, etc: https://stackoverflow.com/questions/17258029/c-setenv-undefined-identifier-in-visual-studio
 #ifdef _WIN32
 	_putenv_s("BABEL_DATADIR", LOCAL_OB_DATADIR);
+	_putenv_s("BABEL_LIBDIR", LOCAL_OB_LIBDIR);
 #else
-#ifndef __INTELLISENSE__ // Ignore setenv error in vscode:
 	setenv("BABEL_DATADIR", LOCAL_OB_DATADIR, 1);
-#endif  // vscode error workaround
+	setenv("BABEL_LIBDIR", LOCAL_OB_LIBDIR, 1);
 #endif
 
 	std::string mof_results = analyzeMOF(std::string(filename), output_dir);

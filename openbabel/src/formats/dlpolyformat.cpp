@@ -12,6 +12,11 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
 
 #include <iomanip>
 #include <map>
@@ -295,7 +300,7 @@ namespace OpenBabel
     forces.clear();
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
     
     //Define some references so we can use the old parameter names
@@ -342,7 +347,7 @@ namespace OpenBabel
      */
 
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
     
     //Define some references so we can use the old parameter names
@@ -426,7 +431,7 @@ public:
     forces.clear();
   
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
     
     //Define some references so we can use the old parameter names

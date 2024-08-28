@@ -28,6 +28,8 @@ GNU General Public License for more details.
 #include <openbabel/rotamer.h>
 #include <openbabel/rotor.h>
 #include <openbabel/obutil.h>
+#include "../src/rand.h"
+#include "../src/rand.cpp"
 
 #include <stdio.h>
 #include <iostream>
@@ -57,7 +59,7 @@ int main(int argc,char *argv[])
   OBFormat* pFormat;
   
   pFormat = conv.FormatFromExt(argv[1]);
-  if ( pFormat == NULL )
+  if (pFormat == nullptr)
     {
       cerr << "Error! Cannot read file format!" << endl;
       return(-1);

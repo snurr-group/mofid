@@ -13,6 +13,9 @@
 #include <openbabel/obconversion.h>
 #include <openbabel/chargemodel.h>
 #include <openbabel/obutil.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <cstdlib>
 
 using namespace std;
 using namespace OpenBabel;
@@ -93,7 +96,7 @@ int charge_mmff94(int argc, char* argv[])
       
     pCM = OBChargeModel::FindType("mmff94");
 
-    if (pCM == NULL) {
+    if (pCM == nullptr) {
       cerr << "Bail out! Cannot load charge model!" << endl;
       return -1; // test failed
     }
@@ -195,7 +198,7 @@ void GenerateMMFF94Charges()
 
   OBChargeModel *pCM = OBChargeModel::FindType("mmff94");
 
-  if (pCM == NULL) {
+  if (pCM == nullptr) {
     cerr << "Cannot load charge model!" << endl;
     return;
   }

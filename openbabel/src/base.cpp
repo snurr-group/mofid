@@ -134,7 +134,7 @@ namespace OpenBabel
       if ((*i)->GetAttribute() == s)
         return *i;
 
-    return (OBGenericData*)0;
+    return nullptr;
   }
 
   //! \return the value given an attribute name
@@ -146,7 +146,7 @@ namespace OpenBabel
       if (strcmp((*i)->GetAttribute().c_str(), s)==0)
         return *i;
 
-    return (OBGenericData*)0;
+    return nullptr;
   }
 
   OBGenericData *OBBase::GetData(const unsigned int dt)
@@ -155,7 +155,7 @@ namespace OpenBabel
     for (i = _vdata.begin();i != _vdata.end();++i)
       if ((*i)->GetDataType() == dt)
         return(*i);
-    return(NULL);
+    return nullptr;
   }
 
   std::vector<OBGenericData *> OBBase::GetAllData(const unsigned int dt)
@@ -484,7 +484,7 @@ namespace OpenBabel
     - OBPairData - Arbitrary text key/value data
     - OBPairTemplate - Arbitrary T key/value data
     - OBUnitCell - Storage and manipulation of crystal structure / reciprocal unit cells
-    - AliasData, OBAngleData, OBChiralData, OBCommentData, OBConformerData, OBDOSData, OBElectronicTransitionData,
+    - AliasData, OBAngleData, OBCommentData, OBConformerData, OBDOSData, OBElectronicTransitionData,
       OBExternalBondData, OBGridData, OBMatrixData, OBNasaThermoData, OBOrbitalEnergyData, OBPairData, OBRateData,
       OBRingData, OBRotamerList, OBRotationData, OBSerialNums, OBSetData, OBStereoBase, OBSymmetryData, OBTorsionData, OBUnitCell,
       OBVectorData, OBVibrationData, OBVirtualBond
@@ -567,7 +567,7 @@ namespace OpenBabel
   bonds. Previously only 2^16 atoms or bonds were possible.
 
   The OBNodeBase, OBEdgeBase, and OBGraphBase classes were
-  deprecated. Typedef declarations provide backwards compatibility by
+  deprecated. Typedef declarations provided backwards compatibility by
   mapping to OBAtom, OBBond, and OBMol, respectively.
 
   In addition, this page gives a general list of additions to the library.

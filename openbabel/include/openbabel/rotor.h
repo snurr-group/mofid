@@ -22,9 +22,20 @@ GNU General Public License for more details.
 
 #include <openbabel/parsmart.h>
 #include <openbabel/typer.h>
+#include <openbabel/bitvec.h>
+
+#ifdef UNUSED
+#elif (__GNUC__ == 4)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
+#endif
 
 namespace OpenBabel
 {
+  class OBRing;
 
 #ifndef SQUARE
 #define SQUARE(x) ((x)*(x))
@@ -59,7 +70,7 @@ namespace OpenBabel
         if (_sp)
           {
             delete _sp;
-            _sp = NULL;
+            _sp = nullptr;
           }
       }
 
@@ -489,7 +500,7 @@ namespace OpenBabel
      */
     bool HasFixedBonds()
     {
-      return !_fixedbonds.Empty();
+      return !_fixedbonds.IsEmpty();
     }
     //! Rotates each bond to zero and 180 degrees and tests
     //! if the 2 conformers are duplicates.  if so - the symmetric torsion
@@ -521,7 +532,7 @@ namespace OpenBabel
       _fixedatoms.Clear();
     }
     /**
-     * Intialize the private OBRotorRules database from a specific file.
+     * Initialize the private OBRotorRules database from a specific file.
      */
     void Init(std::string &fname)
     {
@@ -577,7 +588,7 @@ namespace OpenBabel
     OBRotor *BeginRotor(OBRotorIterator &i)
     {
       i = _rotor.begin();
-      return((i ==_rotor.end()) ? NULL:*i);
+      return((i ==_rotor.end()) ? nullptr:*i);
     }
     /**
      * Get a pointer to the next iterator.
@@ -586,7 +597,7 @@ namespace OpenBabel
     OBRotor *NextRotor(OBRotorIterator &i)
     {
       ++i;
-      return((i ==_rotor.end()) ? NULL:*i);
+      return((i ==_rotor.end()) ? nullptr:*i);
     }
     /**
      * Get the rotor list begin iterator.
@@ -618,7 +629,7 @@ namespace OpenBabel
      */
     bool HasFixedAtoms()
     {
-      return(!_fixedatoms.Empty());
+      return(!_fixedatoms.IsEmpty());
     }
     //! Has no effect
     //! \deprecated Currently has no effect

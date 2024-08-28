@@ -15,6 +15,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -57,7 +64,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -75,7 +82,7 @@ namespace OpenBabel
     vector<string> vs;
 
     ifs.getline(buffer, BUFF_SIZE);
-    while (ifs.good() && (strstr(buffer,"mol") == NULL || buffer[0]==';') ) //The "mol" in comment line should be ignored.
+    while (ifs.good() && (strstr(buffer, "mol") == nullptr || buffer[0] == ';')) //The "mol" in comment line should be ignored.
       {
         ifs.getline(buffer, BUFF_SIZE);
         if (ifs.peek() == EOF || !ifs.good())
@@ -86,7 +93,7 @@ namespace OpenBabel
       return false; // ended early
 
     mol.BeginModify();
-    while (ifs.good() && strstr(buffer,"endmol") == NULL)
+    while (ifs.good() && strstr(buffer, "endmol") == nullptr)
       {
 	if(buffer[0]==';'){
 		 ifs.getline(buffer, BUFF_SIZE);
@@ -160,7 +167,7 @@ namespace OpenBabel
   bool HINFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -189,11 +196,11 @@ namespace OpenBabel
                 atom->GetX(),
                 atom->GetY(),
                 atom->GetZ(),
-                atom->GetValence());
+                atom->GetExplicitDegree());
         ofs << buffer;
         for (bond = atom->BeginBond(j); bond; bond = atom->NextBond(j))
           {
-            switch(bond->GetBO())
+            switch(bond->GetBondOrder())
               {
               case 1 :
                 bond_char = 's';

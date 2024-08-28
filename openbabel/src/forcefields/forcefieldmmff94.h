@@ -235,11 +235,12 @@ namespace OpenBabel
         _init = false;
         _rvdw = 7.0;
         _rele = 15.0;
+        _epsilon = 1.0; // default electrostatics
         _pairfreq = 15;
         _cutoff = false;
         _linesearch = LineSearchType::Newton2Num;
-        _gradientPtr = NULL;
-        _grad1 = NULL;
+        _gradientPtr = nullptr;
+        _grad1 = nullptr;
 	if (!strncmp(ID, "MMFF94s", 7)) {
           mmff94s = true;
           _parFile = std::string("mmff94s.ff");
@@ -335,4 +336,3 @@ namespace OpenBabel
 
 //! \file forcefieldmmff94.h
 //! \brief MMFF94 force field
-

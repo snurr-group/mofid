@@ -14,6 +14,12 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
+
 
 #include <sstream>
 #include <iomanip>
@@ -92,8 +98,10 @@ public:
   };
 
   //Optional URL where the file format is specified
-  virtual const char* SpecificationURL(){return
-     "http://manual.gromacs.org/current/online/gro.html";};
+  virtual const char* SpecificationURL()
+  {
+    return "http://manual.gromacs.org/documentation/current/reference-manual/file-formats.html#gro";
+  }
 
   /* This optional function is for formats which can contain more than one
      molecule. It is used to quickly position the input stream after the nth
@@ -132,7 +140,7 @@ GROFormat theGROFormat;
 bool GROFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = pOb->CastAndClear<OBMol>();
-  if(pmol==NULL)
+  if (pmol == nullptr)
       return false;
 
   istream& ifs = *pConv->GetInStream();
@@ -355,6 +363,7 @@ bool GROFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
       pmol->PerceiveBondOrders();
     }
   }
+  pmol->SetChainsPerceived();
 
   /* For multi-molecule formats, leave the input stream at the start of the
      next molecule, ready for this routine to be called again.
@@ -373,7 +382,7 @@ bool GROFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 bool GROFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-  if(pmol==NULL)
+  if (pmol == nullptr)
       return false; // Stop converting
 
   ostream& ofs = *pConv->GetOutStream();

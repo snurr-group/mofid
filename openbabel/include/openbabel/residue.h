@@ -27,8 +27,8 @@ obtained in part or whole from RasMol2 by Roger Sayle.
 
 #include <openbabel/babelconfig.h>
 
-#ifndef EXTERN
-#  define EXTERN extern
+#ifndef OB_EXTERN
+#  define OB_EXTERN extern
 #endif
 
 #include <vector>
@@ -179,8 +179,6 @@ namespace OpenBabel {
     //    std::vector<OBGenericData*> _vdata; //!< Custom data
   }; // OBResidue
 
-  //! A standard iterator over a vector of residues
-  typedef std::vector<OBResidue*>::iterator OBResidueIterator;
 
   ///////////////////////////////////////////////////////////////////////////////
   // Global Definitions
@@ -304,6 +302,7 @@ namespace OpenBabel {
   // (otherwise ignore them for C++ use)
   namespace OBResidueIndex
   {
+    
     enum
     {
       ALA   =  0,

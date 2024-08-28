@@ -20,6 +20,12 @@
 #include <openbabel/babelconfig.h>
 #include <openbabel/chargemodel.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+
 #include <openbabel/molchrg.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obmolecformat.h>
@@ -100,10 +106,10 @@ namespace OpenBabel
 			OBResidue *res;
 			double q   = 0.;
 			bool found = false;
-			char *name = NULL;
+			char *name = nullptr;
 
 			// First try atom type name
-			if ( (res = a->GetResidue()) != 0 )
+			if ((res = a->GetResidue()) != nullptr)
 			{
 				char *f = name  = (char*)res->GetAtomID( a ).c_str();
 				for( int j = strlen(f)-1; j>=0; j-- ) { if( f[j]==' ' ){ f[j]='\0'; } } // trim trailing whitespace

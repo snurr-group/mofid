@@ -97,15 +97,14 @@ public:
 		"Write Options e.g. -xf3 \n"
 		"	f# Number of (fictional) levels\n"
 		"	n  Omit (virtual) title\n\n"
-		
+
 		"Read Options e.g. -as\n"
 		"	s  Consider single bonds only\n"
 		;
   };
 
   //Optional URL where the file format is specified
-	virtual const char* SpecificationURL(){return
-     "http://www.mdl.com/downloads/public/ctfile/ctfile.jsp";};
+	virtual const char* SpecificationURL(){ return ""; }
 
   //Optional
 	virtual const char* GetMIMEType()
@@ -150,7 +149,7 @@ XXXFormat theXXXFormat;
 bool XXXFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = pOb->CastAndClear<OBMol>();
-  if(pmol==NULL)
+  if(pmol==nullptr)
       return false;
 
   istream& ifs = *pConv->GetInStream();
@@ -189,7 +188,7 @@ bool XXXFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 bool XXXFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-  if(pmol==NULL)
+  if(pmol==nullptr)
       return false;
 
   ostream& ofs = *pConv->GetOutStream();
@@ -202,7 +201,7 @@ bool XXXFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 	//or if the option has a parameter
 	int levels=0;
 	const char* p = pConv->IsOption("f");
-	if(p) //p==NULL if f option absent
+	if(p) //p==nullptr if f option absent
 		levels = atoi(p);
 
 	// To find out whether this is the first molecule to be output...
@@ -216,4 +215,3 @@ bool XXXFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 }
 
 } //namespace OpenBabel
-

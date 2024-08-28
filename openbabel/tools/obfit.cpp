@@ -35,10 +35,13 @@ GNU General Public License for more details.
 #include <openbabel/mol.h>
 #include <openbabel/parsmart.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/math/vector3.h>
+#include <openbabel/generic.h>
+#include <openbabel/atom.h>
 #ifndef _MSC_VER
   #include <unistd.h>
 #endif
-
+#include <cstdlib>
 
 using namespace std;
 using namespace OpenBabel;
@@ -54,7 +57,7 @@ int main(int argc,char **argv)
 {
 
   int errflg=0;
-  char *FileRef=NULL, *FileMove=NULL, *Pattern=NULL;
+  char *FileRef=nullptr, *FileMove=nullptr, *Pattern=nullptr;
   string err;
   char *program_name=argv[0];
 

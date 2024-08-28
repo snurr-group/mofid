@@ -1,6 +1,11 @@
 # Library versioning
-set(SOVERSION 5)
-set(LIBRARY_VERSION 5.0.0)
+set(SOVERSION 7)
+set(LIBRARY_VERSION 7.0.0)
+
+
+find_package(Boost 1.45.0 COMPONENTS system)
+
+
 
 set(charges
   charges/eem.cpp
@@ -68,12 +73,13 @@ set(ops
   ops/changecell.cpp
   ops/delpolarh.cpp
   ops/delnonpolarh.cpp
-  ops/energy.cpp
   ops/gen2D.cpp
   ops/fillUC.cpp
+  ops/forcefield.cpp
   ops/gen3d.cpp
   ops/largest.cpp
   ops/loader.cpp
+  ops/neutralize.cpp
   ops/opsplit.cpp
   ops/optransform.cpp
   ops/partialcharges.cpp
@@ -100,6 +106,7 @@ set(stereo_srcs
   stereo/tetrahedral.cpp
   stereo/perception.cpp
   stereo/facade.cpp
+  stereo/gen3dstereohelper.cpp
 )
 
 set(openbabel_srcs
@@ -113,7 +120,6 @@ set(openbabel_srcs
   canon.cpp
   chains.cpp
   chargemodel.cpp
-  chiral.cpp
   data.cpp
   data_utilities.cpp
   descriptor.cpp
@@ -244,6 +250,15 @@ add_library(openbabel ${BUILD_TYPE}
   )
 
 target_link_libraries(openbabel ${libs})
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
+if(BUILD_SHARED OR BUILD_MIXED)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(openbabel Threads::Threads)
+endif()
 
 set_target_properties(openbabel PROPERTIES
   VERSION ${LIBRARY_VERSION}
@@ -251,9 +266,9 @@ set_target_properties(openbabel PROPERTIES
   DEFINE_SYMBOL MAKE_OBDLL
   )
 if(MSVC)
-  # Set the output name to openbabel-2 (preserves old behaviour). Is this desired?
+  # Set the output name to openbabel-3 (preserves old behaviour). Is this desired?
   set_target_properties(openbabel PROPERTIES
-    OUTPUT_NAME openbabel-2)
+    OUTPUT_NAME openbabel-3)
   remove_definitions(_UNICODE UNICODE)
 endif(MSVC)
 

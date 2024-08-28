@@ -16,6 +16,12 @@ GNU General Public License for more details.
 
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/data.h>
+#include <cstdlib>
+
 
 using namespace std;
 namespace OpenBabel
@@ -67,7 +73,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -83,7 +89,7 @@ namespace OpenBabel
   bool CHEM3D1Format::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -136,7 +142,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -152,7 +158,7 @@ namespace OpenBabel
   bool CHEM3D2Format::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -299,7 +305,7 @@ namespace OpenBabel
                      mol_typ,atom->GetIdx(),atom->GetType());
             obErrorLog.ThrowError(__FUNCTION__, buffer, obInfo);
             atnum = atom->GetAtomicNum();
-            type_num = atnum * 10 + atom->GetValence();
+            type_num = atnum * 10 + atom->GetExplicitDegree();
             snprintf(type_name, sizeof(type_num), "%d",type_num);
           }
         strncpy(ele_type, OBElements::GetSymbol(atom->GetAtomicNum()), sizeof(ele_type));

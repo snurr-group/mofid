@@ -16,14 +16,14 @@ GNU General Public License for more details.
 ***********************************************************************/
 
 #include <openbabel/babelconfig.h>
-#include <openbabel/mol.h>
 #include <openbabel/phmodel.h>
+#include <openbabel/mol.h>
 #include <openbabel/op.h>
 #include <vector>
 
 namespace OpenBabel
 {
-
+  class OBMol;
   /** \class OpTransform optransform.h <openbabel/optransform.h>
       \brief Applies molecular reactions/transforms (OBChemTsfm class) read from a datafile
       \since version 2.2
@@ -40,10 +40,10 @@ public:
   virtual const char* Description();
 
   //!Checks that this op is being applied to the right kind of object(OBMol)
-  virtual bool WorksWith(OBBase* pOb)const{ return dynamic_cast<OBMol*>(pOb)!=NULL; }
+  virtual bool WorksWith(OBBase* pOb)const{ return dynamic_cast<OBMol*>(pOb)!=nullptr; }
 
   //! Carries out the transform
-  virtual bool Do(OBBase* pOb, const char* OptionText=NULL, OpMap* pOptions=NULL, OBConversion* pConv=NULL);
+  virtual bool Do(OBBase* pOb, const char* OptionText=nullptr, OpMap* pOptions=nullptr, OBConversion* pConv=nullptr);
 
   virtual OpTransform* MakeInstance(const std::vector<std::string>& textlines)
 {

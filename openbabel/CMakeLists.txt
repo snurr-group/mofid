@@ -1,14 +1,15 @@
-# Please ensure that any changes remain compliant with 2.8.10.
+# Please ensure that any changes remain compliant with 3.1.
 if(NOT EMBED_OPENBABEL)
-  cmake_minimum_required(VERSION 2.8.10)
+  cmake_minimum_required(VERSION 3.1)
 endif()
 
 project(openbabel)
 set(CMAKE_MODULE_PATH ${openbabel_SOURCE_DIR}/cmake/modules)
 
+set (CMAKE_CXX_STANDARD 11)
+
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
-  cmake_policy(SET CMP0005 OLD) # add_definitions need updating to set to NEW
   if(POLICY CMP0042)
     cmake_policy(SET CMP0042 OLD)
   endif()
@@ -16,12 +17,14 @@ endif()
 
 include (CheckCXXCompilerFlag)
 
+#include (MacroEnsureVersion)
+
 # Version numbering - should be bumped for each release
 # Note that for "beta" releases, we should start at x.90.0 -- we've
 # had too many 1.100.1 releases. :-)
-set(BABEL_MAJ_VER   2)
-set(BABEL_MIN_VER   4)
-set(BABEL_PATCH_VER 90)
+set(BABEL_MAJ_VER   3)
+set(BABEL_MIN_VER   1)
+set(BABEL_PATCH_VER 0)
 
 # This should be phased out in preference for just using the target name
 set(BABEL_LIBRARY openbabel)
@@ -32,9 +35,7 @@ if(EMBED_OPENBABEL)
 else()
   set(BABEL_VERSION  "${BABEL_MAJ_VER}.${BABEL_MIN_VER}.${BABEL_PATCH_VER}")
 endif()
-set(BABEL_DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share"
-    CACHE PATH "Install dir for arch independent data")
-set(BABEL_DATADIR  "${BABEL_DATAROOTDIR}/openbabel")
+set(BABEL_DATADIR  "${CMAKE_INSTALL_PREFIX}/share/openbabel")
 
 option(ENABLE_VERSIONED_FORMATS
   "Enable versioning of the format plugin directory" ON)
@@ -70,9 +71,9 @@ else() # Windows - bin dir = lib dir to load libraries
   endif()
 endif()
 if(NOT DEFINED OB_INCLUDE_DIRS)
-  set(OB_INCLUDE_DIRS "include/openbabel-2.0")
+  set(OB_INCLUDE_DIRS "include/openbabel${BABEL_MAJ_VER}")
 endif()
-set(OB_EXPORTS_FILE "${openbabel_BINARY_DIR}/OpenBabel2_EXPORTS.cmake")
+set(OB_EXPORTS_FILE "${openbabel_BINARY_DIR}/OpenBabel3_EXPORTS.cmake")
 # Ensure a fresh file is made each time CMake is run
 file(REMOVE "${OB_EXPORTS_FILE}")
 
@@ -275,9 +276,7 @@ if(NOT MSVC)
     }
    " SCANDIR_NEEDS_CONST)
 
-  set(OB_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/${OB_PLUGIN_INSTALL_DIR}"
-      CACHE PATH "Set to system install for bindings only build")
-  add_definitions(-DOB_MODULE_PATH="\\"${OB_MODULE_PATH}\\"")
+  set(OB_MODULE_PATH "${CMAKE_INSTALL_PREFIX}/${OB_PLUGIN_INSTALL_DIR}")
 
   # Add some visibility support when using GCC
   # note: Altough MinGW g++ 4.4 passes this test, visibility can't be used
@@ -356,6 +355,11 @@ else()
 endif()
 message(STATUS "Use ${OB_SHARED_PTR_IMPLEMENTATION} in ${OB_SHARED_PTR_HEADER}")
 
+find_package(Boost COMPONENTS program_options iostreams)
+  if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+ endif()
+
 # Intel C++ Compiler
 # Note: Windows version uses different options!
 if(${CMAKE_CXX_COMPILER_ID} MATCHES Intel AND UNIX)
@@ -414,8 +418,7 @@ if(UNIX AND BUILD_SHARED)
   if(APPLE)
     set(CMAKE_INSTALL_NAME_DIR ${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR})
   else()
-    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}"
-        CACHE PATH "Set sane rpath")
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
     set(CMAKE_SKIP_BUILD_RPATH FALSE)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -441,9 +444,9 @@ configure_file(${openbabel_SOURCE_DIR}/src/config.h.cmake
 install(FILES ${openbabel_BINARY_DIR}/include/openbabel/babelconfig.h
   DESTINATION ${OB_INCLUDE_DIRS}/openbabel)
 if(NOT MSVC)
-  configure_file(${openbabel_SOURCE_DIR}/openbabel-2.0.pc.cmake
-    ${openbabel_BINARY_DIR}/openbabel-2.0.pc @ONLY)
-  install(FILES ${openbabel_BINARY_DIR}/openbabel-2.0.pc
+  configure_file(${openbabel_SOURCE_DIR}/openbabel-3.pc.cmake
+    ${openbabel_BINARY_DIR}/openbabel-3.pc @ONLY)
+  install(FILES ${openbabel_BINARY_DIR}/openbabel-3.pc
     DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endif()
 
@@ -465,6 +468,137 @@ else()
   endif()
 endif()
 #cjh
+
+
+find_package(Boost COMPONENTS filesystem iostreams unit_test_framework)
+if(Boost_FOUND)
+  include_directories(${Boost_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+  option(WITH_MAEPARSER "Build Maestro support" ON)
+  if(BUILD_SHARED)
+    option(WITH_COORDGEN "Build Coordgen support" ON)
+  else()
+    option(WITH_COORDGEN "Build Coordgen support" OFF)
+  endif()
+else()
+  option(WITH_COORDGEN "Build Coordgen support" OFF)
+endif()
+
+if(WITH_MAEPARSER)
+
+    find_package(maeparser MODULE QUIET)
+
+    if (maeparser_FOUND)
+
+      message(STATUS "Maestro formats will be supported. Using MaeParser libraries at ${maeparser_LIBRARIES}.")
+
+    else()
+
+      set(MAEPARSER_VERSION "v1.2.3" CACHE STRING "Maeparser fallback version to download")
+
+      set(MAEPARSER_DIR "${openbabel_SOURCE_DIR}/external/maeparser-${MAEPARSER_VERSION}")
+
+      option(MAEPARSER_BUILD_SHARED_LIBS "Build maeparser as a shared library" ${BUILD_SHARED})
+
+      # Do not build the test, as it will be put into the bin dir, where it won't be found by the test runner.
+      set(MAEPARSER_BUILD_TESTS OFF CACHE BOOL "Disable Maeparser tests")
+
+      if(EXISTS "${MAEPARSER_DIR}/maeparser/CMakeLists.txt")
+
+        message(STATUS "Building existing MaeParser '${MAEPARSER_VERSION}' source at ${MAEPARSER_DIR}.")
+
+      else()
+
+          file(DOWNLOAD "https://github.com/schrodinger/maeparser/archive/${MAEPARSER_VERSION}.tar.gz"
+              "${MAEPARSER_DIR}/maeparser-${MAEPARSER_VERSION}.tar.gz")
+
+          execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxf "maeparser-${MAEPARSER_VERSION}.tar.gz"
+              WORKING_DIRECTORY "${MAEPARSER_DIR}")
+
+          find_path(MAEPARSER_UNPACK_DIR "CMakeLists.txt" PATH "${MAEPARSER_DIR}/*" NO_DEFAULT_PATH)
+
+          if(MAEPARSER_UNPACK_DIR)
+            file(RENAME "${MAEPARSER_UNPACK_DIR}" "${MAEPARSER_DIR}/maeparser")
+            message(STATUS "Downloaded MaeParser '${MAEPARSER_VERSION}' to ${MAEPARSER_DIR}.")
+          else()
+            message(FATAL_ERROR "Failed getting or unpacking Maeparser '${MAEPARSER_VERSION}'.")
+          endif()
+
+      endif()
+
+      add_subdirectory("${MAEPARSER_DIR}/maeparser")
+
+      set(maeparser_INCLUDE_DIRS "${MAEPARSER_DIR}")
+      set(maeparser_LIBRARIES maeparser)
+
+      message(STATUS "Maestro formats will be supported. Using MaeParser '${MAEPARSER_VERSION}' at ${MAEPARSER_DIR}")
+
+    endif()
+
+    include_directories(${maeparser_INCLUDE_DIRS})
+    set(libs ${libs} ${maeparser_LIBRARIES})
+
+else()
+    message(STATUS "Maestro formats will NOT be supported. Please install Boost to enable Maestro formats.")
+endif()
+
+
+if(WITH_COORDGEN)
+
+    find_package(coordgen MODULE QUIET)
+
+    if (coordgen_FOUND)
+
+      message(STATUS "Coordinate generation with Coordgen will be supported. Using Coordgen libraries at ${coordgen_LIBRARIES}.")
+
+    else()
+
+      set(COORDGEN_VERSION "master" CACHE STRING "Coordgen fallback version to download")
+
+      set(COORDGEN_DIR "${openbabel_SOURCE_DIR}/external/coordgen-${COORDGEN_VERSION}")
+
+      # These won't work, since openbabel relocates them to the "bin" dir
+      set(COORDGEN_BUILD_TESTS OFF CACHE BOOL "Disable building Coordgen tests")
+      set(COORDGEN_BUILD_EXAMPLE OFF CACHE BOOL "Disable building Coordgen example")
+
+      if(EXISTS "${COORDGEN_DIR}/coordgen/CMakeLists.txt")
+
+        message(STATUS "Building existing Coordgen '${COORDGEN_VERSION}' source at ${COORDGEN_DIR}.")
+
+      else()
+
+          file(DOWNLOAD "https://github.com/schrodinger/coordgenlibs/archive/${COORDGEN_VERSION}.tar.gz"
+              "${COORDGEN_DIR}/coordgenlibs-${COORDGEN_VERSION}.tar.gz")
+
+          execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxf "coordgenlibs-${COORDGEN_VERSION}.tar.gz"
+              WORKING_DIRECTORY "${COORDGEN_DIR}")
+
+          find_path(COORDGEN_UNPACK_DIR "CMakeLists.txt" PATH "${COORDGEN_DIR}/*" NO_DEFAULT_PATH)
+
+          if(COORDGEN_UNPACK_DIR)
+            file(RENAME "${COORDGEN_UNPACK_DIR}" "${COORDGEN_DIR}/coordgen")
+            message(STATUS "Downloaded Coordgen '${COORDGEN_VERSION}' to ${COORDGEN_DIR}.")
+          else()
+            message(FATAL_ERROR "Failed getting or unpacking Coordgen '${COORDGEN_VERSION}'.")
+          endif()
+
+      endif()
+
+      add_subdirectory("${COORDGEN_DIR}/coordgen")
+
+      set(coordgen_INCLUDE_DIRS "${COORDGEN_DIR}")
+      set(coordgen_LIBRARIES coordgen)
+
+
+      message(STATUS "Coordinate generation with Coordgen will be supported Using Coordgen '${COORDGEN_VERSION}' at ${COORDGEN_DIR}")
+
+    endif()
+
+    include_directories(${coordgen_INCLUDE_DIRS})
+    set(libs ${libs} ${coordgen_LIBRARIES})
+
+else()
+    message(STATUS "Coordinate generation with Coordgen will NOT be supported. Please install Boost to enable Maestro formats.")
+endif()
 
 option(WITH_JSON "Build JSON support" ON)
 option(OPENBABEL_USE_SYSTEM_RAPIDJSON "Use the system rapidjson if available." ON)
@@ -605,37 +739,39 @@ add_subdirectory(scripts)
 option(MINIMAL_BUILD "Disable full build" OFF)
 
 # Create the Config and ConfigVersion files in the build directory, useful to
-# build against an uninstalled OpenBabel build. Simply set OpenBabel2_DIR to
-# point at the build directory and call find_package(OpenBabel2)
-set(OpenBabel2_INCLUDE_DIRS
+# build against an uninstalled OpenBabel build. Simply set OpenBabel3_DIR to
+# point at the build directory and call find_package(OpenBabel3)
+set(OpenBabel3_INCLUDE_DIRS
   "${openbabel_SOURCE_DIR}/include"
   "${openbabel_BINARY_DIR}/include")
-configure_file("${openbabel_SOURCE_DIR}/OpenBabel2Config.cmake.in"
-  "${openbabel_BINARY_DIR}/OpenBabel2Config.cmake" @ONLY)
-configure_file("${openbabel_SOURCE_DIR}/OpenBabel2ConfigVersion.cmake.in"
-  "${openbabel_BINARY_DIR}/OpenBabel2ConfigVersion.cmake" @ONLY)
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel3Config.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel3Config.cmake" @ONLY)
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel3ConfigVersion.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel3ConfigVersion.cmake" @ONLY)
 
 # Now to configure the installed config file.
-set(OB_CONFIG_DIR "${LIB_INSTALL_DIR}/cmake/openbabel2")
-set(OpenBabel2_INCLUDE_DIRS "\${OpenBabel2_INSTALL_PREFIX}/${OB_INCLUDE_DIRS}")
+set(OB_CONFIG_DIR "${LIB_INSTALL_DIR}/cmake/openbabel3")
+set(OpenBabel3_INCLUDE_DIRS "\${OpenBabel3_INSTALL_PREFIX}/${OB_INCLUDE_DIRS}")
+set(OpenBabel3_LIBRARIES "$<TARGET_FILE:openbabel>")
+
 set(OB_EXPORTS_FILE
-  "\${OpenBabel2_INSTALL_PREFIX}/${OB_CONFIG_DIR}/OpenBabel2_EXPORTS.cmake")
+  "\${OpenBabel3_INSTALL_PREFIX}/${OB_CONFIG_DIR}/OpenBabel3_EXPORTS.cmake")
 set(REL_REF)
 if(NOT WIN32)
   set(REL_REF "/../../..")
 endif()
-configure_file("${openbabel_SOURCE_DIR}/OpenBabel2Config.cmake.in"
-  "${openbabel_BINARY_DIR}/OpenBabel2ConfigInstall.cmake" @ONLY)
+configure_file("${openbabel_SOURCE_DIR}/OpenBabel3Config.cmake.in"
+  "${openbabel_BINARY_DIR}/OpenBabel3ConfigInstall.cmake" @ONLY)
 
 install(EXPORT openbabel-targets
   DESTINATION "${OB_CONFIG_DIR}"
-  FILE OpenBabel2_EXPORTS.cmake
+  FILE OpenBabel3_EXPORTS.cmake
   COMPONENT Development)
-install(FILES "${openbabel_BINARY_DIR}/OpenBabel2ConfigInstall.cmake"
+install(FILES "${openbabel_BINARY_DIR}/OpenBabel3ConfigInstall.cmake"
   DESTINATION ${OB_CONFIG_DIR}
   COMPONENT Development
-  RENAME OpenBabel2Config.cmake)
-install(FILES "${openbabel_BINARY_DIR}/OpenBabel2ConfigVersion.cmake"
+  RENAME OpenBabel3Config.cmake)
+install(FILES "${openbabel_BINARY_DIR}/OpenBabel3ConfigVersion.cmake"
   DESTINATION ${OB_CONFIG_DIR}
   COMPONENT Development)
 

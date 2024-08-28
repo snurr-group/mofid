@@ -22,12 +22,14 @@ GNU General Public License for more details.
 #ifdef WIN32
 #define USING_OBDLL
 #endif
-
+#include <cstdlib>
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
 #include <openbabel/descriptor.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/obiter.h>
+#include <openbabel/residue.h>
 #ifndef _MSC_VER
   #include <unistd.h>
 #endif
@@ -48,7 +50,7 @@ int main(int argc,char **argv)
 {
   char *program_name= argv[0];
   int c;
-  char *FileIn = NULL;
+  char *FileIn = nullptr;
 
   if (argc != 2)
     {

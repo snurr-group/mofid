@@ -1,0 +1,37 @@
+environment:
+  BOOST_ROOT_DIR: c:\Libraries\boost
+  BOOST_LIBRARY_PATH: c:\Libraries\boost\lib64-msvc-12.0
+  INSTALL_PREFIX : c:\installation
+  CMAKE_PREFIX_PATH : c:\installation\lib\cmake
+
+image: Visual Studio 2013
+
+platform: x64
+
+configuration:
+  - Release
+    #  - Debug
+
+install:
+  # by default, all script lines are interpreted as batch
+
+build:
+  project: build\INSTALL.vcxproj
+  parallel: true
+
+before_build:
+  - mkdir %APPVEYOR_BUILD_FOLDER%\build
+  - cd %APPVEYOR_BUILD_FOLDER%\build
+  - cmake .. -G "Visual Studio 12 Win64" ^
+      -DBOOST_ROOT="%BOOST_ROOT_DIR%" ^
+      -DBOOST_LIBRARYDIR="%BOOST_LIBRARY_PATH%" ^
+      -DCMAKE_PREFIX_PATH="%CMAKE_PREFIX_PATH%" ^
+      -DCMAKE_INSTALL_PREFIX="%INSTALL_PREFIX%" ^
+      -DCOORDGEN_RIGOROUS_BUILD=ON
+
+test_script:
+  - set PATH=%PATH%;%BOOST_LIBRARY_PATH%;%INSTALL_PREFIX%\bin
+  # For whatever reason, boost_iostreams depends on libbz2.dll (required for maeparser)
+  - copy %BOOST_LIBRARY_PATH%\boost_bzip2-vc120-mt-1_56.dll %INSTALL_PREFIX%\bin\libbz2.dll
+  - cd %APPVEYOR_BUILD_FOLDER%\build
+  - ctest -j2 --output-on-failure -C Release

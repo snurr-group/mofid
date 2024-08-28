@@ -14,6 +14,11 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/elements.h>
+
 
 using namespace std;
 namespace OpenBabel
@@ -64,7 +69,7 @@ namespace OpenBabel
   bool CacheFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -123,7 +128,7 @@ namespace OpenBabel
     vector<OBBond*>::iterator j;
     for (bond = mol.BeginBond(j);bond;bond = mol.NextBond(j))
       {
-        switch (bond->GetBO())
+        switch (bond->GetBondOrder())
           {
           case 1:
             strcpy(bstr,"single");

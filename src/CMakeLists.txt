@@ -1,12 +1,12 @@
 #
 # This script is based on the example used to create static executables
-# linking to the static OpenBabel2 library.
+# linking to the static OpenBabel3 library.
 #
 
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)  # Hide Cygwin error
 
-# This line is required for cmake backwards compatibility.
-cmake_minimum_required(VERSION 2.8.10)
+# Minimum version required for FetchContent
+cmake_minimum_required(VERSION 3.11)
 
 # Name of your project
 project(sbu)
@@ -16,11 +16,25 @@ project(sbu)
 # set(executable_target sbu)
 # Use a loop like openbabel/tools/CMakeLists.txt
 
+# GoogleTest requires at least C++14
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if (BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(test)
+    add_library(mofidtest
+        STATIC
+        obdetails.cpp
+    )
+endif()
+
 # tools that do not require external MOFid headers/sources:
 set(tools
         sobgrep
         searchdb
         tsfm_smiles
+        compare
    )
 if (EMSCRIPTEN)
   set (tools searchdb)  # disable extraneous tools from JS build
@@ -41,30 +55,39 @@ set(mofid_includes
 
 set(LOCAL_OB_DATADIR "${CMAKE_SOURCE_DIR}/../openbabel/data"
     CACHE PATH "Install dir for OB data, no customization needed for MOFs")
+set(LOCAL_OB_LIBDIR "${CMAKE_SOURCE_DIR}/../openbabel/build/lib"
+    CACHE PATH "Install dir for OB shared libraries")
 # Set up include file for the data directory
 configure_file(${CMAKE_SOURCE_DIR}/config_sbu.h.cmake
   ${CMAKE_BINARY_DIR}/includes/config_sbu.h)
 include_directories(${CMAKE_BINARY_DIR}/includes/)
 
 
-# Set the path containing OpenBabel2Config.cmake, needed for find_package below.
-find_path(OpenBabel2_DIR OpenBabel2Config.cmake PATHS
-          ${OpenBabel2_DIR}
+# Set the path containing OpenBabel3Config.cmake, needed for find_package below.
+find_path(OpenBabel3_DIR OpenBabel3Config.cmake PATHS
+          ${OpenBabel3_DIR}
           "${CMAKE_SOURCE_DIR}/../openbabel/build"
           "/usr/lib/openbabel"
          "/usr/local/lib/openbabel")
 
 #
-# Find and setup OpenBabel2.
+# Find and setup OpenBabel3.
 #
-find_package(OpenBabel2 REQUIRED)
-include_directories(${OpenBabel2_INCLUDE_DIRS})
+find_package(Threads REQUIRED)
+find_package(OpenBabel3 REQUIRED)
+include_directories(${OpenBabel3_INCLUDE_DIRS})
 
 # Dependencies
 #find_package(LibXml2)
 
-# Set compiler flags similar to Open Babel's CMAKE_CXX_FLAGS_RELWITHDEBINFO
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -DNDEBUG")
+# Two build types are available: Release (DEFAULT), Debug
+if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g3 -fno-inline")
+endif()
 
 foreach(tool ${tools})
   # The executable
@@ -90,7 +113,7 @@ IF (CYGWIN)
     add_custom_command(
       TARGET sbu POST_BUILD COMMAND
       ${CMAKE_COMMAND} -E copy_if_different
-      "${OpenBabel2_DIR}/bin/${ob_dll}" ${CMAKE_BINARY_DIR}
+      "${OpenBabel3_DIR}/bin/${ob_dll}" ${CMAKE_BINARY_DIR}
     )
   ENDFOREACH()
 ENDIF (CYGWIN)

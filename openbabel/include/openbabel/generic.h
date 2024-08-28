@@ -72,7 +72,7 @@ namespace OpenBabel
     OBAtom *_atom;
     OBBond *_bond;
   public:
-  OBExternalBond(): _idx(0), _atom(NULL), _bond(NULL) {}
+  OBExternalBond(): _idx(0), _atom(nullptr), _bond(nullptr) {}
     OBExternalBond(OBAtom *,OBBond *,int);
     OBExternalBond(const OBExternalBond &);
     ~OBExternalBond()   {}
@@ -95,7 +95,7 @@ namespace OpenBabel
     OBExternalBondData();
 
     //Copying is not used and too much work to set up
-    virtual OBGenericData* Clone(OBBase* /*parent*/) const{return NULL;}
+    virtual OBGenericData* Clone(OBBase* /*parent*/) const{return nullptr;}
 
     void SetData(OBAtom*,OBBond*,int);
     std::vector<OBExternalBond> *GetData()
@@ -138,13 +138,6 @@ namespace OpenBabel
       {return new OBPairTemplate<ValueT>(*this);}
     void SetValue(const ValueT t)             { _value = t;     }
     virtual const ValueT &GetGenericValue() const    { return(_value); }
-    const ValueT &GetGenericValueDef(const ValueT &def_val) const
-    { 
-      if(this == NULL)
-	return def_val;
-      else	
-        return GetGenericValue(); 
-    }
   };
 
   //! Store arbitrary key/value integer data like OBPairData
@@ -189,7 +182,7 @@ namespace OpenBabel
         if ((*i)->GetAttribute() == s)
           return(*i);
 
-      return(NULL);
+      return(nullptr);
     }
 
     //! \return the OBGenericData associate with the attribute name parameter.
@@ -201,7 +194,7 @@ namespace OpenBabel
         if ((*i)->GetAttribute() == s)
           return(*i);
 
-      return(NULL);
+      return(nullptr);
     }
 
     //! Gets the entire set.
@@ -271,7 +264,7 @@ namespace OpenBabel
     // exist due to Kekulize() in EndModify() in operator= in OBMol. Having
     // more than one RingData causes problems as one of them can become invalid
     // and cause segfaults.
-    virtual OBGenericData* Clone(OBBase* /*parent*/) const{return NULL;}
+    virtual OBGenericData* Clone(OBBase* /*parent*/) const{return nullptr;}
     ~OBRingData();
 
     OBRingData &operator=(const OBRingData &);
@@ -614,7 +607,7 @@ namespace OpenBabel
     //! double is angle in radians
     std::vector<triple<OBAtom*,OBAtom*,double> > _ads;
 
-    OBTorsion(): _bc((OBAtom *)NULL, (OBAtom *)NULL)      {      }
+    OBTorsion(): _bc((OBAtom *)nullptr, (OBAtom *)nullptr)      {      }
     //protected for use only by friend classes
     OBTorsion(OBAtom *, OBAtom *, OBAtom *, OBAtom *);
 
@@ -727,7 +720,7 @@ namespace OpenBabel
     OBAngle(const OBAngle &);
     ~OBAngle()
       {
-        _vertex = NULL;
+        _vertex = nullptr;
       }
 
     OBAngle &operator = (const OBAngle &);
@@ -788,51 +781,6 @@ namespace OpenBabel
     }
   };
 
-  enum atomreftype{
-    output,     //!<
-    input,      //!<
-    calcvolume  //!<
-  }; // sets which atom4ref is accessed by OBChiralData
-
-  //! \class OBChiralData generic.h <openbabel/generic.h>
-  //! \brief Used to hold chiral inforamtion about the atom as OBGenericData
-  //! \deprecated Used OBStereoFacade instead
- class OBAPI OBChiralData : public OBGenericData
-  {
-    friend class OBMol;
-    friend class OBAtom;
-
-  protected:
-    std::vector<unsigned int> _atom4refs; //!< input atom references
-    std::vector<unsigned int> _atom4refo; //!< output atom references
-    std::vector<unsigned int> _atom4refc; //!< calcvolume references
-
-    //! The parity of the vector (of length 4)
-    //! 1234 returns 0, 1243 returns 1
-    int parity;
-
-  public:
-
-    OBChiralData();
-    OBChiralData(const OBChiralData &src);
-    virtual OBGenericData* Clone(OBBase* /*parent*/) const
-      { return new OBChiralData(*this); }
-    OBChiralData &operator =(const OBChiralData &);
-    ~OBChiralData(){}
-
-    void Clear();
-
-    //! \return a vector of all 4 atom references of type @p t
-    std::vector<unsigned int> GetAtom4Refs(atomreftype t) const;
-    //! \return the atom reference specified by @p a of type @p t
-    unsigned int GetAtomRef(int a,atomreftype t);
-
-    bool SetAtom4Refs(std::vector<unsigned int> atom4refs, atomreftype t);
-    int AddAtomRef(unsigned int atomref, atomreftype t);
-
-    //! \return the size of the atom references of a given type @p t
-    unsigned int GetSize(atomreftype t) const;
-  };
 
   //! \class OBSerialNums generic.h <openbabel/generic.h>
   //! \brief Defines a map between serial numbers (e.g., in a PDB file) and OBAtom objects inside a molecule
@@ -1192,13 +1140,13 @@ namespace OpenBabel
     OBFreeGridPoint *BeginPoint(OBFreeGridPointIterator &i)
     {
       i = _points.begin();
-      return((i == _points.end()) ? (OBFreeGridPoint*)NULL : (OBFreeGridPoint*)*i);
+      return((i == _points.end()) ? (OBFreeGridPoint*)nullptr : (OBFreeGridPoint*)*i);
     }
 
     OBFreeGridPoint *NextPoint(OBFreeGridPointIterator &i)
     {
       ++i;
-      return((i == _points.end()) ? (OBFreeGridPoint*)NULL : (OBFreeGridPoint*)*i);
+      return((i == _points.end()) ? (OBFreeGridPoint*)nullptr : (OBFreeGridPoint*)*i);
     }
     
     void Clear();
@@ -1215,7 +1163,7 @@ namespace OpenBabel
 
     int NumPartialCharges() 
     { 
-      return _PartialCharge.size(); 
+      return (int)_PartialCharge.size(); 
     }
     
     void AddPartialCharge(std::vector<double> q)

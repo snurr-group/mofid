@@ -15,7 +15,15 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/bond.h>
+#include <openbabel/data.h>
+#include <openbabel/generic.h>
+
 #include <openbabel/forcefield.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -75,7 +83,7 @@ namespace OpenBabel
   bool TinkerFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -148,16 +156,16 @@ namespace OpenBabel
   bool TinkerFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
     ostream &ofs = *pConv->GetOutStream();
     OBMol &mol = *pmol;
     bool mm2Types = false;
-    bool mmffTypes = pConv->IsOption("m",OBConversion::OUTOPTIONS) != NULL;
-    bool mm3Types = pConv->IsOption("3",OBConversion::OUTOPTIONS) != NULL;
-    bool classTypes = pConv->IsOption("c", OBConversion::OUTOPTIONS) != NULL;
+    bool mmffTypes = pConv->IsOption("m", OBConversion::OUTOPTIONS) != nullptr;
+    bool mm3Types = pConv->IsOption("3", OBConversion::OUTOPTIONS) != nullptr;
+    bool classTypes = pConv->IsOption("c", OBConversion::OUTOPTIONS) != nullptr;
 
     unsigned int i;
     char buffer[BUFF_SIZE];
@@ -263,7 +271,7 @@ namespace OpenBabel
       if (b->GetAtomicNum() == OBElements::Nitrogen) {
         if (b->IsAmideNitrogen())
           return 28;
-        if (b->GetValence() > 3)
+        if (b->GetExplicitDegree() > 3)
           return 48;// ammonium
         return 23; // default amine/imine
       }
@@ -285,7 +293,7 @@ namespace OpenBabel
       return 163; break;
 
     case 5: // B
-      if (atom->GetValence() >= 4)
+      if (atom->GetExplicitDegree() >= 4)
         return 27; // tetrahedral
       return 26; break;
 
@@ -348,7 +356,7 @@ namespace OpenBabel
         return 46;
 
       if (atom->GetHyb() == 3) {
-        if (atom->GetValence() > 3)
+        if (atom->GetExplicitDegree() > 3)
           return 39; // ammonium
         return 8;
       }
@@ -389,7 +397,7 @@ namespace OpenBabel
     case 15: // P
       if (atom->CountFreeOxygens() > 0)
         return 153; // phosphate
-      if (atom->BOSum() > 3)
+      if (atom->GetExplicitValence() > 3)
         return 60; // phosphorus V
       return 25; break;
 
@@ -409,7 +417,7 @@ namespace OpenBabel
         case 7:
           countNeighborN++; break;
         case 8:
-          if (b->GetHvyValence() == 1)
+          if (b->GetHvyDegree() == 1)
             countNeighborO++;
           break;
         case 16:

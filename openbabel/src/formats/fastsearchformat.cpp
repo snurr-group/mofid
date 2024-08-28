@@ -22,6 +22,11 @@ GNU General Public License for more details.
 #include <openbabel/fingerprint.h>
 #include <openbabel/op.h>
 #include <openbabel/elements.h>
+#include <openbabel/bond.h>
+#include <openbabel/obutil.h>
+#include <cstdlib>
+#include <algorithm>
+
 
 using namespace std;
 namespace OpenBabel {
@@ -31,7 +36,7 @@ class FastSearchFormat : public OBFormat
 {
 public:
 //Register this format type ID
-FastSearchFormat() : fsi(NULL)
+FastSearchFormat() : fsi(nullptr)
 {
   OBConversion::RegisterFormat("fs",this);
   //Specify the number of option taken by options
@@ -169,7 +174,7 @@ virtual const char* Description() //required
     if(!ObtainTarget(pConv, patternMols, indexname))
       return false;
 
-    bool exactmatch = pConv->IsOption("e",OBConversion::INOPTIONS)!=NULL;// -ae option
+    bool exactmatch = pConv->IsOption("e", OBConversion::INOPTIONS) != nullptr; // -ae option
 
     //Open the datafile and put it in pConv
     //datafile name derived from index file probably won't have a file path
@@ -275,7 +280,7 @@ virtual const char* Description() //required
             pConv->SetOneObjectOnly();
             if(itr != --SeekposMap.rend())
               pConv->SetMoreFilesToCome();//so that not seen as last on output
-            pConv->Convert(NULL,NULL);
+            pConv->Convert(nullptr, nullptr);
           }
       }
 
@@ -338,11 +343,11 @@ virtual const char* Description() //required
   bool FastSearchFormat::WriteChemObject(OBConversion* pConv)
   {
     //Prepares or updates an index file. Called for each molecule indexed
-    bool update = pConv->IsOption("u")!=NULL;
+    bool update = pConv->IsOption("u") != nullptr;
 
     static ostream* pOs;
     static bool NewOstreamUsed;
-    if(fsi==NULL)
+    if (fsi == nullptr)
       {
 	// Warn that compressed files cannot be used. It's hard to seek
 	// inside of a gzip file.
@@ -375,7 +380,7 @@ virtual const char* Description() //required
         auditMsg += description.substr( 0, description.find('\n') );
         obErrorLog.ThrowError(__FUNCTION__,auditMsg,obAuditMsg);
 
-        FptIndex* pidx=NULL; //used with update
+        FptIndex* pidx = nullptr; //used with update
 
         //if(pOs==&cout) did not work with GUI
         if(!dynamic_cast<ofstream*>(pOs))
@@ -516,7 +521,7 @@ virtual const char* Description() //required
           delete pOs;
 
         //return to starting conditions
-        fsi=NULL;
+        fsi=nullptr;
 
         obErrorLog.StartLogging();
 
@@ -684,14 +689,14 @@ virtual const char* Description() //required
 
     if(idx>=patternMol.NumBonds())
       return;
-    if(patternMol.GetBond(idx)->GetBO()==4)
+    if(patternMol.GetBond(idx)->GetBondOrder()==4)
     {
-      patternMol.GetBond(idx)->SetBO(1);
+      patternMol.GetBond(idx)->SetBondOrder(1);
       patternMols.push_back(patternMol);
       AddPattern(patternMols, patternMol,idx+1);
 
       patternMols.push_back(patternMol);
-      patternMols.back().GetBond(idx)->SetBO(5);
+      patternMols.back().GetBond(idx)->SetBondOrder(5);
     }
     AddPattern(patternMols, patternMol,idx+1);
   }

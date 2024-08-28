@@ -19,9 +19,16 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
 #include <openbabel/locale.h>
+#include <openbabel/oberror.h>
+#include <openbabel/parsmart.h>
+#include <openbabel/obutil.h>
 
 #include "forcefieldgaff.h"
+
+#include <cstdlib>
 
 using namespace std;
 
@@ -247,8 +254,8 @@ namespace OpenBabel
         std::vector<OBFFParameter> &parameter)
   {
     OBFFParameter *par;
-    if (a == NULL || b == NULL || c == NULL || d == NULL )
-      return NULL;
+    if (a == nullptr || b == nullptr || c == nullptr || d == nullptr )
+      return nullptr;
     string _a(a);
     string _b(b);
     string _c(c);
@@ -261,7 +268,7 @@ namespace OpenBabel
 	par = &parameter[idx];
 	return par;
       }
-    return NULL;
+    return nullptr;
   }
 
   template<bool gradients>
@@ -542,7 +549,7 @@ namespace OpenBabel
       if (HasGroups()) {
         bool validBond = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()))
             validBond = true;
         }
         if (!validBond)
@@ -552,12 +559,12 @@ namespace OpenBabel
       bondcalc.a = a;
       bondcalc.b = b;
 
-      parameter = GetParameter(a->GetType(), b->GetType(), NULL, NULL,  _ffbondparams);
-      if (parameter == NULL) {
-        parameter = GetParameter("X", a->GetType(), NULL, NULL, _ffbondparams);
-        if (parameter == NULL) {
-          parameter = GetParameter("X", b->GetType(), NULL, NULL, _ffbondparams);
-          if (parameter == NULL) {
+      parameter = GetParameter(a->GetType(), b->GetType(), nullptr, nullptr, _ffbondparams);
+      if (parameter == nullptr) {
+        parameter = GetParameter("X", a->GetType(), nullptr, nullptr, _ffbondparams);
+        if (parameter == nullptr) {
+          parameter = GetParameter("X", b->GetType(), nullptr, nullptr, _ffbondparams);
+          if (parameter == nullptr) {
             bondcalc.kr = KCAL_TO_KJ * 500.0;
             bondcalc.r0 = 1.100;
             bondcalc.SetupPointers();
@@ -603,8 +610,8 @@ namespace OpenBabel
       if (HasGroups()) {
         bool validAngle = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()) &&
-              _intraGroup[i].BitIsOn(c->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()) &&
+              _intraGroup[i].BitIsSet(c->GetIdx()))
             validAngle = true;
         }
         if (!validAngle)
@@ -615,14 +622,14 @@ namespace OpenBabel
       anglecalc.b = b;
       anglecalc.c = c;
 
-      parameter = GetParameter(a->GetType(), b->GetType(), c->GetType(), NULL, _ffangleparams);
-      if (parameter == NULL) {
-        parameter = GetParameter("X", b->GetType(), c->GetType(), NULL, _ffangleparams);
-        if (parameter == NULL) {
-          parameter = GetParameter(a->GetType(), b->GetType(), "X", NULL, _ffangleparams);
-          if (parameter == NULL) {
-            parameter = GetParameter("X", b->GetType(), "X", NULL, _ffangleparams);
-            if (parameter == NULL) {
+      parameter = GetParameter(a->GetType(), b->GetType(), c->GetType(), nullptr, _ffangleparams);
+      if (parameter == nullptr) {
+        parameter = GetParameter("X", b->GetType(), c->GetType(), nullptr, _ffangleparams);
+        if (parameter == nullptr) {
+          parameter = GetParameter(a->GetType(), b->GetType(), "X", nullptr, _ffangleparams);
+          if (parameter == nullptr) {
+            parameter = GetParameter("X", b->GetType(), "X", nullptr, _ffangleparams);
+            if (parameter == nullptr) {
               anglecalc.kth = KCAL_TO_KJ * 0.020;
               anglecalc.theta0 = 120.0;
               anglecalc.SetupPointers();
@@ -671,8 +678,8 @@ namespace OpenBabel
       if (HasGroups()) {
         bool validTorsion = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()) &&
-              _intraGroup[i].BitIsOn(c->GetIdx()) && _intraGroup[i].BitIsOn(d->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()) &&
+              _intraGroup[i].BitIsSet(c->GetIdx()) && _intraGroup[i].BitIsSet(d->GetIdx()))
             validTorsion = true;
         }
         if (!validTorsion)
@@ -685,13 +692,13 @@ namespace OpenBabel
       torsioncalc.d = d;
 
       parameter = GetParameter(a->GetType(), b->GetType(), c->GetType(), d->GetType(), _fftorsionparams);
-      if (parameter == NULL) {
+      if (parameter == nullptr) {
         parameter = GetParameter("X", b->GetType(), c->GetType(), d->GetType(), _fftorsionparams);
-        if (parameter == NULL) {
+        if (parameter == nullptr) {
           parameter = GetParameter(a->GetType(), b->GetType(), c->GetType(), "X", _fftorsionparams);
-          if (parameter == NULL) {
+          if (parameter == nullptr) {
             parameter = GetParameter("X", b->GetType(), c->GetType(), "X", _fftorsionparams);
-            if (parameter == NULL) {
+            if (parameter == nullptr) {
 	      torsioncalc.vn_half = 0.0;
 	      torsioncalc.gamma = 0.0;
 	      torsioncalc.n = 0.0;
@@ -730,21 +737,21 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, _mol) {
       b = (OBAtom*) &*atom;
 
-      a = NULL;
-      c = NULL;
-      d = NULL;
+      a = nullptr;
+      c = nullptr;
+      d = nullptr;
 
       FOR_NBORS_OF_ATOM(nbr, b) {
-	if (a ==NULL)
+	if (a ==nullptr)
 	  a = (OBAtom*) &*nbr;
-	else if (c == NULL)
+	else if (c == nullptr)
 	  c = (OBAtom*) &*nbr;
 	else
 	  d = (OBAtom*) &*nbr;
       }
 
       // skip this improper dihedral if atom b does not have 3 neighbors
-      if ((a == NULL) || (c == NULL) || (d == NULL))
+      if (a == nullptr || c == nullptr || d == nullptr)
 	continue;
 
       // skip this improper dihedral if the atoms are ignored
@@ -756,8 +763,8 @@ namespace OpenBabel
       if (HasGroups()) {
 	bool validOOP = false;
 	for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-	  if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()) &&
-	      _intraGroup[i].BitIsOn(c->GetIdx()) && _intraGroup[i].BitIsOn(d->GetIdx()))
+	  if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()) &&
+	      _intraGroup[i].BitIsSet(c->GetIdx()) && _intraGroup[i].BitIsSet(d->GetIdx()))
 	    validOOP = true;
 	}
 	if (!validOOP)
@@ -765,7 +772,7 @@ namespace OpenBabel
       }
 
       parameter = GetParameterOOP(a->GetType(), b->GetType(), c->GetType(), d->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-C-D || PLANE = ABC
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -779,7 +786,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP(a->GetType(), b->GetType(), d->GetType(), c->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-D-C || PLANE = ABD
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -793,7 +800,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP(c->GetType(), b->GetType(), d->GetType(), a->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// C-B-D-A || PLANE = CBD
 	oopcalc.a = c;
 	oopcalc.b = b;
@@ -807,7 +814,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", b->GetType(), c->GetType(), d->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-C-D || PLANE = ABC
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -821,7 +828,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", b->GetType(), d->GetType(), c->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-D-C || PLANE = ABD
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -835,7 +842,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", b->GetType(), d->GetType(), a->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// C-B-D-A || PLANE = CBD
 	oopcalc.a = c;
 	oopcalc.b = b;
@@ -849,7 +856,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", "X", c->GetType(), d->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-C-D || PLANE = ABC
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -863,7 +870,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", "X", d->GetType(), c->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// A-B-D-C || PLANE = ABD
 	oopcalc.a = a;
 	oopcalc.b = b;
@@ -877,7 +884,7 @@ namespace OpenBabel
 	continue;
       }
       parameter = GetParameterOOP("X", "X", d->GetType(), a->GetType(), _ffoopparams);
-      if (parameter != NULL){
+      if (parameter != nullptr){
 	// C-B-D-A || PLANE = CBD
 	oopcalc.a = c;
 	oopcalc.b = b;
@@ -917,13 +924,13 @@ namespace OpenBabel
       if (HasGroups()) {
         bool validVDW = false;
         for (unsigned int i=0; i < _interGroup.size(); ++i) {
-          if (_interGroup[i].BitIsOn(a->GetIdx()) && _interGroup[i].BitIsOn(b->GetIdx()))
+          if (_interGroup[i].BitIsSet(a->GetIdx()) && _interGroup[i].BitIsSet(b->GetIdx()))
             validVDW = true;
         }
         for (unsigned int i=0; i < _interGroups.size(); ++i) {
-          if (_interGroups[i].first.BitIsOn(a->GetIdx()) && _interGroups[i].second.BitIsOn(b->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(a->GetIdx()) && _interGroups[i].second.BitIsSet(b->GetIdx()))
             validVDW = true;
-          if (_interGroups[i].first.BitIsOn(b->GetIdx()) && _interGroups[i].second.BitIsOn(a->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(b->GetIdx()) && _interGroups[i].second.BitIsSet(a->GetIdx()))
             validVDW = true;
         }
 
@@ -931,8 +938,8 @@ namespace OpenBabel
           continue;
       }
 
-      parameter_a = GetParameter(a->GetType(), NULL, NULL, NULL, _ffvdwparams);
-      if (parameter_a == NULL) { // no vdw parameter -> use hydrogen
+      parameter_a = GetParameter(a->GetType(), nullptr, nullptr, nullptr, _ffvdwparams);
+      if (parameter_a == nullptr) { // no vdw parameter -> use hydrogen
         Ra = 1.4870;
         Ea = 0.0157;
 
@@ -945,8 +952,8 @@ namespace OpenBabel
         Ea = parameter_a->_dpar[1];
       }
 
-      parameter_b = GetParameter(b->GetType(), NULL, NULL, NULL, _ffvdwparams);
-      if (parameter_b == NULL) { // no vdw parameter -> use hydrogen
+      parameter_b = GetParameter(b->GetType(), nullptr, nullptr, nullptr, _ffvdwparams);
+      if (parameter_b == nullptr) { // no vdw parameter -> use hydrogen
         Rb = 1.4870;
         Eb = 0.0157;
 
@@ -1019,13 +1026,13 @@ namespace OpenBabel
       if (HasGroups()) {
         bool validEle = false;
         for (unsigned int i=0; i < _interGroup.size(); ++i) {
-          if (_interGroup[i].BitIsOn(a->GetIdx()) && _interGroup[i].BitIsOn(b->GetIdx()))
+          if (_interGroup[i].BitIsSet(a->GetIdx()) && _interGroup[i].BitIsSet(b->GetIdx()))
             validEle = true;
         }
         for (unsigned int i=0; i < _interGroups.size(); ++i) {
-          if (_interGroups[i].first.BitIsOn(a->GetIdx()) && _interGroups[i].second.BitIsOn(b->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(a->GetIdx()) && _interGroups[i].second.BitIsSet(b->GetIdx()))
             validEle = true;
-          if (_interGroups[i].first.BitIsOn(b->GetIdx()) && _interGroups[i].second.BitIsOn(a->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(b->GetIdx()) && _interGroups[i].second.BitIsSet(a->GetIdx()))
             validEle = true;
         }
 
@@ -1033,7 +1040,7 @@ namespace OpenBabel
           continue;
       }
 
-      elecalc.qq = KCAL_TO_KJ * 332.17 * a->GetPartialCharge() * b->GetPartialCharge();
+      elecalc.qq = KCAL_TO_KJ * 332.17 * a->GetPartialCharge() * b->GetPartialCharge() / _epsilon;
 
       if (elecalc.qq) {
         elecalc.a = &*a;
@@ -1241,7 +1248,7 @@ namespace OpenBabel
 	    _vexttyp.push_back(pair<OBSmartsPattern*,string> (sp,vs[2]));
         else {
           delete sp;
-          sp = NULL;
+          sp = nullptr;
           obErrorLog.ThrowError(__FUNCTION__, " Could not parse atom type table from gaff.prm", obInfo);
           return false;
         }
@@ -1428,7 +1435,7 @@ namespace OpenBabel
     // Trigger calculation of Gasteiger charges
     // Note that the Gastegier charge calculation checks for the values of particular atom types
     _mol.SetAutomaticPartialCharge(true);
-    _mol.UnsetPartialChargesPerceived();
+    _mol.SetPartialChargesPerceived(false);
     // Trigger partial charge calculation
     FOR_ATOMS_OF_MOL(atom, _mol) {
       atom->GetPartialCharge();

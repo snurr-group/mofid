@@ -18,6 +18,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -102,7 +109,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -123,7 +130,7 @@ namespace OpenBabel
     mol.BeginModify();
     while	(ifs.getline(buffer,BUFF_SIZE))
       {
-        if(strstr(buffer,"Cartesian Coordinates") != NULL)
+        if (strstr(buffer, "Cartesian Coordinates") != nullptr)
           {
             // mol.EndModify();
             mol.Clear();
@@ -165,13 +172,13 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           } // if "Cartesian Coordinates"
-        if(strstr(buffer,"Normal Coordinates") != NULL)
+        if (strstr(buffer, "Normal Coordinates") != nullptr)
           {
             ifs.getline(buffer,BUFF_SIZE);     // [Dimensions are Mass**-1/2 Distance]
             ifs.getline(buffer,BUFF_SIZE);     // blank line
             ifs.getline(buffer,BUFF_SIZE);     // Symmetries
-	    while((strstr(buffer,"Normal modes in internal coordinates") == NULL) && 
-		  (strstr(buffer,"Dipole Moment Function") == NULL)) 
+	    while(strstr(buffer, "Normal modes in internal coordinates") == nullptr &&
+		  strstr(buffer, "Dipole Moment Function") == nullptr)
 	      {
 	        vector<vector3> vib1, vib2, vib3;
                 ifs.getline(buffer,BUFF_SIZE);     // Frequencies
@@ -212,7 +219,7 @@ namespace OpenBabel
 	        ifs.getline(buffer,BUFF_SIZE);     // Symmetries (or end of frequencies)
 	      } // while
           } // if "Normal Coordinates"
-        if(strstr(buffer,"Infrared") != NULL)
+        if (strstr(buffer, "Infrared") != nullptr)
           {
             ifs.getline(buffer, BUFF_SIZE); // table header
             ifs.getline(buffer, BUFF_SIZE); // table delimiter
@@ -221,7 +228,7 @@ namespace OpenBabel
             ifs.getline(buffer, BUFF_SIZE);
             tokenize(vs,buffer);
             while (vs.size() == 4) {
-              if (strstr(buffer,"VIBRATION") != NULL) {
+              if (strstr(buffer, "VIBRATION") != nullptr) {
                  Intensities.push_back(atof(vs[2].c_str()));
 	      }	
               ifs.getline(buffer, BUFF_SIZE);
@@ -258,7 +265,7 @@ namespace OpenBabel
   bool AcesInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names

@@ -14,6 +14,11 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/elements.h>
+#include <cstdlib>
 
 #include <sstream>
 
@@ -70,7 +75,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -105,7 +110,7 @@ namespace OpenBabel
   bool CRK2DFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -169,7 +174,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -203,7 +208,7 @@ namespace OpenBabel
   bool CRK3DFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -406,7 +411,7 @@ namespace OpenBabel
     if (ifs.peek() != EOF && ifs.good())
       {
         ifs.getline(buffer,BUFF_SIZE);
-        if (strstr(buffer,"</Property>") == 0)
+        if (strstr(buffer, "</Property>") == nullptr)
           return false; // something messed up
       }
 
@@ -450,7 +455,7 @@ namespace OpenBabel
         OBBond *bnd=mol.GetBond(m);
 
         int from=bnd->GetBeginAtom()->GetIdx(),to=bnd->GetEndAtom()->GetIdx();
-        double order=bnd->GetBO();
+        double order=bnd->GetBondOrder();
         if (bnd->IsAromatic())
           order=1.5;
         int style=0;

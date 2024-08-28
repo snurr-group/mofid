@@ -16,6 +16,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
+
 #ifdef _MSC_VER
 #include <regex>
 #else
@@ -80,7 +88,9 @@ namespace OpenBabel
     {
       return
         "ORCA input format\n"
-        "This can be used as a template file for orca calculations\n";
+        "Write Options e.g. -xk\n"
+        "  k  \"keywords\" Use the specified keywords for input\n"
+        "  f    <file>     Read the file specified for input keywords\n\n";
     }
 
     virtual const char* SpecificationURL()
@@ -108,7 +118,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -233,11 +243,11 @@ namespace OpenBabel
             occ.resize(0);
             ifs.getline(buffer,BUFF_SIZE); // skip ---------------------
             ifs.getline(buffer,BUFF_SIZE); // skip empty line or look for spin informations
-            if (strstr(buffer,"SPIN UP ORBITALS") != NULL) m_openShell = true;
+            if (strstr(buffer, "SPIN UP ORBITALS") != nullptr) m_openShell = true;
             ifs.getline(buffer,BUFF_SIZE); // skip headline
             ifs.getline(buffer,BUFF_SIZE);
             tokenize(vs,buffer);
-            while (strstr(buffer,"---------") == NULL && vs.size() !=0) {
+            while (strstr(buffer, "---------") == nullptr && vs.size() !=0) {
                 if (vs.size() != 4) break;
                 occ.push_back(atof(vs[1].c_str()));
                 energyEh.push_back(atof(vs[2].c_str()));
@@ -254,7 +264,7 @@ namespace OpenBabel
                 ifs.getline(buffer,BUFF_SIZE); // skip headline
                 ifs.getline(buffer,BUFF_SIZE);
                 tokenize(vs,buffer);
-                while (strstr(buffer,"---------") == NULL && vs.size() >0) {
+                while (strstr(buffer, "---------") == nullptr && vs.size() >0) {
                     if (vs.size() != 4) break;
                     occB.push_back(atof(vs[1].c_str()));
                     energyBEh.push_back(atof(vs[2].c_str()));
@@ -636,7 +646,7 @@ namespace OpenBabel
   bool OrcaInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -645,7 +655,28 @@ namespace OpenBabel
 
     ofs << "# ORCA input file" << endl;
     ofs << "# " << mol.GetTitle() << endl;
-    ofs << "! insert inline commands here " << endl;
+
+    const char *keywords = pConv->IsOption("k",OBConversion::OUTOPTIONS);
+    const char *keywordFile = pConv->IsOption("f",OBConversion::OUTOPTIONS);
+    string defaultKeywords = "! insert inline commands here ";
+
+    if(keywords)
+      {
+        defaultKeywords = keywords;
+      }
+    if (keywordFile)
+      {
+        ifstream kfstream(keywordFile);
+        string keyBuffer;
+        if (kfstream)
+          {
+            while (getline(kfstream, keyBuffer))
+              ofs << keyBuffer << endl;
+          }
+      }
+    else
+      ofs << defaultKeywords << endl;
+
     ofs << "* xyz " << mol.GetTotalCharge() << " " << mol.GetTotalSpinMultiplicity() << endl;
 
 
@@ -694,7 +725,7 @@ namespace OpenBabel
       if (pos !=0) return (checkBuffer); // do nothing
 
       while (regexec(&myregex, checkBuffer.c_str(), 1, &pm, REG_EXTENDED) == 0) {
-          checkBuffer.insert(pm.rm_eo-1, " ");  // insert whitespace to seperate the columns
+          checkBuffer.insert(pm.rm_eo-1, " ");  // insert whitespace to separate the columns
       }
       return (checkBuffer);
   }

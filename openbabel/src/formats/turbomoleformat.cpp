@@ -16,8 +16,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
 
-const double AAU = 0.5291772108;  // Ångström per bohr (CODATA 2002)
+
+const double AAU = 0.5291772108;  // ï¿½ngstrï¿½m per bohr (CODATA 2002)
 
 using namespace std;
 namespace OpenBabel
@@ -70,7 +76,7 @@ TurbomoleFormat theTurbomoleFormat;
 bool TurbomoleFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -138,7 +144,7 @@ bool TurbomoleFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
 
 char *strlwr(char *s)
 {
-    if (s != NULL)
+    if (s != nullptr)
       {
         char *p;
         for (p = s; *p; ++p)
@@ -151,7 +157,7 @@ char *strlwr(char *s)
 bool TurbomoleFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names

@@ -27,7 +27,7 @@ GNU General Public License for more details.
 #include <openbabel/obconversion.h>
 #include <openbabel/data_utilities.h>
 #include <openbabel/pointgroup.h>
-
+#include <cstdlib>
 #ifndef _MSC_VER
   #include <unistd.h>
 #endif
@@ -214,7 +214,7 @@ int main(int argc,char **argv)
 *     Set the derivative of the second virial coefficient with temperature for cp calculation\n\n
 *
 * \b --kj:
-*     Use Joules instead of Calories in the ouput\n\n
+*     Use Joules instead of Calories in the output\n\n
 *
 * \par EXAMPLES
 *  - View the possible options:

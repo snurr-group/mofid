@@ -19,6 +19,11 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/ring.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/typer.h>
 #include <openbabel/elements.h>
 
@@ -33,9 +38,9 @@ using namespace std;
 
 namespace OpenBabel
 {
-
-  OBAromaticTyper  aromtyper;
-  OBAtomTyper      atomtyper;
+  // Initialize globals declared in typer.h
+  THREAD_LOCAL OBAromaticTyper  aromtyper;
+  THREAD_LOCAL OBAtomTyper      atomtyper;
 
   /*! \class OBAtomTyper typer.h <openbabel/typer.h>
     \brief Assigns atom types, hybridization, and formal charges
@@ -82,7 +87,7 @@ namespace OpenBabel
         else
           {
             delete sp;
-            sp = NULL;
+            sp = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse INTHYB line in atom type table from atomtyp.txt", obInfo);
             return;
           }
@@ -101,7 +106,7 @@ namespace OpenBabel
         else
           {
             delete sp;
-            sp = NULL;
+            sp = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse EXTTYP line in atom type table from atomtyp.txt", obInfo);
             return;
           }
@@ -114,14 +119,14 @@ namespace OpenBabel
     for (i = _vinthyb.begin();i != _vinthyb.end();++i)
       {
         delete i->first;
-        i->first = NULL;
+        i->first = nullptr;
       }
 
     vector<pair<OBSmartsPattern*,string> >::iterator j;
     for (j = _vexttyp.begin();j != _vexttyp.end();++j)
       {
         delete j->first;
-        j->first = NULL;
+        j->first = nullptr;
       }
 
   }
@@ -202,7 +207,7 @@ namespace OpenBabel
     // check all atoms to make sure *some* hybridization is assigned
     for (atom = mol.BeginAtom(k);atom;atom = mol.NextAtom(k))
       if (atom->GetHyb() == 0) {
-        switch (atom->GetValence()) {
+        switch (atom->GetExplicitDegree()) {
           case 0:
           case 1:
           case 2:
@@ -215,7 +220,7 @@ namespace OpenBabel
             atom->SetHyb(3);
             break;
           default:
-            atom->SetHyb(atom->GetValence());
+            atom->SetHyb(atom->GetExplicitDegree());
         }
       }
   }
@@ -261,7 +266,7 @@ namespace OpenBabel
         _ringtyp.push_back(pair<OBSmartsPattern*,string> (sp,vs[1]));
       else {
         delete sp;
-        sp = NULL;
+        sp = nullptr;
         obErrorLog.ThrowError(__FUNCTION__, " Could not parse RING line in ring type table from ringtyp.txt", obInfo);
         return;
       }
@@ -273,7 +278,7 @@ namespace OpenBabel
     vector<pair<OBSmartsPattern*,string> >::iterator i;
     for (i = _ringtyp.begin();i != _ringtyp.end();++i) {
       delete i->first;
-      i->first = NULL;
+      i->first = nullptr;
     }
   }
 
@@ -393,8 +398,8 @@ namespace OpenBabel
 
     unsigned int elem = atm->GetAtomicNum();
     int chg = atm->GetFormalCharge();
-    unsigned int deg = atm->GetValence() + atm->GetImplicitHCount();
-    unsigned int val = atm->BOSum() + atm->GetImplicitHCount();
+    unsigned int deg = atm->GetExplicitDegree() + atm->GetImplicitHCount();
+    unsigned int val = atm->GetExplicitValence() + atm->GetImplicitHCount();
 
     switch (elem) {
     case OBElements::Carbon:
@@ -612,9 +617,9 @@ namespace OpenBabel
 
     //unset all aromatic flags
     for (atom = mol.BeginAtom(i); atom; atom = mol.NextAtom(i))
-      atom->UnsetAromatic();
+      atom->SetAromatic(false);
     for (bond = mol.BeginBond(j); bond; bond = mol.NextBond(j))
-      bond->UnsetAromatic();
+      bond->SetAromatic(false);
 
     // New code using lookups instead of SMARTS patterns
     FOR_ATOMS_OF_MOL(atom, mol) {
@@ -855,7 +860,7 @@ namespace OpenBabel
 
             for (nbr = atom->BeginNbrAtom(l);nbr;nbr = atom->NextNbrAtom(l))
               {
-                // we can get this from atom->GetHvyValence()
+                // we can get this from atom->GetHvyDegree()
                 // but we need to find neighbors in rings too
                 // so let's save some time
                 if (nbr->GetAtomicNum() != OBElements::Hydrogen)

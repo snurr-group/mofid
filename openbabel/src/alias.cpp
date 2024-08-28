@@ -12,16 +12,22 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
+#include <cstdlib>
 #include <sstream>
 #include <string>
 #include <openbabel/alias.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/op.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/builder.h>
+#include <openbabel/obiter.h>
 #include <openbabel/parsmart.h>
 #include <openbabel/mcdlutil.h>
 #include <openbabel/shared_ptr.h>
 #include <openbabel/elements.h>
+#include <openbabel/generic.h>
 
 #define MARK_UNUSED(x) (void)(x)
 
@@ -44,7 +50,7 @@ namespace OpenBabel
   {
     /*
     Interprets the alias text and adds atom(s) as appropriate to mol.
-    Tries the following in turn until one is sucessful:
+    Tries the following in turn until one is successful:
     1) If starts with number treat as isotope+element e.g. 2H
     2) Looks up alias in superatom.txt e.g. COOH Pr
     3) If of the form Rn stored as a * atom with Atom Class data
@@ -111,7 +117,7 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
   */
 
   OBAtom* XxAtom = mol.GetAtom(atomindex);
-/*  if(XxAtom->GetValence()>1)
+/*  if(XxAtom->GetExplicitDegree()>1)
   {
     obErrorLog.ThrowError(__FUNCTION__, _alias + " is multivalent, which is currently not supported.", obWarning);
     return false;
@@ -145,9 +151,11 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
   OBAtom* firstAttachAtom = XxAtom->BeginNbrAtom(bi);
   unsigned mainAttachIdx = firstAttachAtom ? firstAttachAtom->GetIdx() : 0;
   unsigned int firstAttachFlags = 0;
-  if (firstAttachAtom)
+  unsigned int firstAttachOrder = 1;
+  if (firstAttachAtom) {
     firstAttachFlags = mol.GetBond(XxAtom, firstAttachAtom)->GetFlags();
-
+    firstAttachOrder = mol.GetBond(XxAtom, firstAttachAtom)->GetBondOrder();
+  }
   //++Make list of other attachments* of XxAtom
   // (Added later so that the existing bonding of the XXAtom are retained)
   vector<pair<OBAtom*, unsigned> > otherAttachments;
@@ -176,8 +184,9 @@ bool AliasData::FromNameLookup(OBMol& mol, const unsigned int atomindex)
     builder.Build(obFrag);
     obFrag.DeleteAtom(obFrag.GetAtom(1));//remove dummy atom
     mol += obFrag; //Combine with main molecule
-    if(mainAttachIdx)
-      builder.Connect(mol, mainAttachIdx, newFragIdx);
+    if(mainAttachIdx) {
+      builder.Connect(mol, mainAttachIdx, newFragIdx,XxAtom->GetVector(),firstAttachOrder);
+    }
   }
   else // 0D, 2D
   {
@@ -316,7 +325,7 @@ void AliasData::RevertToAliasForm(OBMol& mol)
     FOR_ATOMS_OF_MOL(a, mol)
     {
       acted=false;
-      AliasData* ad = NULL;
+      AliasData* ad = nullptr;
       if((ad = (static_cast<AliasData*>(a->GetData(AliasDataType)))) && ad->IsExpanded())
       {
         ad->DeleteExpandedAtoms(mol);
@@ -348,18 +357,24 @@ bool AliasData::AddAliases(OBMol* pmol)
         for(unsigned iatom=1; iatom<mlist[imatch].size();++iatom)//each atom in match
         {
           int idx = mlist[imatch][iatom];
+
           if(AllExAtoms.count(idx))
           {
             //atom already appears in an alias so abandon this (smaller) alias
             delete ad;
-            ad = NULL;
+            ad = nullptr;
             break;
           }
           else
           {
-            AllExAtoms.insert(idx);
-            int id  =(pmol->GetAtom(idx))->GetId();
-            ad->AddExpandedAtom(id);
+            OBAtom* a = pmol->GetAtom(idx);
+            // atom might not be present in original molecule, because SMARTS are all with hydrogens added
+            // original molecule might lack them
+            if (a != nullptr) {
+              AllExAtoms.insert(idx);
+              int id  = a->GetId();
+              ad->AddExpandedAtom(id);
+            }
           }
         }
         if(ad)
@@ -378,7 +393,7 @@ public:
   OpGenAlias(const char* ID) : OBOp(ID, false){};
   const char* Description(){ return "Generate aliases as an alternative representation."; }
 
-  virtual bool WorksWith(OBBase* pOb)const{ return dynamic_cast<OBMol*>(pOb)!=NULL; }
+  virtual bool WorksWith(OBBase* pOb) const { return dynamic_cast<OBMol*>(pOb) != nullptr; }
   virtual bool Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*);
 };
 

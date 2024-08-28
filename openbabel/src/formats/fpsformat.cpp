@@ -15,9 +15,15 @@ GNU General Public License for more details.
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <ctime>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/fingerprint.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -169,7 +175,7 @@ string FPSFormat::getTimeStr()
   size_t time_res;                             /* Result of strftime                */
 
   /* ---- Get the system-time ---- */
-  akttime = time((time_t *) NULL);
+  akttime = time((time_t *) nullptr);
   time_res = strftime(timestr,
                       TIME_STR_SIZE,
                       "%Y-%m-%dT%H:%M:%S",

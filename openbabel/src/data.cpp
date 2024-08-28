@@ -20,12 +20,15 @@ GNU General Public License for more details.
 #ifdef WIN32
 #pragma warning (disable : 4786)
 #endif
-
+#include <cstdlib>
 #include <openbabel/babelconfig.h>
 #include <openbabel/data.h>
 #include <openbabel/data_utilities.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/locale.h>
+#include <openbabel/oberror.h>
 #include <openbabel/elements.h>
 
 // data headers with default parameters
@@ -41,9 +44,9 @@ using namespace std;
 
 namespace OpenBabel
 {
-
-  OBTypeTable      ttab;
-  OBResidueData    resdat;
+  // Initialize the globals (declared in data.h)
+  OBTypeTable ttab;
+  OBResidueData resdat;
 
   OBAtomicHeatOfFormationTable::OBAtomicHeatOfFormationTable(void)
   {
@@ -99,7 +102,7 @@ namespace OpenBabel
     OBAtomHOF *oba;
 
     ptr = const_cast<char*>( strchr(line,'#'));
-    if (NULL != ptr)
+    if (nullptr != ptr)
       ptr[0] = '\0';
     if (strlen(line) > 0)
       {
@@ -451,7 +454,7 @@ namespace OpenBabel
     for (a1 = mol.BeginAtom(i);a1;a1 = mol.NextAtom(i))
       {
         r1 = a1->GetResidue();
-        if (r1 == NULL) // atoms may not have residues
+        if (r1 == nullptr) // atoms may not have residues
           continue;
 
         if (skipres.length() && r1->GetNumString() == skipres)
@@ -466,7 +469,7 @@ namespace OpenBabel
         for (j=i,a2 = mol.NextAtom(j);a2;a2 = mol.NextAtom(j))
           {
             r2 = a2->GetResidue();
-            if (r2 == NULL) // atoms may not have residues
+            if (r2 == nullptr) // atoms may not have residues
               continue;
 
             if (r1->GetNumString() != r2->GetNumString())
@@ -496,7 +499,7 @@ namespace OpenBabel
     skipres = ""; // don't skip any residues right now
     for (a1 = mol.BeginAtom(i);a1;a1 = mol.NextAtom(i))
       {
-        if (a1->GetAtomicNum() == OBElements::Oxygen && !a1->GetValence())
+        if (a1->GetAtomicNum() == OBElements::Oxygen && !a1->GetExplicitDegree())
           {
             a1->SetType("O3");
             continue;
@@ -508,16 +511,16 @@ namespace OpenBabel
           }
 
         //***valence rule for O-
-        if (a1->GetAtomicNum() == OBElements::Oxygen && a1->GetValence() == 1)
+        if (a1->GetAtomicNum() == OBElements::Oxygen && a1->GetExplicitDegree() == 1)
           {
             OBBond *bond;
             bond = (OBBond*)*(a1->BeginBonds());
-            if (bond->GetBO() == 2)
+            if (bond->GetBondOrder() == 2)
               {
                 a1->SetType("O2");
                 a1->SetHyb(2);
               }
-            else if (bond->GetBO() == 1)
+            else if (bond->GetBondOrder() == 1)
               {
                 // Leave the protonation/deprotonation to phmodel.txt
                 a1->SetType("O3");
@@ -529,7 +532,7 @@ namespace OpenBabel
           }
 
         r1 = a1->GetResidue();
-        if (r1 == NULL) continue; // atoms may not have residues
+        if (r1 == nullptr) continue; // atoms may not have residues
         if (skipres.length() && r1->GetNumString() == skipres)
           continue;
 
@@ -690,7 +693,7 @@ namespace OpenBabel
       // If all else fails, use the compiled in values
       if (_dataptr)
         {
-          obErrorLog.ThrowError(__FUNCTION__, "Cannot open " + _filename + " defaulting to compiled data.", obWarning);
+          obErrorLog.ThrowError(__FUNCTION__, "Cannot open " + _filename + " defaulting to compiled data.", obDebug);
 
           const char *p1,*p2;
           for (p1 = p2 = _dataptr;*p2 != '\0';++p2)

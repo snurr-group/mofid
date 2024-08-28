@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #ifdef WIN32
 #define USING_OBDLL
 #endif
-
+#include <cstdlib>
 #include <openbabel/babelconfig.h>
 #include <openbabel/base.h>
 #include <openbabel/mol.h>
@@ -232,7 +232,7 @@ int main(int argc,char **argv)
       totalSteps++;
 
       if (pFF->DetectExplosion()) {
-        cerr << "explosion has occured!" << endl;
+        cerr << "explosion has occurred!" << endl;
         conv.Write(&mol, &cout);
         return(1);
       } else

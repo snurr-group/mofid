@@ -26,6 +26,10 @@
 #include <openbabel/mol.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 
 #include <openbabel/obiter.h>
 #include <openbabel/data.h>
@@ -70,7 +74,7 @@ public:
     }
 
     /// Return MIME type, NULL in this case.
-    virtual const char* GetMIMEType() { return 0; };
+    virtual const char* GetMIMEType() { return nullptr; }
 
       /// Return read/write flag: read only.
     virtual unsigned int Flags()
@@ -105,11 +109,11 @@ OBMSMSFormat msmsFormat__;
 bool OBMSMSFormat::WriteMolecule( OBBase* pOb, OBConversion* pConv )
 {
     OBMol* pmol = dynamic_cast< OBMol* >(pOb);
-    if( pmol == 0 ) return false;
+    if (pmol == nullptr) return false;
 
     ostream& os = *pConv->GetOutStream();
 
-    const bool atomNames = pConv->IsOption( "a", OBConversion::OUTOPTIONS )!=NULL;
+    const bool atomNames = pConv->IsOption("a", OBConversion::OUTOPTIONS) != nullptr;
 
     // write header ?
 

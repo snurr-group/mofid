@@ -26,6 +26,8 @@ GNU General Public License for more details.
 #ifndef OB_SPECTROPHORE_H
 #define OB_SPECTROPHORE_H
 
+#include <openbabel/babelconfig.h>
+#include <vector>
 
 /** \file  spectrophore.h
  *  \brief Class to compute Spectrophores&tm;
@@ -37,9 +39,6 @@ GNU General Public License for more details.
 
 
 
-#include <set>
-#include <openbabel/mol.h>
-
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -49,6 +48,7 @@ GNU General Public License for more details.
 
 namespace OpenBabel
 {
+  class OBMol;
 
 /**
 \class  OBSpectrophore spectrophore.h <openbabel/spectrophore.h>
@@ -498,7 +498,7 @@ Spectrophores&tm; are recommended.
          NormalizationOption GetNormalization(void) const;
 
          /** Calling this method starts the calculation of the Spectrophore&tm;.
-         After succesful calculation, the Spectrophore&tm; is returned as a
+         After successful calculation, the Spectrophore&tm; is returned as a
          standard vector of 48 doubles. The 48 doubles are organised into 4 sets
          of 12 doubles each:-
          - numbers 01-11: Spectrophore&tm; values calculated from the atomic partial charges;

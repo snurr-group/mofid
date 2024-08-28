@@ -11,7 +11,6 @@
 #endif
 
 #include <openbabel/obutil.h>
-#include <openbabel/rand.h>
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/math/transform3d.h>
@@ -29,6 +28,7 @@
 #include <openbabel/reactionfacade.h>
 #include <openbabel/residue.h>
 #include <openbabel/internalcoord.h>
+#include <openbabel/bondtyper.h>
 
 #include <openbabel/ring.h>
 #include <openbabel/obconversion.h>
@@ -64,6 +64,9 @@
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/stereo/squareplanar.h>
 #include <openbabel/stereo/bindings.h>
+
+#include <openbabel/chains.h>
+#include <openbabel/obiter.h>
 %}
 
 // Set and reset dlopenflags so that plugin loading works fine for "import _openbabel"
@@ -208,7 +211,6 @@ OpenBabel::AliasData *toAliasData(OpenBabel::OBGenericData *data) {
 }
 %}
 CAST_GENERICDATA_TO(AngleData)
-CAST_GENERICDATA_TO(ChiralData)
 CAST_GENERICDATA_TO(CommentData)
 CAST_GENERICDATA_TO(ConformerData)
 CAST_GENERICDATA_TO(ExternalBondData)
@@ -230,6 +232,7 @@ CAST_GENERICDATA_TO(UnitCell)
 CAST_GENERICDATA_TO(VectorData)
 CAST_GENERICDATA_TO(VibrationData)
 CAST_GENERICDATA_TO(VirtualBond)
+CAST_GENERICDATA_TO(StereoBase)
 CAST_GENERICDATA_TO(TetrahedralStereo)
 CAST_GENERICDATA_TO(CisTransStereo)
 CAST_GENERICDATA_TO(SquarePlanarStereo)
@@ -243,7 +246,6 @@ CAST_GENERICDATA_TO(SquarePlanarStereo)
 %import <openbabel/babelconfig.h>
 
 %include <openbabel/data.h>
-%include <openbabel/rand.h>
 %include <openbabel/obutil.h>
 %include <openbabel/math/vector3.h>
 %warnfilter(503) OpenBabel::matrix3x3; // Not wrapping any of the overloaded operators
@@ -280,6 +282,17 @@ namespace std { class stringbuf {}; }
 %include <openbabel/format.h>
 %include <openbabel/obconversion.h>
 %include <openbabel/obfunctions.h>
+
+//avoid conflicts with OBElement; for consistency prefix all single 
+//character residue abbreviations with res
+%rename(resA) OpenBabel::OBResidueIndex::A;
+%rename(resC) OpenBabel::OBResidueIndex::C;
+%rename(resG) OpenBabel::OBResidueIndex::G;
+%rename(resT) OpenBabel::OBResidueIndex::T;
+%rename(resI) OpenBabel::OBResidueIndex::I;
+%rename(resU) OpenBabel::OBResidueIndex::U;
+
+%include <openbabel/elements.h>
 %include <openbabel/residue.h>
 %include <openbabel/internalcoord.h>
 %include <openbabel/atom.h>
@@ -320,7 +333,7 @@ OBMol.BeginResidues = OBMol.EndResidues = OBMol.BeginResidue = OBMol.EndResidue 
 // wrap GetRGB parameters
 %include "typemaps.i"
 %apply double *OUTPUT { double *r, double *g, double *b };
-%include <openbabel/elements.h>
+
 // void GetRGB(unsigned int atomic_number, double *r, double *g, double *b);
 %clear double *r, double *g, double *b;
 
@@ -522,6 +535,7 @@ ttab = cvar.ttab
 atomtyper = cvar.atomtyper
 aromtyper = cvar.aromtyper
 %}
+
 
 // Functions to set the log file to std::cout and std::cerr
 

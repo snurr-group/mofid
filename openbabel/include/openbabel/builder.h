@@ -26,12 +26,17 @@ GNU General Public License for more details.
 
 #include <list>
 #include <set>
-#include <openbabel/base.h>
-#include <openbabel/mol.h>
+
 #include <openbabel/stereo/stereo.h>
 
 namespace OpenBabel
 {
+  class OBMol;
+  class OBAtom;
+  class OBSmartsPattern;
+  class vector3;
+  class OBBitVec;
+
   //! \class OBBuilder builder.h <openbabel/builder.h>
   //! \brief Class to build 3D structures
   class OBAPI OBBuilder {
@@ -65,11 +70,14 @@ namespace OpenBabel
       //@}
 
 
+      //! Used by LoadFragments to check for invalid (all zero coordinates) fragments
+      void AddRingFragment(OBSmartsPattern *sp, const std::vector<vector3> &coords);
       //! Load fragment info from file, if is it has not already been done
       void LoadFragments();
       std::vector<vector3> GetFragmentCoord(std::string smiles);
 
-      /*! Get the position for a new neighbour on atom.
+      /*! Get the position for a new neighbour on atom.  Returns
+       * non-finite vector if there is no reasonable location.
        *  \param atom Atom for which we want a new neighbour location.
        *  \returns The position for the new atom.
        */
@@ -78,24 +86,24 @@ namespace OpenBabel
 
       /*! Atoms a and b are part of two fragments that are not connected in mol.
        *  Connect will translate and rotate the fragment that contains b so that
-       *  a and b are seperated by a bond. This bond is also added.
+       *  a and b are separated by a bond. This bond is also added.
        *  \param mol The molecule to be modified
        *  \param a Index for atom in fragment that should not be rotated.
        *  \param b Index for atom in fragment that should be rotated.
        *  \param newpos Direction for new bond between a and b
        *  \param bondOrder Bond order of the new bond between a and b.
-       *  \returns true if succesful or fails when failed (most likely cause
+       *  \returns true if successful or fails when failed (most likely cause
        *  for failing: a and b are in the same fragment, they are connected)
        */
       static bool Connect(OBMol &mol, int a, int b, vector3 &newpos, int bondOrder = 1);
       /*! Atoms a and b are part of two fragments that are not connected in mol.
        *  Connect will translate and rotate the fragment that contains b so that
-       *  a and b are seperated by a bond. This bond is also added.
+       *  a and b are separated by a bond. This bond is also added.
        *  \param mol The molecule to be modified
        *  \param a Index for atom in fragment that should not be rotated.
        *  \param b Index for atom in fragment that should be rotated.
        *  \param bondOrder Bond order of the new bond bewtween a and b.
-       *  \returns true if succesfull or fails when failed (most likely cause
+       *  \returns true if successful or fails when failed (most likely cause
        *  for failing: a and b are in the same fragment, they are connected)
        */
       static bool Connect(OBMol &mol, int a, int b, int bondOrder = 1);
@@ -157,10 +165,11 @@ namespace OpenBabel
 
     private:
       //! used to hold the fragments loaded in the constructor
-      static std::map<std::string, double> _torsion;
-      static std::vector<std::string> _fragments;
-      static std::map<std::string, int> _fragments_index;
-      static std::map<std::string, std::vector<vector3> > _fragments_cache;
+      //static std::map<std::string, double> _torsion;
+      static std::vector<std::string> _rigid_fragments;
+      static std::vector<std::pair<OBSmartsPattern*, std::vector<vector3> > > _ring_fragments;
+      static std::map<std::string, int> _rigid_fragments_index;
+      static std::map<std::string, std::vector<vector3> > _rigid_fragments_cache;
       //! Connect a ring fragment to an already matched fragment. Currently only
       //  supports the case where the fragments overlap at a spiro atom only.
       static void ConnectFrags(OBMol &mol, OBMol &workmol, std::vector<int> match, std::vector<vector3> coords,

@@ -36,11 +36,12 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
 #include <openbabel/parsmart.h>
 #include <openbabel/rotamer.h>
 //#include <unistd.h>
 #include <openbabel/obconversion.h>
-
+#include <cstdlib>
 using namespace std;
 using namespace OpenBabel;
 
@@ -51,7 +52,7 @@ int main(int argc,char **argv)
   OBAtom *a1, *a2, *a3, *a4;
   unsigned int smartor[4]= {0,0,0,0};// atoms of the tortional in the SMART
   float angle =   0;      // tortional angle value to set in degree
-  char *FileIn =NULL, *Pattern=NULL;
+  char *FileIn = nullptr, *Pattern = nullptr;
   unsigned int i, t, errflg = 0;
   int c;
   string err;

@@ -8,7 +8,6 @@
 
 
 #include <openbabel/obutil.h>
-#include <openbabel/rand.h>
 #include <openbabel/math/vector3.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/math/transform3d.h>
@@ -17,6 +16,7 @@
 #include <openbabel/generic.h>
 #include <openbabel/griddata.h>
 
+#include <openbabel/elements.h>
 #include <openbabel/base.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
@@ -56,6 +56,9 @@
 #include <openbabel/stereo/cistrans.h>
 #include <openbabel/stereo/squareplanar.h>
 #include <openbabel/stereo/bindings.h>
+
+#include <openbabel/chains.h>
+#include <openbabel/obiter.h>
 %}
 
 
@@ -72,6 +75,14 @@
 %include "std_string.i"
 %include "std_pair.i"
 %include "cpointer.i"
+%include "std/std_iostream.i"
+
+// fix bug in std_Vector.i
+%apply const std::vector<unsigned int>& { std::vector<unsigned int>& }
+%apply const std::vector<vector<int>>& { std::vector<vector<int>>& }
+
+%apply std::vector<unsigned int> &INOUT {std::vector<unsigned int> &};
+
 
 %pointer_class(std::string,stringp)
 %typemap("rtype")  const std::string & "character"; //add typemap for const references
@@ -99,10 +110,8 @@
        return new std::ofstream(filename);
     }
     const std::string stringFromOstream(const std::ostringstream* os){
-     // return (os->str()).c_str();
       return os->str();
     }
-
 %}
 
 
@@ -213,7 +222,6 @@ OpenBabel::AliasData *toAliasData(OpenBabel::OBGenericData *data) {
 }
 %}
 CAST_GENERICDATA_TO(AngleData)
-CAST_GENERICDATA_TO(ChiralData)
 CAST_GENERICDATA_TO(CommentData)
 CAST_GENERICDATA_TO(ConformerData)
 CAST_GENERICDATA_TO(ExternalBondData)
@@ -256,7 +264,6 @@ CAST_GENERICDATA_TO(VirtualBond)
 
 %warnfilter(516) OpenBabel::OBElementTable; // Ignoring std::string methods in favour of char* ones
 %include <openbabel/data.h>
-%include <openbabel/rand.h>
 %include <openbabel/obutil.h>
 %warnfilter(516) OpenBabel::vector3; // Using the const x(), y() and z() in favour of the non-const
 %include <openbabel/math/vector3.h>
@@ -300,8 +307,15 @@ namespace std { class stringbuf {}; }
 %ignore OpenBabel::OBConversion::FindFormat(const char *);
 %ignore OpenBabel::OBConversion::FormatFromExt(const char *);
 %include <openbabel/obconversion.h>
+
+
+//avoid conflicts with OBElement
+%rename(resC) OpenBabel::OBResidueIndex::C;
+%rename(resI) OpenBabel::OBResidueIndex::I;
+%rename(resU) OpenBabel::OBResidueIndex::U;
 %include <openbabel/residue.h>
 %include <openbabel/internalcoord.h>
+%include <openbabel/elements.h>
 
 %typemap(javacode) OpenBabel::OBAtom
 %{

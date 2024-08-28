@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <openbabel/obconversion.h>
 #include "deferred.h"
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -53,8 +54,8 @@ public:
     return description.c_str();
   }
 
-  virtual bool WorksWith(OBBase* pOb)const{ return dynamic_cast<OBMol*>(pOb)!=NULL; }
-  virtual bool Do(OBBase* pOb, const char* OptionText=NULL, OpMap* pOptions=NULL, OBConversion* pConv=NULL);
+  virtual bool WorksWith(OBBase* pOb) const { return dynamic_cast<OBMol*>(pOb) != nullptr; }
+  virtual bool Do(OBBase* pOb, const char* OptionText=nullptr, OpMap* pOptions=nullptr, OBConversion* pConv=nullptr);
   virtual bool ProcessVec(vector<OBBase*>& vec);
   static bool MatchPairData(OBBase* pOb, std::string& s); //Copy of protected OBDescriptor function
 
@@ -108,7 +109,7 @@ bool OpLargest::Do(OBBase* pOb, const char* OptionText, OpMap* pOptions, OBConve
     //If the first molecule has matching OBPairData, use that and set _pDesc to NULL
     if(!vec.empty() && MatchPairData(pOb, vec[idesc]))
     {
-      _pDesc = NULL;
+      _pDesc = nullptr;
       _prop = vec[idesc];
     }
     else

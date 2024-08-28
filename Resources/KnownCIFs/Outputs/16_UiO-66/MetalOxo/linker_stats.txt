@@ -1,0 +1,2 @@
+RHFSRTQXETUEBB-UHFFFAOYSA-L	2	24	InChI=1S/C8H2O4/c9-7(10)5-1-2-6(4-3-5)8(11)12/h(H,9,10)(H,11,12)/p-2	RHFSRTQXETUEBB	[O-]C(=O)C1=[C][C]=C([C]=[C]1)C(=O)[O-]	[O-][C]([C]1[C][C][C]([C][C]1)[C]([O])[O-])[O]
+

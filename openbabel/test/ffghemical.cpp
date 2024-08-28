@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <fstream>
+#include <cstdlib>
 
 #include <openbabel/mol.h>
 #include <openbabel/obconversion.h>
@@ -100,7 +101,7 @@ int ffghemical(int argc, char* argv[])
     
   OBForceField* pFF = OBForceField::FindForceField("Ghemical");
 
-  if (pFF == NULL) {
+  if (pFF == nullptr) {
     cerr << "Bail out! Cannot load force field!" << endl;
     return -1; // test failed
   }
@@ -177,7 +178,7 @@ void PGenerateEnergies()
 
   OBForceField* pFF = OBForceField::FindForceField("Ghemical");
 
-  if (pFF == NULL) {
+  if (pFF == nullptr) {
     cerr << "Cannot load force field!" << endl;
     return;
   }

@@ -16,9 +16,11 @@
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
 #include <openbabel/atom.h>
+#include <openbabel/bond.h>
 #include <openbabel/generic.h>
 #include <openbabel/obconversion.h>
 #include <openbabel/obiter.h>
+#include <openbabel/ring.h>
 #include <openbabel/elements.h>
 
 
@@ -336,7 +338,7 @@ void Deconstructor::SimplifyTopology() {
 		for (AtomSet::iterator it=net_1c_without_conn.begin(); it!=net_1c_without_conn.end(); ++it) {
 			// Unlike the earlier algorithm, we can use the raw valence of the test point
 			// because the SimplifyAxB method takes care of duplicate connections
-			if ((*it)->GetValence() == 1) {
+			if ((*it)->GetExplicitDegree() == 1) {
 				// Find the neighbor of the 1-coordinated PA.
 				// .begin() returns the first (in this case, only) element in the internal->external map.
 				PseudoAtom it_conn = VirtualMol(*it).GetExternalBondsOrConns().begin()->second;
@@ -345,7 +347,7 @@ void Deconstructor::SimplifyTopology() {
 				PseudoAtom nbor_of_1c = it_and_conn.GetExternalBondsOrConns().begin()->second;
 
 				if (simplified_net.AtomHasRole(*it, "node")) {
-					if (nbor_of_1c->GetValence() == 1) {
+					if (nbor_of_1c->GetExplicitDegree() == 1) {
 						obErrorLog.ThrowError(__FUNCTION__, "Not collapsing 1-c node into a 1-c linker", obInfo);
 					} else {
 						simplified_net.MergeAtomToAnother(*it, nbor_of_1c);
@@ -362,7 +364,7 @@ void Deconstructor::SimplifyTopology() {
 				} else {
 					obErrorLog.ThrowError(__FUNCTION__, "Unexpected atom role in the simplified net.", obWarning);
 				}
-			} else if ((*it)->GetValence() == 0) {
+			} else if ((*it)->GetExplicitDegree() == 0) {
 				// Free solvents are isolated without any external connections
 				simplified_net.DeleteAtomAndConns(*it, "free solvent");
 				++simplifications;
@@ -525,7 +527,7 @@ void MetalOxoDeconstructor::PostSimplification() {
 		AtomSet for_net_4c = simplified_net.GetAtoms(false).GetAtoms();
 		for (AtomSet::iterator it_4c=for_net_4c.begin(); it_4c!=for_net_4c.end(); ++it_4c) {
 			PseudoAtom sq_4c = *it_4c;
-			if (sq_4c->GetValence() == 4 && simplified_net.AtomHasRole(sq_4c, "linker")) {
+			if (sq_4c->GetExplicitDegree() == 4 && simplified_net.AtomHasRole(sq_4c, "linker")) {
 				simplified_net.SplitFourVertexIntoTwoThree(sq_4c);
 			}
 		}
@@ -689,7 +691,7 @@ std::string MetalOxoDeconstructor::GetLinkerStats(std::string sep) {
 		const bool skeleton_flag = true;
 		ikey_to_smiles[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, !skeleton_flag));
 		ikey_to_smiles_skeleton[pa_ikey] = rtrimWhiteSpace(getSMILES(orig_linker, obconv, skeleton_flag));
-		ikey_to_conn[pa_ikey] = (*pa)->GetValence();
+		ikey_to_conn[pa_ikey] = (*pa)->GetExplicitDegree();
 	}
 
 	for (std::vector<std::string>::iterator it=ikeys.begin(); it!=ikeys.end(); ++it) {
@@ -742,10 +744,10 @@ void StandardIsolatedDeconstructor::SimplifyTopology() {
 		// Simplify the adjacency matrix by outright deleting 0-c and 1-c sites
 		AtomSet base_pas = simplified_net.GetAtoms(false).GetAtoms();
 		for (AtomSet::iterator it=base_pas.begin(); it!=base_pas.end(); ++it) {
-			if ((*it)->GetValence() == 1) {
+			if ((*it)->GetExplicitDegree() == 1) {
 				simplified_net.DeleteAtomAndConns(*it, "deleted 1-c site");
 				++simplifications;
-			} else if ((*it)->GetValence() == 0) {
+			} else if ((*it)->GetExplicitDegree() == 0) {
 				simplified_net.DeleteAtomAndConns(*it, "deleted 0-c site");
 				++simplifications;
 			}
@@ -858,7 +860,7 @@ std::pair<VirtualMol,VirtualMol> SingleNodeDeconstructor::CalculateNonmetalRing(
 	OBAtom* curr_ring_atom = seen[b];
 	while (curr_ring_atom != a) {
 		ring.AddAtom(curr_ring_atom);
-		if (curr_ring_atom->GetValence() > 2) {  // has non-ring coordination
+		if (curr_ring_atom->GetExplicitDegree() > 2) {  // has non-ring coordination
 			VirtualMol substituents = GetNonmetalRingSubstituent(curr_ring_atom);
 			if (substituents.NumAtoms() == 1) {  // single curr_ring_atom if connection has rings, metals, etc.
 				atoms_with_ring_nbors.AddAtom(curr_ring_atom);
@@ -1223,12 +1225,12 @@ void AllNodeDeconstructor::CollapseLinkers() {
 			if (pa->GetAtomicNum() == TREE_EXT_CONN || pa->GetAtomicNum() == TREE_INT_BRANCH) {
 				// Check expected valencies
 				if (pa->GetAtomicNum() == TREE_EXT_CONN) {
-					if (pa->GetValence() != 1) {
+					if (pa->GetExplicitDegree() != 1) {
 						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_EXT_CONN with an unexpected implicit valence", obError);
 						continue;
 					}
 				} else if (pa->GetAtomicNum() == TREE_INT_BRANCH) {
-					if (pa->GetValence() != 2) {
+					if (pa->GetExplicitDegree() != 2) {
 						obErrorLog.ThrowError(__FUNCTION__, "Found TREE_INT_BRANCH with an unexpected valence", obError);
 						continue;
 					}
@@ -1398,7 +1400,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 		simplifications = 0;
 		ConnIntToExt pa_to_1c;
 		FOR_ATOMS_OF_MOL(a, *frag_molp) {
-			if (a->GetValence() == 1 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT) {
+			if (a->GetExplicitDegree() == 1 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT) {
 				FOR_NBORS_OF_ATOM(nbor, *a) {  // get the 1 neighbor (inner to fragment)
 					pa_to_1c.insert(AtomPair(&*nbor, &*a));
 				}
@@ -1426,12 +1428,12 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 	// Differentiate between truly external connectors and internal branch points containing connection sites.
 	FOR_ATOMS_OF_MOL(a, frag_molp) {
 		if (a->GetAtomicNum() == TREE_EXT_CONN) {
-			if (a->GetValence() == 0) {
+			if (a->GetExplicitDegree() == 0) {
 				if (frag_molp->NumAtoms() > 1) {
 					obErrorLog.ThrowError(__FUNCTION__, "AssertionError: found TREE_EXT_CONN PA disconnected from the rest of the graph", obError);
 				}
 				a->SetAtomicNum(TREE_BRANCH_POINT);  // everything collapsed to a single point, e.g. pyrazine
-			} else if (a->GetValence() == 1) {
+			} else if (a->GetExplicitDegree() == 1) {
 				// Keep it as type TREE_EXT_CONN: 2-c with explicit connection plus an implicit external connection
 			} else {  // total valence is 3+
 				a->SetAtomicNum(TREE_BRANCH_POINT);
@@ -1453,7 +1455,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 					// nbor should only connects to TREE_EXT_CONN and (optionally) one other site,
 					// otherwise it's a branch point.
 					// Handle the conn-conn case separately as another step
-					if (nbor->GetValence() < 3 && nbor->GetAtomicNum() != TREE_EXT_CONN && nbor->GetAtomicNum() != TREE_BRANCH_POINT) {
+					if (nbor->GetExplicitDegree() < 3 && nbor->GetAtomicNum() != TREE_EXT_CONN && nbor->GetAtomicNum() != TREE_BRANCH_POINT) {
 						// Only allow one connector to claim the nbor.  Otherwise, you could have
 						// two connectors competing to simplify conn-2c-conn.
 						bool new_pa_simplification = true;
@@ -1498,9 +1500,9 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 	std::vector<VirtualMol> pairs_of_1c_conns;  // can't use a set because VirtualMols have no comparison operator
 	VirtualMol simplified_1c(frag_molp);
 	FOR_ATOMS_OF_MOL(a, frag_molp) {
-		if (a->GetAtomicNum() == TREE_EXT_CONN && a->GetValence() == 1) {
+		if (a->GetAtomicNum() == TREE_EXT_CONN && a->GetExplicitDegree() == 1) {
 			FOR_NBORS_OF_ATOM(a_nbor, *a) {
-				if (a_nbor->GetAtomicNum() == TREE_EXT_CONN && a_nbor->GetValence() == 1) {
+				if (a_nbor->GetAtomicNum() == TREE_EXT_CONN && a_nbor->GetExplicitDegree() == 1) {
 					if (!simplified_1c.HasAtom(&*a) && !simplified_1c.HasAtom(&*a_nbor)) {
 						simplified_1c.AddAtom(&*a);
 						simplified_1c.AddAtom(&*a_nbor);
@@ -1538,7 +1540,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 	std::vector<VirtualMol> branches_to_combine;
 	VirtualMol visited_branches(frag_molp);
 	FOR_ATOMS_OF_MOL(a, frag_molp) {
-		if (a->GetValence() == 2 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT && !visited_branches.HasAtom(&*a)) {
+		if (a->GetExplicitDegree() == 2 && a->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT && !visited_branches.HasAtom(&*a)) {
 			// Use a BFS to get all adjacent 2-c sites
 			VirtualMol a_nbors(frag_molp);
 			std::queue<PseudoAtom> to_visit;
@@ -1551,7 +1553,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 				a_nbors.AddAtom(curr_bfs);
 
 				FOR_NBORS_OF_ATOM(nbor, curr_bfs) {
-					if (nbor->GetValence() == 2 && nbor->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT && !visited_branches.HasAtom(&*nbor)) {
+					if (nbor->GetExplicitDegree() == 2 && nbor->GetAtomicNum() != TREE_EXT_CONN && a->GetAtomicNum() != TREE_BRANCH_POINT && !visited_branches.HasAtom(&*nbor)) {
 						to_visit.push(&*nbor);
 					}
 				}
@@ -1593,7 +1595,7 @@ void AllNodeDeconstructor::TreeDecomposition(MappedMol *fragment_to_simplify, Vi
 			// Already detected
 		} else if (a->GetAtomicNum() != TREE_INT_BRANCH && a->GetAtomicNum() != TREE_EXT_CONN) {
 			a->SetAtomicNum(TREE_BRANCH_POINT);
-			if (a->GetValence() < 3) {
+			if (a->GetExplicitDegree() < 3) {
 				obErrorLog.ThrowError(__FUNCTION__, "Found branch point with fewer than three connections.", obError);
 			}
 		}

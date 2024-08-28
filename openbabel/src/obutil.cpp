@@ -20,7 +20,12 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <openbabel/math/matrix3x3.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
 #include <openbabel/obutil.h>
+#include <openbabel/internalcoord.h>
+
+#include <cstring>
 
 #ifdef HAVE_CONIO_H
 #include <conio.h>
@@ -447,9 +452,9 @@ namespace OpenBabel
     if (vic.empty())
       return;
 
-    if (vic[0] != NULL) {
+    if (vic[0] != nullptr) {
       std::vector<OBInternalCoord*>::iterator it = vic.begin();
-      vic.insert(it, static_cast<OBInternalCoord*>(NULL));
+      vic.insert(it, nullptr);
     }
 
     if (vic.size() != mol.NumAtoms() + 1) {

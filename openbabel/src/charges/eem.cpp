@@ -18,10 +18,14 @@ GNU General Public License for more details.
 
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/chargemodel.h>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/molchrg.h>
 #include <openbabel/elements.h>
 
@@ -225,7 +229,7 @@ namespace OpenBabel
     unsigned int i, j, k, kMax, iMax;
     std::vector<double> vScales(dim, 0);
     double maxVal = 0, dummy = 0;
-    double * pRowi = NULL;
+    double * pRowi = nullptr;
 
     // first find the highest pivot element in each row and store it for implicit scaling
     for (i = 0; i < dim; ++i)

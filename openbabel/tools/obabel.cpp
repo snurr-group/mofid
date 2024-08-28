@@ -58,8 +58,8 @@ int main(int argc,char *argv[])
 {
   OBConversion Conv(&cin, &cout); //default input and output are console 
 
-  OBFormat* pInFormat = NULL;
-  OBFormat* pOutFormat = NULL;
+  OBFormat* pInFormat = nullptr;
+  OBFormat* pOutFormat = nullptr;
   bool outGzip = false;
   vector<string> FileList, OutputFileList;
   string OutputFileName;
@@ -68,8 +68,8 @@ int main(int argc,char *argv[])
   bool gotInType = false, gotOutType = false;
   bool SplitOrBatch=false;
 
-  char *oext = NULL;
-  char *iext = NULL;
+  char *oext = nullptr;
+  char *iext = nullptr;
 
   //Save name of program without its path (and .exe)
   string pn(argv[0]);
@@ -120,10 +120,11 @@ int main(int argc,char *argv[])
                     }
                   else
                       pInFormat = Conv.FindFormat(iext);
-                  if(pInFormat==NULL)
+                  if (pInFormat == nullptr)
                     {
                       cerr << program_name << ": cannot read input format!" << endl;
                       usage();
+                      exit(1);
                     }
                   break;
 
@@ -143,22 +144,23 @@ int main(int argc,char *argv[])
                   else
                     pOutFormat = Conv.FindFormat(oext);
 
-                  if(pOutFormat==NULL)
+                  if (pOutFormat == nullptr)
                     {
                       cerr << program_name << ": cannot write output format!" << endl;
                       usage();
+                      exit(1);
                     }
                   break;
 
                 case 'O':
                   OutputFileName = argv[arg] + 2;
-                  if(OutputFileName.size()<3)
+                  if(OutputFileName.empty())
                     OutputFileName = argv[++arg]; //space left after -O: use next argument
                   break;
 
                 case 'L': //display a list of plugin type or classes
                   {
-                    const char* param=NULL;
+                    const char* param = nullptr;
                     if(argc>arg+1)
                       param = argv[arg+2];
 
@@ -168,7 +170,7 @@ int main(int argc,char *argv[])
                     OBPlugin* plugin;
                     if ((OBPlugin::GetPlugin("plugins", argv[arg+1]) &&
                          (plugin = OBPlugin::GetPlugin(argv[arg+1], param))) ||
-                        (plugin = OBPlugin::GetPlugin(NULL, argv[arg+1])))
+                        (plugin = OBPlugin::GetPlugin(nullptr, argv[arg+1])))
                     {
                       //Output details of subtype
                       string txt;
@@ -242,7 +244,7 @@ int main(int argc,char *argv[])
                               {
                                 apiConv.SetOutFormat(pAPI);
                                 apiConv.AddOption(nam+1, OBConversion::GENOPTIONS, txt.c_str());
-                                apiConv.Write(NULL, &std::cout);
+                                apiConv.Write(nullptr, &std::cout);
                               }
                           }
                         else
@@ -313,6 +315,7 @@ int main(int argc,char *argv[])
           cerr << "No input file or format spec or possibly a misplaced option.\n"
             "Most options must come after the input files. (-i -o -O -m can be anywhwere.)\n" <<endl;
           usage();
+          exit(1);
         }
     }
 
@@ -320,11 +323,12 @@ int main(int argc,char *argv[])
     {
       //check there is a valid output format, but the extension will be re-interpreted in OBConversion
       pOutFormat = Conv.FormatFromExt(OutputFileName.c_str(), outGzip);
-      if(OutputFileName.empty() || pOutFormat==NULL)
+      if (OutputFileName.empty() || pOutFormat==nullptr)
         {
           cerr << "Missing or unknown output file or format spec or possibly a misplaced option.\n"
             "Options, other than -i -o -O -m, must come after the input files.\n" <<endl;
           usage();
+          exit(1);
         }
     }
   
@@ -332,11 +336,13 @@ int main(int argc,char *argv[])
     {
       cerr << "Invalid input format" << endl;
       usage();
+      exit(1);
     }
     if(!Conv.SetOutFormat(pOutFormat, outGzip))
     {
       cerr << "Invalid output format" << endl;
       usage();
+      exit(1);
     }
 
   if(SplitOrBatch)
@@ -413,14 +419,12 @@ void usage()
   cout << "Usage:\n" << program_name
        << " [-i<input-type>] <infilename> [-o<output-type>] -O<outfilename> [Options]" << endl;
   cout << "Try  -H option for more information." << endl;
-  
+
 #ifdef _DEBUG
   //CM keep window open
   cout << "Press any key to finish" <<endl;
   getch();
 #endif
-  
-  exit (0);
 }
 
 void help()
@@ -549,6 +553,7 @@ void help()
 *  \n    ccc -- CCC format [Readonly]
 *  \n    cht -- ChemTool format [Writeonly]
 *  \n    cml -- Chemical Markup Language
+*  \n    com -- Gaussian Cartesian Input [Writeonly]
 *  \n    crk2d -- Chemical Resource Kit diagram format (2D)
 *  \n    crk3d -- Chemical Resource Kit 3D format
 *  \n    csr -- CSR format [Writeonly]
@@ -559,13 +564,16 @@ void help()
 *  \n    feat -- Feature format
 *  \n    fh -- Fenske-Hall Z-Matrix format [Writeonly]
 *  \n    fix -- FIX format [Writeonly]
-*  \n    g03 -- Gaussian98/03 Cartesian [Writeonly]
-*  \n    g98 -- Gaussian98/03 Cartesian [Writeonly]
+*  \n    g03 -- Gaussian 98/03 Output [Readonly]
+*  \n    g98 -- Gaussian 98/03 Output [Readonly]
 *  \n    gam -- GAMESS Output
 *  \n    gamout -- GAMESS Output
-*  \n    gau -- Gaussian98/03 Cartesian [Writeonly]
+*  \n    gau -- Gaussian Cartesian Input [Writeonly]
+*  \n    gjc -- Gaussian Cartesian Input [Writeonly]
+*  \n    gjf -- Gaussian Cartesian Input [Writeonly]
 *  \n    gpr -- Ghemical format
 *  \n    gr96 -- GROMOS96 format [Writeonly]
+*  \n    gzmat -- Gaussian Z-Matrix Input
 *  \n    hin -- HyperChem Input format
 *  \n    ins -- ShelX format [Readonly]
 *  \n    jout -- Jaguar output format

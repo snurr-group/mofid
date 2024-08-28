@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 #include <openbabel/op.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/base.h>
 
 namespace OpenBabel
 {
@@ -33,7 +34,7 @@ public:
     ; }
 
   virtual bool WorksWith(OBBase* pOb)const{ return true; } //all OBBase objects
-  virtual bool Do(OBBase* pOb, const char* OptionText=NULL, OpMap* pOptions=NULL, OBConversion* pConv=NULL);
+  virtual bool Do(OBBase* pOb, const char* OptionText=nullptr, OpMap* pOptions=nullptr, OBConversion* pConv=nullptr);
 };
 
 /////////////////////////////////////////////////////////////////

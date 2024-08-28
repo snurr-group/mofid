@@ -15,6 +15,11 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/internalcoord.h>
+
 
 using namespace std;
 namespace OpenBabel
@@ -60,7 +65,7 @@ FenskeZmatFormat theFenskeZmatFormat;
 bool FenskeZmatFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
         return false;
 
     //Define some references so we can use the old parameter names
@@ -72,7 +77,7 @@ bool FenskeZmatFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
     vector<OBAtom*>::iterator i;
 
     vector<OBInternalCoord*> vic;
-    vic.push_back((OBInternalCoord*)NULL);
+    vic.push_back(nullptr);
     for (atom = mol.BeginAtom(i);atom;atom = mol.NextAtom(i))
         vic.push_back(new OBInternalCoord);
 

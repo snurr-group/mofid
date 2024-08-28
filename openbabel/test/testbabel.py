@@ -19,7 +19,7 @@ import re
 import sys
 import unittest
 
-from subprocess import Popen, PIPE, check_output, STDOUT
+from subprocess import CalledProcessError, Popen, PIPE, check_output, STDOUT
 
 def run_exec(*args):
     """Run one of OpenBabel's executables
@@ -27,7 +27,7 @@ def run_exec(*args):
     With two arguments (stdin, commandline) it pipes
     the stdin through the executable.
 
-    Example: run_exec("CC(=O)Cl", "babel -ismi -oinchi")
+    Example: run_exec("CC(=O)Cl", "obabel -ismi -oinchi")
 
     Return a tuple (stdout, stderr)
     """
@@ -38,8 +38,12 @@ def run_exec(*args):
     else:
         raise Exception("One or two arguments expected")
 
-    broken = commandline.encode().split()
-    exe = executable(broken[0].decode())
+    if sys.platform.startswith("win"):
+        broken = commandline.split()
+        exe = executable(broken[0])
+    else:
+        broken = commandline.encode().split()
+        exe = executable(broken[0].decode())
     # Note that bufsize = -1 means default buffering
     # Without this, it's unbuffered and it takes 10x longer on MacOSX
     if text:
@@ -51,6 +55,9 @@ def run_exec(*args):
                   stdout=PIPE, stderr=PIPE, bufsize=-1)
         stdout, stderr = p.communicate()
 
+    if p.returncode and len(stderr) == 0:
+        #should never exit with an error without an error message
+        raise CalledProcessError(p.returncode,commandline,stdout.decode())
     return stdout.decode(), stderr.decode()
 
 def executable(name):
@@ -67,9 +74,8 @@ def log(text):
 
     The log file (log.txt) is created in build/test
     """
-    output = open("log.txt", "a")
-    print >> output, text
-    output.close()
+    with open("log.txt", "a") as output:
+        output.write(text + "\n")
 
 class BaseTest(unittest.TestCase):
     """A base class for test classes that adds additional
@@ -109,6 +115,15 @@ class TestOBabel(BaseTest):
         """Ensure that this does not segfault (PR#1818)"""
         self.canFindExecutable("obabel")
         output, error = run_exec("obabel -i")
+        self.assertTrue(len(output) > 1, "Did not generate output")
+        self.assertTrue(len(error) > 1, "Did not generate error message")
+
+    def testShortOutfileName(self):
+        # Test that -O can handle short file names
+        # if not the command will show warning on 2D coords
+        self.canFindExecutable("obabel")
+        _, errormsg = run_exec("CCC", "obabel -ismi -omol -Otf --gen2D")
+        self.assertFalse("No 2D or 3D coordinates" in errormsg)
 
     def testSMItoInChI(self):
         self.canFindExecutable("obabel")
@@ -190,48 +205,232 @@ REMARK    5  A    between atoms: CZ_11  and  OH_12
 REMARK                            x       y       z     vdW  Elec       q    Type
 REMARK                         _______ _______ _______ _____ _____    ______ ____
 ROOT
-ATOM      1  CG  TYR A   1      36.534  51.990  63.891  0.00  0.00    +0.000 A 
-ATOM      2  CD2 TYR A   1      37.369  53.085  64.053  0.00  0.00    +0.000 A 
-ATOM      3  CD1 TYR A   1      35.949  51.786  62.644  0.00  0.00    +0.000 A 
-ATOM      4  CE2 TYR A   1      37.618  53.971  62.993  0.00  0.00    +0.000 A 
-ATOM      5  CE1 TYR A   1      36.180  52.653  61.580  0.00  0.00    +0.000 A 
-ATOM      6  CZ  TYR A   1      37.010  53.742  61.763  0.00  0.00    +0.000 A 
+ATOM      1  CG  TYR A   5      36.534  51.990  63.891  0.00  0.00    +0.000 A 
+ATOM      2  CD1 TYR A   5      37.369  53.085  64.053  0.00  0.00    +0.000 A 
+ATOM      3  CD2 TYR A   5      35.949  51.786  62.644  0.00  0.00    +0.000 A 
+ATOM      4  CE1 TYR A   5      37.618  53.971  62.993  0.00  0.00    +0.000 A 
+ATOM      5  CE2 TYR A   5      36.180  52.653  61.580  0.00  0.00    +0.000 A 
+ATOM      6  CZ  TYR A   5      37.010  53.742  61.763  0.00  0.00    +0.000 A 
 ENDROOT
 BRANCH   6   7
-ATOM      7  OH  TYR A   1      37.199  54.607  60.730  0.00  0.00    +0.000 OA
-ATOM      8  HH  TYR A   1      36.875  54.171  59.926  0.00  0.00    +0.000 HD
+ATOM      7  OH  TYR A   5      37.199  54.607  60.730  0.00  0.00    +0.000 OA
+ATOM      8  HH  TYR A   5      36.875  54.171  59.926  0.00  0.00    +0.000 HD
 ENDBRANCH   6   7
 BRANCH   1   9
-ATOM      9  CB  TYR A   1      36.233  51.055  65.045  0.00  0.00    +0.000 C 
+ATOM      9  CB  TYR A   5      36.233  51.055  65.045  0.00  0.00    +0.000 C 
 BRANCH   9  10
-ATOM     10  CA  TYR A   1      35.195  51.589  66.041  0.00  0.00    +0.000 C 
+ATOM     10  CA  TYR A   5      35.195  51.589  66.041  0.00  0.00    +0.000 C 
 BRANCH  10  11
-ATOM     11  N   TYR A   1      35.078  50.693  67.193  0.00  0.00    +0.000 NA
-ATOM     12  H   TYR A   1      35.302  49.703  67.057  0.00  0.00    +0.000 HD
+ATOM     11  N   TYR A   5      35.078  50.693  67.193  0.00  0.00    +0.000 NA
+ATOM     12  H   TYR A   5      35.302  49.703  67.057  0.00  0.00    +0.000 HD
 ENDBRANCH  10  11
 BRANCH  10  13
-ATOM     13  C   TYR A   1      33.792  51.581  65.423  0.00  0.00    +0.000 C 
-ATOM     14  O   TYR A   1      33.362  50.580  64.852  0.00  0.00    +0.000 OA
+ATOM     13  C   TYR A   5      33.792  51.581  65.423  0.00  0.00    +0.000 C 
+ATOM     14  O   TYR A   5      33.362  50.580  64.852  0.00  0.00    +0.000 OA
 ENDBRANCH  10  13
 ENDBRANCH   9  10
 ENDBRANCH   1   9
 TORSDOF 5
 '''
         output, error = run_exec(pdb, "obabel -ipdb -opdbqt")
-        self.assertEqual(output, pdbqt)        
+        self.assertEqual(output.replace("\r", ""), pdbqt.replace("\r", ""))
 
     def testMissingPlugins(self):
+        if sys.platform.startswith("win32"):
+            return
         libdir = os.environ.pop("BABEL_LIBDIR", None)
         os.environ["BABEL_LIBDIR"] = ""
 
         obabel = executable("obabel")
-        msg = check_output('%s -:C -osmi' % obabel, shell=True, stderr=STDOUT, universal_newlines=True)
+        with self.assertRaises(CalledProcessError) as cm:
+            check_output('%s -:C -osmi' % obabel, shell=True, stderr=STDOUT, universal_newlines=True)
+        msg = cm.exception.output
         if libdir:
             os.environ["BABEL_LIBDIR"] = libdir
         else:
             os.environ.pop("BABEL_LIBDIR")
 
         self.assertTrue('BABEL_LIBDIR' in msg)
+
+    def testCOFtoCAN(self):
+        self.canFindExecutable("obabel")
+        listCOFnames = [
+                'culgi_00',
+                'culgi_01',
+                'culgi_02',
+                'culgi_03',
+                'culgi_04',
+                'culgi_05',
+                'culgi_06',
+                'culgi_07',
+                'culgi_08',
+                'culgi_09',
+                'culgi_10',
+                'culgi_11',
+                ]
+        listCANexpected = [
+                '[O-]C(=O)Cc1cccc2c1oc1c(C)c(C)ccc1c2=O',
+                'C=Cc1c[nH]c(=O)[nH]c1=O',
+                'C[C@@H](Cc1ccc(cc1)I)[NH2+]C(C)C',
+                '[NH3+]C[C@@H]1O[C@@H](Cc2c1ccc(c2O)O)[C@]12C[C@H]3C[C@@H](C2)C[C@@H](C1)C3',
+                '[O-]C(=O)[C@H](CCCNC(=[NH2+])N)[NH3+]',
+                'ClC(=O)C(C)(C)C',
+                'CC#CCOC(=O)c1c(C)nc2c(c1N)c1CC[C@H](Cc1s2)O',
+                'OC[C@H]1O[C@H](C[C@@H]1F)n1ccc(=O)[nH]c1=O',
+                'OC[C@H]1O[C@H]([C@@H]([C@@H]1O)O)n1cnc2c1ncnc2N[C@H]1CCC[C@@H]1O',
+                '[O-]C(=O)CC[C@H]([NH3+])C=C',
+                'O=[S@@](c1nc2c([nH]1)cccc2)Cc1nccc(c1C)OCC(F)(F)F',
+                'C#C[C@]1(O)CC[C@@H]2[C@]1(C)CC[C@H]1[C@H]2CCc2c1ccc(c2)O',
+                ]
+        for cofname, CAN in zip(listCOFnames, listCANexpected):
+            coffilename = cofname + '.cof'
+            if(cofname == 'culgi_06'):
+                cofname = 'mol24' # Special case: 'internal name' not the same as file name
+            coffile = self.getTestFile(coffilename)
+            cansmi = CAN + '\t' + cofname # Expected SMILES line plus molecule name
+            output, error = run_exec( "obabel -icof -ocan %s" % coffile)
+            self.assertEqual(output.rstrip('\r\n'), cansmi)
+
+    def testCOFtoMOL(self):
+        self.canFindExecutable("obabel")
+        listCOFnames = [
+                'culgi_00',
+                'culgi_01',
+                'culgi_02',
+                'culgi_03',
+                'culgi_04',
+                'culgi_05',
+                'culgi_06',
+                'culgi_07',
+                'culgi_08',
+                'culgi_09',
+                'culgi_10',
+                'culgi_11',
+                ]
+        for cofname in listCOFnames:
+            coffilename = cofname + '.cof'
+            if(cofname == 'culgi_06'):
+                cofname = 'mol24'
+            coffile = self.getTestFile(coffilename)
+            output, error = run_exec( "obabel -icof -omol %s" % coffile)
+            molfilename = cofname + '.mol'
+            molfile = self.getTestFile(molfilename)
+
+            # Chop up the output and the baseline files into single lines
+            # Skip first two lines: first line contains Culgi version,
+            # second line contains OpenBabel ID/hash
+            with open(molfile, "r") as molfilehandle:
+                moldata = molfilehandle.readlines()[2:]
+            outdata = output.splitlines()[2:]
+            self.assertEqual(len(outdata), len(moldata))
+            for outline, molline in zip(outdata, moldata):
+                self.assertEqual(outline.rstrip('\r\n'), molline.rstrip('\r\n'))
+
+    def testMOLtoCOF(self):
+        self.canFindExecutable("obabel")
+        listMOLnames = [
+                'culgi_00',
+                'culgi_01',
+                'culgi_02',
+                'culgi_03',
+                'culgi_04',
+                'culgi_05',
+                'mol24',
+                'culgi_07',
+                'culgi_08',
+                'culgi_09',
+                'culgi_10',
+                'culgi_11',
+                ]
+        for molname in listMOLnames:
+            molfilename = molname + '.mol'
+            coffilename = molname + '_from_mol.cof'
+            coffile = self.getTestFile(coffilename)
+            molfile = self.getTestFile(molfilename)
+            output, error = run_exec( "obabel -imol -ocof %s --partialcharge none" % molfile)
+
+            # Chop up the output and the baseline files into single lines
+            # Skip first three lines: first line contains Culgi version,
+            # next two lines contain comment
+            with open(coffile, "r") as coffilehandle:
+                cofdata = coffilehandle.readlines()[3:]
+            outdata = output.splitlines()[3:]
+            self.assertEqual(len(outdata), len(cofdata))
+            for outline, cofline in zip(outdata, cofdata):
+                self.assertEqual(outline.rstrip('\r\n'), cofline.rstrip('\r\n'))
+
+    def testCOFtoMOL2(self):
+        self.canFindExecutable("obabel")
+        listCOFnames = [
+                'culgi_00',
+                'culgi_01',
+                'culgi_02',
+                'culgi_03',
+                'culgi_04',
+                'culgi_05',
+                'culgi_06',
+                'culgi_07',
+                'culgi_08',
+                'culgi_09',
+                'culgi_10',
+                'culgi_11',
+                ]
+        for cofname in listCOFnames:
+            coffilename = cofname + '.cof'
+            if(cofname == 'culgi_06'):
+                cofname = 'mol24'
+            coffile = self.getTestFile(coffilename)
+            output, error = run_exec( "obabel -icof -omol2 %s" % coffile)
+            mol2filename = cofname + '.mol2'
+            mol2file = self.getTestFile(mol2filename)
+
+            # Chop up the output and the baseline files into single lines
+            with open(mol2file, "r") as mol2filehandle:
+                mol2data = mol2filehandle.readlines()
+            outdata = output.splitlines()
+            self.assertEqual(len(outdata), len(mol2data))
+            for outline, mol2line in zip(outdata, mol2data):
+                self.assertEqual(outline.rstrip('\r\n'), mol2line.rstrip('\r\n'))
+
+    def testMOL2toCOF(self):
+        self.canFindExecutable("obabel")
+        listMOL2names = [
+                'culgi_00',
+                'culgi_01',
+                'culgi_02',
+                'culgi_03',
+                'culgi_04',
+                'culgi_05',
+                'mol24',
+                'culgi_07',
+                'culgi_08',
+                'culgi_09',
+                'culgi_10',
+                'culgi_11',
+                ]
+        for mol2name in listMOL2names:
+            mol2filename = mol2name + '.mol2'
+            coffilename = mol2name + '_from_mol2.cof'
+            coffile = self.getTestFile(coffilename)
+            mol2file = self.getTestFile(mol2filename)
+            output, error = run_exec( "obabel -imol2 -ocof %s" % mol2file)
+
+            # Chop up the output and the baseline files into single lines
+            # Skip first three lines: first line contains Culgi version,
+            # next two lines contain comment
+            with open(coffile, "r") as coffilehandle:
+                cofdata = coffilehandle.readlines()[3:]
+            outdata = output.splitlines()[3:]
+            self.assertEqual(len(outdata), len(cofdata))
+            for outline, cofline in zip(outdata, cofdata):
+                self.assertEqual(outline.rstrip('\r\n'), cofline.rstrip('\r\n'))
+
+    def testReadMOL2(self):
+        '''This is a regression test for a segfault, but could put
+        other mol2 test here'''
+        mol2file = self.getTestFile('5sun_protein.mol2')
+        outputerr = run_exec( "obabel -imol2 %s -osdf" % mol2file)
+        self.assertTrue(len(outputerr[0]) > 0, "Did not generate output")
 
 
 if __name__ == "__main__":

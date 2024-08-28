@@ -15,6 +15,9 @@ GNU General Public License for more details.
 #include <openbabel/parsmart.h>
 #include <openbabel/isomorphism.h>
 #include "opisomorph.h"
+#include <openbabel/generic.h>
+#include <cstdlib>
+#include <algorithm>
 
 namespace OpenBabel
 {
@@ -176,7 +179,7 @@ bool OpNewS::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* 
   {
     //Set up on first call
     queries.clear();
-    query=NULL;
+    query=nullptr;
     nPatternAtoms=0;
     inv=false;
 
@@ -251,7 +254,7 @@ bool OpNewS::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* 
           "that contains one or more pattern molecules.";
         obErrorLog.ThrowError(__FUNCTION__, msg, obError, onceOnly);
         delete pmol;
-        pmol = NULL;
+        pmol = nullptr;
         pConv->SetOneObjectOnly(); //stop conversion
         return false;
       }
@@ -294,7 +297,7 @@ bool OpNewS::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* 
   bool match = false;
   //These are a vector of each mapping, each containing atom indxs.
   vector<vector<int> > vecatomvec;
-  vector<vector<int> >* pMappedAtoms = NULL;
+  vector<vector<int> >* pMappedAtoms = nullptr;
 
   if(nPatternAtoms)
     if(pmol->NumHvyAtoms() != nPatternAtoms)
@@ -349,7 +352,7 @@ bool OpNewS::Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion* 
   {
     //delete a non-matching mol
     delete pmol;
-    pmol = NULL;
+    pmol = nullptr;
     return false;
   }
 

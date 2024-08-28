@@ -15,8 +15,13 @@ GNU General Public License for more details.
 #include <vector>
 #include <string>
 #include <iomanip>
+#include <cstdlib>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/fingerprint.h>
 
 using namespace std;
@@ -171,7 +176,7 @@ namespace OpenBabel
         "The fingerprint must be unfolded when describing bits.", obError);
         return false;
       }
-      string descr = pFP->DescribeBits(fptvec, pConv->IsOption("s")!=NULL);
+      string descr = pFP->DescribeBits(fptvec, pConv->IsOption("s") != nullptr);
       if(descr=="")
         obErrorLog.ThrowError(__FUNCTION__,
         "Bit descriptions are not available for this fingerprint type", obError, onceOnly);

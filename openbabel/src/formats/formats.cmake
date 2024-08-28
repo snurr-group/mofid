@@ -57,6 +57,12 @@ set(formats_compchem
       zindoformat
   )
 
+if(WITH_MAEPARSER)
+    set(formats_compchem ${formats_compchem}
+        maeformat
+       )
+endif()
+
 
 if(MSVC OR HAVE_REGEX_H)
   set(formats_compchem
@@ -94,10 +100,11 @@ set(formats_misc
       chemdrawct
       chemtoolformat
       cifformat
+      cofformat
       crkformat
       cssrformat
       dlpolyformat
-      exyzformat
+      exyzformat      
       fastsearchformat
       fastaformat
       featformat
@@ -132,11 +139,13 @@ set(formats_misc
       tinkerformat
       unichemformat
       viewmolformat
+      wlnformat
       xedformat
       xyzformat
       yasaraformat
       )
 
+set(wlnformat_additional_sources wln-nextmove.cpp)
 # genbankformat can currently only be built statically
 if(NOT BUILD_SHARED)
   set(formats_misc ${formats_misc} genbankformat)

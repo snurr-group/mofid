@@ -14,11 +14,20 @@ GNU General Public License for more details.
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
+#include <openbabel/data.h>
+
+
 
 #include <vector>
 #include <map>
 
 #include <sstream>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -87,7 +96,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -170,6 +179,7 @@ namespace OpenBabel
 
     }
     mol.SetPartialChargesPerceived();
+    mol.SetChainsPerceived();
 
     // clean out remaining blank lines
     std::streampos ipos;
@@ -386,8 +396,8 @@ namespace OpenBabel
 
     /* residue sequence number */
     string resnum = sbuf.substr(16,4);
-    OBResidue *res  = (mol.NumResidues() > 0) ? mol.GetResidue(mol.NumResidues()-1) : NULL;
-    if (res == NULL || res->GetName() != resname
+    OBResidue *res  = mol.NumResidues() > 0 ? mol.GetResidue(mol.NumResidues()-1) : nullptr;
+    if (res == nullptr || res->GetName() != resname
         || res->GetNumString() != resnum)
       {
         vector<OBResidue*>::iterator ri;
@@ -397,7 +407,7 @@ namespace OpenBabel
               && static_cast<int>(res->GetChain()) == chain)
             break;
 
-        if (res == NULL)
+        if (res == nullptr)
           {
             res = mol.NewResidue();
             res->SetChain(chain);
@@ -424,7 +434,7 @@ namespace OpenBabel
   bool PQRFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -501,7 +511,7 @@ namespace OpenBabel
             snprintf(type_name, sizeof(type_name), " %-3s", tmp);
           }
 
-        if ( (res = atom->GetResidue()) != 0 )
+        if ((res = atom->GetResidue()) != nullptr)
           {
             het = res->IsHetAtom(atom);
             snprintf(the_res,4,"%s",(char*)res->GetName().c_str());
@@ -560,7 +570,7 @@ namespace OpenBabel
     for (i = 1; i <= mol.NumAtoms(); i ++)
       {
         atom = mol.GetAtom(i);
-        if (atom->GetValence() == 0)
+        if (atom->GetExplicitDegree() == 0)
           continue; // no need to write a CONECT record -- no bonds
 
         snprintf(buffer, BUFF_SIZE, "CONECT%5d", i);
@@ -581,7 +591,7 @@ namespace OpenBabel
           }
 
         // Add trailing spaces
-        int remainingValence = atom->GetValence() % 4;
+        int remainingValence = atom->GetExplicitDegree() % 4;
         for (int count = 0; count < (4 - remainingValence); count++) {
           snprintf(buffer, BUFF_SIZE, "     ");
           ofs << buffer;

@@ -14,6 +14,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/obiter.h>
+#include <cstdlib>
+
 #include <openbabel/math/matrix3x3.h>
 
 using namespace std;
@@ -113,7 +120,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -229,7 +236,7 @@ namespace OpenBabel
   bool FreeFormFractionalFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -237,7 +244,7 @@ namespace OpenBabel
     OBMol &mol = *pmol;
 
     char buffer[BUFF_SIZE];
-    OBUnitCell *uc = NULL;
+    OBUnitCell *uc = nullptr;
 
     ofs << mol.GetTitle() << endl;
 
@@ -257,7 +264,7 @@ namespace OpenBabel
     FOR_ATOMS_OF_MOL(atom, mol)
       {
         v = atom->GetVector();
-        if (uc != NULL)
+        if (uc != nullptr)
           v = uc->CartesianToFractional(v);
 
         snprintf(buffer, BUFF_SIZE, "%s %10.5f%10.5f%10.5f",

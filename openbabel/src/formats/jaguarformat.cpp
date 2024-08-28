@@ -15,7 +15,15 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+
 #include <ctype.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -97,7 +105,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL) return false;
+    if (pmol == nullptr) return false;
 
     //Define some references so we can use the old parameter names
     istream &ifs = *pConv->GetInStream();
@@ -114,10 +122,10 @@ namespace OpenBabel
     mol.BeginModify();
     while (ifs.getline(buffer,BUFF_SIZE))
       {
-        if (strstr(buffer,"Input geometry:") != NULL
-            || strstr(buffer,"symmetrized geometry:") != NULL
-            || strstr(buffer,"new geometry:") != NULL
-            || strstr(buffer,"final geometry:") != NULL)
+        if (strstr(buffer, "Input geometry:") != nullptr ||
+            strstr(buffer, "symmetrized geometry:") != nullptr ||
+            strstr(buffer, "new geometry:") != nullptr ||
+            strstr(buffer, "final geometry:") != nullptr)
           {
             // mol.EndModify();
             mol.Clear();
@@ -144,7 +152,7 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           }
-        if (strstr(buffer, "Atomic charges from electrostatic potential") != NULL)
+        if (strstr(buffer, "Atomic charges from electrostatic potential") != nullptr)
           {
             mol.SetAutomaticPartialCharge(false);
             unsigned int chgcount=0;
@@ -161,7 +169,7 @@ namespace OpenBabel
                   }
               }
           }
-        else if(strstr(buffer,"Dipole Moments (Debye)") != NULL)
+        else if (strstr(buffer, "Dipole Moments (Debye)") != nullptr)
           {
             ifs.getline(buffer,BUFF_SIZE); // actual components   X ###  Y #### Z ###
             tokenize(vs,buffer);
@@ -196,7 +204,7 @@ namespace OpenBabel
   bool JaguarInputFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL) return false;
+    if (pmol == nullptr) return false;
 
     //Define some references so we can use the old parameter names
     ostream &ofs = *pConv->GetOutStream();
@@ -231,7 +239,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL) return false;
+    if (pmol == nullptr) return false;
 
     //Define some references so we can use the old parameter names
     istream &ifs = *pConv->GetInStream();
@@ -249,7 +257,7 @@ namespace OpenBabel
     mol.Clear();
     while (ifs.getline(buffer,BUFF_SIZE))
       {
-        if (strstr(buffer,"&zmat") != NULL)
+        if (strstr(buffer, "&zmat") != nullptr)
           {
             ifs.getline(buffer,BUFF_SIZE);  //   AtomLabel, X, Y, Z
             tokenize(vs,buffer);

@@ -21,8 +21,11 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
 #include <openbabel/obmolecformat.h>
 #include <stdio.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -80,7 +83,7 @@ namespace OpenBabel
   bool ACRFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     istream& ifs = *pConv->GetInStream();

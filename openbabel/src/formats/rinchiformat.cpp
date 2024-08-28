@@ -17,6 +17,9 @@ GNU General Public License for more details.
 #include <string>
 #include <algorithm>
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+
 #include <openbabel/obconversion.h>
 #include <openbabel/reactionfacade.h>
 #include <openbabel/obmolecformat.h>
@@ -40,6 +43,7 @@ namespace OpenBabel
     {
       return
         "RInChI\n"
+        "The Reaction InChI\n"
         "The Reaction InChI (or RInChI) is intended to be a unique\n"
         "string that describes a reaction. This may be useful for\n"
         "indexing and searching reaction databases. As with the InChI\n"
@@ -101,7 +105,7 @@ namespace OpenBabel
   bool ReactionInChIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if (pmol == NULL || !pmol->IsReaction())
+    if (pmol == nullptr || !pmol->IsReaction())
       return false;
     ostream &ofs = *pConv->GetOutStream();
 

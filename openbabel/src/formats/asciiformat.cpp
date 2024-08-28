@@ -17,9 +17,15 @@ GNU General Public License for more details.
 ***********************************************************************/
 #include <openbabel/babelconfig.h>
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
 #include <openbabel/op.h>
 #include <openbabel/depict/depict.h>
 #include <openbabel/depict/asciipainter.h>
+#include <cstdlib>
 
 using namespace std;
 
@@ -102,7 +108,7 @@ ASCIIFormat theASCIIFormat;
 bool ASCIIFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
 {
   OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-  if(pmol==NULL)
+  if (pmol == nullptr)
       return false;
 
   ostream& ofs = *pConv->GetOutStream();

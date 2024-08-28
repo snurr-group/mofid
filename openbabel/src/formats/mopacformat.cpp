@@ -15,6 +15,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/obiter.h>
+#include <openbabel/elements.h>
+#include <openbabel/internalcoord.h>
+#include <openbabel/generic.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -60,7 +68,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -76,7 +84,7 @@ namespace OpenBabel
     vector<double> charges;
     bool hasPartialCharges = false;
     double energy;
-    OBVectorData *dipoleMoment = NULL;
+    OBVectorData *dipoleMoment = nullptr;
     bool readingVibrations = false;
     vector< vector<vector3> > displacements; // vibrational displacements
     vector<double> frequencies, intensities;
@@ -92,7 +100,7 @@ namespace OpenBabel
     while	(ifs.getline(buffer,BUFF_SIZE))
       {
         // Avoid "FORCE CONSTANT IN CARTESIAN COORDINATES" (PR#3417992)
-        if(strstr(buffer,"  CARTESIAN COORDINATES") != NULL)
+        if (strstr(buffer, "  CARTESIAN COORDINATES") != nullptr)
           {
             // mol.EndModify();
             mol.Clear();
@@ -123,7 +131,7 @@ namespace OpenBabel
               }
           }
         // ANGSTROMS but not DEGREES (cartesians, not angles)
-        else if(strstr(buffer,"(ANGSTROMS)") != NULL && strstr(buffer,"(DEGREES)") == NULL)
+        else if (strstr(buffer, "(ANGSTROMS)") != nullptr && strstr(buffer, "(DEGREES)") == nullptr)
           { // newer versions don't print CARTESIAN for final geometry
             mol.Clear();
             ifs.getline(buffer,BUFF_SIZE);	// blank
@@ -146,7 +154,7 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           }
-        else if(strstr(buffer,"UNIT CELL TRANSLATION") != NULL)
+        else if (strstr(buffer, "UNIT CELL TRANSLATION") != nullptr)
           {
             numTranslationVectors = 0; // ignore old translationVectors
             ifs.getline(buffer,BUFF_SIZE);	// blank
@@ -166,7 +174,7 @@ namespace OpenBabel
               }
           }
         // Optimized translation vectors:
-        else if (strstr(buffer, "FINAL  POINT  AND  DERIVATIVES") != NULL)
+        else if (strstr(buffer, "FINAL  POINT  AND  DERIVATIVES") != nullptr)
           {
             numTranslationVectors = 0; // Reset
             ifs.getline(buffer,BUFF_SIZE);	// blank
@@ -212,12 +220,12 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           }
-        else if(strstr(buffer,"NC:NB:NA:I") != NULL) // z-matrix
+        else if (strstr(buffer, "NC:NB:NA:I") != nullptr) // z-matrix
           {
             mol.Clear();
             vector<OBInternalCoord*> vic;
             vector<unsigned int> indices;
-            vic.push_back((OBInternalCoord*)NULL);
+            vic.push_back(nullptr);
 
             while (ifs.getline(buffer,BUFF_SIZE)) {
               tokenize(vs,buffer);
@@ -249,31 +257,31 @@ namespace OpenBabel
               if ((indices[idx] > 0) && (indices[idx] <= mol.NumAtoms()))
                 vic[a->GetIdx()]->_a = mol.GetAtom(indices[idx]);
               else
-                vic[a->GetIdx()]->_a = NULL;
+                vic[a->GetIdx()]->_a = nullptr;
 
               if ((indices[idx+1] > 0) && (indices[idx+1] <= mol.NumAtoms()))
                 vic[a->GetIdx()]->_b = mol.GetAtom(indices[idx+1]);
               else
-                vic[a->GetIdx()]->_b = NULL;
+                vic[a->GetIdx()]->_b = nullptr;
 
               if ((indices[idx+2] > 0) && (indices[idx+2] <= mol.NumAtoms()))
                 vic[a->GetIdx()]->_c = mol.GetAtom(indices[idx+2]);
               else
-                vic[a->GetIdx()]->_c = NULL;
+                vic[a->GetIdx()]->_c = nullptr;
 
               idx += 3;
             }
             InternalToCartesian(vic,mol);
             // coordinates should be set
           }
-        else if(strstr(buffer,"DOUBLY OCCUPIED LEVELS") != NULL)
+        else if (strstr(buffer, "DOUBLY OCCUPIED LEVELS") != nullptr)
           {
             tokenize(vs, buffer);
             if (vs.size() < 9)
               continue;
             alphaHOMO = atoi(vs[8].c_str());
           }
-        else if(strstr(buffer,"EIGENVALUES") != NULL)
+        else if (strstr(buffer, "EIGENVALUES") != nullptr)
           {
             ifs.getline(buffer, BUFF_SIZE); // real data
             tokenize(vs, buffer);
@@ -286,12 +294,12 @@ namespace OpenBabel
               tokenize(vs, buffer);
             }
           }
-        else if(strstr(buffer,"FINAL HEAT") != NULL)
+        else if (strstr(buffer, "FINAL HEAT") != nullptr)
           {
             sscanf(buffer,"%*s%*s%*s%*s%*s%lf",&energy);
             mol.SetEnergy(energy);
           }
-        else if(strstr(buffer,"ELECTROSTATIC POTENTIAL CHARGES") != NULL)
+        else if (strstr(buffer, "ELECTROSTATIC POTENTIAL CHARGES") != nullptr)
           {
             hasPartialCharges = true;
             charges.clear(); // Mulliken Charges
@@ -300,11 +308,11 @@ namespace OpenBabel
             ifs.getline(buffer,BUFF_SIZE);
             tokenize(vs,buffer);
             if (vs.size() < 1) return false; // timvdm 18/06/2008
-            while (vs.size() > 0 && strstr(vs[0].c_str(),"DIPOLE") == NULL)
+            while (vs.size() > 0 && strstr(vs[0].c_str(), "DIPOLE") == nullptr)
               {
                 if (vs.size() < 3) break;
                 atom = mol.GetAtom(atoi(vs[0].c_str()));
-                if (atom != NULL)
+                if (atom != nullptr)
                   atom->SetPartialCharge(atof(vs[2].c_str()));
                 charges.push_back(atof(vs[2].c_str()));
 
@@ -313,7 +321,7 @@ namespace OpenBabel
                 tokenize(vs,buffer);
               }
           }
-        else if(strstr(buffer,"NET ATOMIC CHARGES") != NULL)
+        else if (strstr(buffer, "NET ATOMIC CHARGES") != nullptr)
           {
             hasPartialCharges = true;
             charges.clear();
@@ -322,11 +330,11 @@ namespace OpenBabel
             ifs.getline(buffer,BUFF_SIZE);
             tokenize(vs,buffer);
             if (vs.size() < 1) return false; // timvdm 18/06/2008
-            while (vs.size() > 0 && strstr(vs[0].c_str(),"DIPOLE") == NULL)
+            while (vs.size() > 0 && strstr(vs[0].c_str(), "DIPOLE") == nullptr)
               {
                 if (vs.size() < 3) break;
                 atom = mol.GetAtom(atoi(vs[0].c_str()));
-                if (atom != NULL)
+                if (atom != nullptr)
                   atom->SetPartialCharge(atof(vs[2].c_str()));
                 charges.push_back(atof(vs[2].c_str()));
 
@@ -336,7 +344,7 @@ namespace OpenBabel
               }
             // Now we should be at DIPOLE line. If missing, break out of block
             // and continue parsing file.
-            if (vs.size() == 0 || strstr(vs[0].c_str(), "DIPOLE") != NULL)
+            if (vs.size() == 0 || strstr(vs[0].c_str(), "DIPOLE") != nullptr)
               continue;
             if (!ifs.getline(buffer,BUFF_SIZE))	// POINT CHARGE
               continue; // let the outer loop handle this
@@ -360,13 +368,13 @@ namespace OpenBabel
             if (!ifs.getline(buffer,BUFF_SIZE))
               break;
           }
-        else if(strstr(buffer,"MASS-WEIGHTED COORDINATE ANALYSIS") != NULL)
+        else if(strstr(buffer,"MASS-WEIGHTED COORDINATE ANALYSIS") != nullptr)
           { // the correct vibrations -- earlier bits aren't mass-weighted
             readingVibrations = true;
             if (!ifs.getline(buffer,BUFF_SIZE))
               break;
           }
-        else if (readingVibrations && strstr(buffer, "Root No.") != NULL)
+        else if (readingVibrations && strstr(buffer, "Root No.") != nullptr)
           {
             ifs.getline(buffer, BUFF_SIZE); // blank line
             ifs.getline(buffer, BUFF_SIZE); // symmetry labels (for OB-2.3)
@@ -422,7 +430,7 @@ namespace OpenBabel
               modeCount = vs.size();
             }
           }
-        else if (readingVibrations && strstr(buffer, "T-DIPOLE") != NULL)
+        else if (readingVibrations && strstr(buffer, "T-DIPOLE") != nullptr)
           {
             unsigned int currentIntensity = intensities.size();
             tokenize(vs, buffer);
@@ -502,9 +510,9 @@ namespace OpenBabel
       OBConversion::RegisterFormat("mop",this, "chemical/x-mopac-input");
       OBConversion::RegisterFormat("mpc",this, "chemical/x-mopac-input");
       // Command-line keywords
-      OBConversion::RegisterOptionParam("k", NULL, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("k", nullptr, 1, OBConversion::OUTOPTIONS);
       // Command-line keyword file
-      OBConversion::RegisterOptionParam("f", NULL, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("f", nullptr, 1, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -629,7 +637,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -755,7 +763,7 @@ namespace OpenBabel
   bool MOPACCARTFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -767,7 +775,7 @@ namespace OpenBabel
 
     const char *keywords = pConv->IsOption("k",OBConversion::OUTOPTIONS);
     const char *keywordFile = pConv->IsOption("f",OBConversion::OUTOPTIONS);
-    bool writeUnitCell = (NULL != pConv->IsOption("u", OBConversion::OUTOPTIONS));
+    bool writeUnitCell = nullptr != pConv->IsOption("u", OBConversion::OUTOPTIONS);
     string defaultKeywords = "PUT KEYWORDS HERE";
 
     if(keywords)
@@ -832,9 +840,9 @@ namespace OpenBabel
     {
       OBConversion::RegisterFormat("mopin", this, "chemical/x-mopac-input");
       // Command-line keywords
-      OBConversion::RegisterOptionParam("k", NULL, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("k", nullptr, 1, OBConversion::OUTOPTIONS);
       // Command-line keyword file
-      OBConversion::RegisterOptionParam("f", NULL, 1, OBConversion::OUTOPTIONS);
+      OBConversion::RegisterOptionParam("f", nullptr, 1, OBConversion::OUTOPTIONS);
     }
 
     virtual const char* Description() //required
@@ -861,7 +869,7 @@ namespace OpenBabel
   bool MOPACINTFormat::ReadMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     istream &ifs = *pConv->GetInStream();
@@ -874,7 +882,7 @@ namespace OpenBabel
 
     vector<OBInternalCoord*> vic;
     vector<unsigned int> indices;
-    vic.push_back((OBInternalCoord*)NULL);
+    vic.push_back(nullptr);
 
     ifs.getline(buffer,BUFF_SIZE); // keywords
     ifs.getline(buffer,BUFF_SIZE); // filename
@@ -911,17 +919,17 @@ namespace OpenBabel
       if ((indices[idx] > 0) && (indices[idx] <= mol.NumAtoms()))
         vic[a->GetIdx()]->_a = mol.GetAtom(indices[idx]);
       else
-        vic[a->GetIdx()]->_a = NULL;
+        vic[a->GetIdx()]->_a = nullptr;
 
       if ((indices[idx+1] > 0) && (indices[idx+1] <= mol.NumAtoms()))
         vic[a->GetIdx()]->_b = mol.GetAtom(indices[idx+1]);
       else
-        vic[a->GetIdx()]->_b = NULL;
+        vic[a->GetIdx()]->_b = nullptr;
 
       if ((indices[idx+2] > 0) && (indices[idx+2] <= mol.NumAtoms()))
         vic[a->GetIdx()]->_c = mol.GetAtom(indices[idx+2]);
       else
-        vic[a->GetIdx()]->_c = NULL;
+        vic[a->GetIdx()]->_c = nullptr;
 
       idx += 3;
     }
@@ -953,7 +961,7 @@ namespace OpenBabel
   bool MOPACINTFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     ostream &ofs = *pConv->GetOutStream();
@@ -963,7 +971,7 @@ namespace OpenBabel
     OBAtom *a,*b,*c;
 
     vector<OBInternalCoord*> vic;
-    vic.push_back((OBInternalCoord*)NULL);
+    vic.push_back(nullptr);
 
     for (unsigned int i = 0; i<mol.NumAtoms(); i++)
       vic.push_back(new OBInternalCoord);

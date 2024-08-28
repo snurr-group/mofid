@@ -15,12 +15,19 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-*************************h**********************************************/
+************************************************************************/
 
 #include <openbabel/babelconfig.h>
 #include <openbabel/mol.h>
 #include <openbabel/locale.h>
 #include <openbabel/elements.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/generic.h>
+#include <openbabel/bond.h>
+#include <openbabel/parsmart.h>
+
+#include <cstdlib>
 
 #include "forcefielduff.h"
 
@@ -621,7 +628,7 @@ namespace OpenBabel {
     parameterA = GetParameterUFF(a->GetType(), _ffparams);
     parameterB = GetParameterUFF(b->GetType(), _ffparams);
 
-    if (parameterA == NULL || parameterB == NULL) {
+    if (parameterA == nullptr || parameterB == nullptr) {
       IF_OBFF_LOGLVL_LOW {
         snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR VDW INTERACTION %d-%d (IDX)...\n",
                  a->GetIdx(), b->GetIdx());
@@ -695,10 +702,10 @@ namespace OpenBabel {
       // calculate the number of lone pairs
       // e.g. for IF3 => "T-shaped"
       valenceElectrons -= b->GetFormalCharge(); // make sure to look for I+F4 -> see-saw
-      double lonePairs = (valenceElectrons - b->BOSum()) / 2.0;
+      double lonePairs = (valenceElectrons - b->GetExplicitValence()) / 2.0;
       // we actually need to round up here -- single e- take room too.
       int sites = (int)ceil(lonePairs);
-      coordination = b->GetValence() + sites;
+      coordination = b->GetExplicitDegree() + sites;
       if (coordination <= 4) { // normal valency
         coordination = ipar;
       } else if (b->GetAtomicNum() == OBElements::Sulfur && b->CountFreeOxygens() == 3) {
@@ -707,10 +714,10 @@ namespace OpenBabel {
         coordination = 2; // i.e., sp2
       }
       /* planar coordination of hexavalent molecules.*/
-      if (lonePairs == 0 && b->GetValence() == 3 && b->BOSum() == 6) {
+      if (lonePairs == 0 && b->GetExplicitDegree() == 3 && b->GetExplicitValence() == 6) {
         coordination = 2;
       }
-      if (lonePairs == 0 && b->GetValence() == 7) {
+      if (lonePairs == 0 && b->GetExplicitDegree() == 7) {
         coordination = 7;
       }
       // Check to see if coordination is really correct
@@ -719,13 +726,13 @@ namespace OpenBabel {
     } else {
       coordination = ipar; // coordination of central atom
     }
-    if (b->GetValence() > 4) {
-      coordination = b->GetValence();
+    if (b->GetExplicitDegree() > 4) {
+      coordination = b->GetExplicitDegree();
     } else {
-      int coordDifference = ipar - b->GetValence();
+      int coordDifference = ipar - b->GetExplicitDegree();
       if (abs(coordDifference) > 2)
         // low valent, but very different than expected by ipar
-        coordination = b->GetValence() - 1; // 4 coordinate == sp3
+        coordination = b->GetExplicitDegree() - 1; // 4 coordinate == sp3
     }
     return coordination;
   }
@@ -762,25 +769,56 @@ namespace OpenBabel {
 
     FOR_ATOMS_OF_MOL(atom, _mol) {
       parameterB = GetParameterUFF(atom->GetType(), _ffparams);
+
+      // GitHub issue #1794
+      if (parameterB == nullptr) {
+        snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ATOM %d (IDX)...\n",
+                 atom->GetIdx());
+        obErrorLog.ThrowError(__FUNCTION__, _logbuf, obWarning);
+        IF_OBFF_LOGLVL_LOW
+          OBFFLog(_logbuf);
+        return false;
+      }
+
       if (GetCoordination(&*atom, parameterB->_ipar[0]) == 5) { // we need to do work for trigonal-bipy!
         // First, find the two largest neighbors
-        OBAtom *largestNbr, *current, *secondLargestNbr = 0;
+        OBAtom *largestNbr, *current, *secondLargestNbr = nullptr;
         double largestRadius;
         OBBondIterator i;
         largestNbr = atom->BeginNbrAtom(i);
         // work out the radius
         parameterA = GetParameterUFF(largestNbr->GetType(), _ffparams);
+
+        if (parameterA == nullptr) {
+          IF_OBFF_LOGLVL_LOW {
+            snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ATOM %d (IDX)...\n",
+                largestNbr->GetIdx());
+            OBFFLog(_logbuf);
+          }
+          return false;
+        }
+
         largestRadius = parameterA->_dpar[0];
 
         for (current = atom->NextNbrAtom(i); current; current = atom->NextNbrAtom(i)) {
           parameterA = GetParameterUFF(current->GetType(), _ffparams);
+
+          if (parameterA == nullptr) {
+            IF_OBFF_LOGLVL_LOW {
+              snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ATOM %d (IDX)...\n",
+                  current->GetIdx());
+              OBFFLog(_logbuf);
+            }
+            return false;
+          }
+
           if (parameterA->_dpar[0] > largestRadius) {
             // New largest neighbor
             secondLargestNbr = largestNbr;
             largestRadius = parameterA->_dpar[0];
             largestNbr = current;
           }
-          if (secondLargestNbr == NULL) {
+          if (secondLargestNbr == nullptr) {
             // save this atom
             secondLargestNbr = current;
           }
@@ -797,7 +835,7 @@ namespace OpenBabel {
         label->SetValue("True");
         largestNbr->SetData(label);
 
-        if (secondLargestNbr != NULL) { // check for NULL, no guarantee
+        if (secondLargestNbr != nullptr) { // check for NULL, no guarantee
           label = new OBPairData;
           label->SetAttribute("UFF_AXIAL_ATOM");
           label->SetValue("True");
@@ -807,23 +845,43 @@ namespace OpenBabel {
       } // end work for 5-coordinate angles
       if (GetCoordination(&*atom, parameterB->_ipar[0]) == 7) { // pentagonal bipyramidal
         // First, find the two largest neighbors
-        OBAtom *largestNbr, *current, *secondLargestNbr = 0;
+        OBAtom *largestNbr, *current, *secondLargestNbr = nullptr;
         double largestRadius;
         OBBondIterator i;
         largestNbr = atom->BeginNbrAtom(i);
         // work out the radius
         parameterA = GetParameterUFF(largestNbr->GetType(), _ffparams);
+
+        if (parameterA == nullptr) {
+          IF_OBFF_LOGLVL_LOW {
+            snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ATOM %d (IDX)...\n",
+                largestNbr->GetIdx());
+            OBFFLog(_logbuf);
+          }
+          return false;
+        }
+
         largestRadius = parameterA->_dpar[0];
 
         for (current = atom->NextNbrAtom(i); current; current = atom->NextNbrAtom(i)) {
           parameterA = GetParameterUFF(current->GetType(), _ffparams);
+
+          if (parameterA == nullptr) {
+            IF_OBFF_LOGLVL_LOW {
+              snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ATOM %d (IDX)...\n",
+                  current->GetIdx());
+              OBFFLog(_logbuf);
+            }
+            return false;
+          }
+
           if (parameterA->_dpar[0] > largestRadius) {
             // New largest neighbor
             secondLargestNbr = largestNbr;
             largestRadius = parameterA->_dpar[0];
             largestNbr = current;
           }
-          if (secondLargestNbr == NULL) {
+          if (secondLargestNbr == nullptr) {
             // save this atom
             secondLargestNbr = current;
           }
@@ -839,7 +897,7 @@ namespace OpenBabel {
         label->SetAttribute("UFF_AXIAL_ATOM");
         label->SetValue("True");
         largestNbr->SetData(label);
-        if (secondLargestNbr != NULL) { // check for NULL, no guarantee
+        if (secondLargestNbr != nullptr) { // check for NULL, no guarantee
           label = new OBPairData;
           label->SetAttribute("UFF_AXIAL_ATOM");
           label->SetValue("True");
@@ -865,7 +923,7 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validBond = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()))
             validBond = true;
         }
         if (!validBond)
@@ -890,7 +948,7 @@ namespace OpenBabel {
       parameterA = GetParameterUFF(a->GetType(), _ffparams);
       parameterB = GetParameterUFF(b->GetType(), _ffparams);
 
-      if (parameterA == NULL || parameterB == NULL) {
+      if (parameterA == nullptr || parameterB == nullptr) {
         IF_OBFF_LOGLVL_LOW {
           snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR BOND %d-%d (IDX)...\n",
                    a->GetIdx(), b->GetIdx());
@@ -936,8 +994,8 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validAngle = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()) &&
-              _intraGroup[i].BitIsOn(c->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()) &&
+              _intraGroup[i].BitIsSet(c->GetIdx()))
             validAngle = true;
         }
         if (!validAngle)
@@ -952,7 +1010,7 @@ namespace OpenBabel {
       parameterB = GetParameterUFF(b->GetType(), _ffparams);
       parameterC = GetParameterUFF(c->GetType(), _ffparams);
 
-      if (parameterA == NULL || parameterB == NULL || parameterC == NULL) {
+      if (parameterA == nullptr || parameterB == nullptr || parameterC == nullptr) {
         IF_OBFF_LOGLVL_LOW {
           snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR ANGLE %d-%d-%d (IDX)...\n",
                    a->GetIdx(), b->GetIdx(), c->GetIdx());
@@ -1153,8 +1211,8 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validTorsion = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) && _intraGroup[i].BitIsOn(b->GetIdx()) &&
-              _intraGroup[i].BitIsOn(c->GetIdx()) && _intraGroup[i].BitIsOn(d->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) && _intraGroup[i].BitIsSet(b->GetIdx()) &&
+              _intraGroup[i].BitIsSet(c->GetIdx()) && _intraGroup[i].BitIsSet(d->GetIdx()))
             validTorsion = true;
         }
         if (!validTorsion)
@@ -1177,7 +1235,7 @@ namespace OpenBabel {
       parameterB = GetParameterUFF(b->GetType(), _ffparams);
       parameterC = GetParameterUFF(c->GetType(), _ffparams);
 
-      if (parameterB == NULL || parameterC == NULL) {
+      if (parameterB == nullptr || parameterC == nullptr) {
         IF_OBFF_LOGLVL_LOW {
           snprintf(_logbuf, BUFF_SIZE, "    COULD NOT FIND PARAMETERS FOR TORSION X-%d-%d-X (IDX)...\n",
                    b->GetIdx(), c->GetIdx());
@@ -1299,12 +1357,12 @@ namespace OpenBabel {
         continue;
       }
 
-      if (b->GetValence() > 3) // no OOP for hypervalent atoms
+      if (b->GetExplicitDegree() > 3) // no OOP for hypervalent atoms
         continue;
 
-      a = NULL;
-      c = NULL;
-      d = NULL;
+      a = nullptr;
+      c = nullptr;
+      d = nullptr;
 
       if (EQn(b->GetType(), "N_3", 3) ||
           EQn(b->GetType(), "N_2", 3) ||
@@ -1339,15 +1397,15 @@ namespace OpenBabel {
         continue; // inversion not defined for this atom type
 
       FOR_NBORS_OF_ATOM(nbr, b) {
-        if (a == NULL)
+        if (a == nullptr)
           a = (OBAtom*) &*nbr;
-        else if (c == NULL)
+        else if (c == nullptr)
           c = (OBAtom*) &*nbr;
         else
           d = (OBAtom*) &*nbr;
       }
 
-      if ((a == NULL) || (c == NULL) || (d == NULL))
+      if (a == nullptr || c == nullptr || d == nullptr)
         continue;
 
       // skip this oop if the atoms are ignored
@@ -1362,10 +1420,10 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validOOP = false;
         for (unsigned int i=0; i < _intraGroup.size(); ++i) {
-          if (_intraGroup[i].BitIsOn(a->GetIdx()) &&
-              _intraGroup[i].BitIsOn(b->GetIdx()) &&
-              _intraGroup[i].BitIsOn(c->GetIdx()) &&
-              _intraGroup[i].BitIsOn(d->GetIdx()))
+          if (_intraGroup[i].BitIsSet(a->GetIdx()) &&
+              _intraGroup[i].BitIsSet(b->GetIdx()) &&
+              _intraGroup[i].BitIsSet(c->GetIdx()) &&
+              _intraGroup[i].BitIsSet(d->GetIdx()))
             validOOP = true;
         }
         if (!validOOP)
@@ -1430,13 +1488,13 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validVDW = false;
         for (unsigned int i=0; i < _interGroup.size(); ++i) {
-          if (_interGroup[i].BitIsOn(a->GetIdx()) && _interGroup[i].BitIsOn(b->GetIdx()))
+          if (_interGroup[i].BitIsSet(a->GetIdx()) && _interGroup[i].BitIsSet(b->GetIdx()))
             validVDW = true;
         }
         for (unsigned int i=0; i < _interGroups.size(); ++i) {
-          if (_interGroups[i].first.BitIsOn(a->GetIdx()) && _interGroups[i].second.BitIsOn(b->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(a->GetIdx()) && _interGroups[i].second.BitIsSet(b->GetIdx()))
             validVDW = true;
-          if (_interGroups[i].first.BitIsOn(b->GetIdx()) && _interGroups[i].second.BitIsOn(a->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(b->GetIdx()) && _interGroups[i].second.BitIsSet(a->GetIdx()))
             validVDW = true;
         }
 
@@ -1494,13 +1552,13 @@ namespace OpenBabel {
       if (HasGroups()) {
         bool validEle = false;
         for (unsigned int i=0; i < _interGroup.size(); ++i) {
-          if (_interGroup[i].BitIsOn(a->GetIdx()) && _interGroup[i].BitIsOn(b->GetIdx()))
+          if (_interGroup[i].BitIsSet(a->GetIdx()) && _interGroup[i].BitIsSet(b->GetIdx()))
             validEle = true;
         }
         for (unsigned int i=0; i < _interGroups.size(); ++i) {
-          if (_interGroups[i].first.BitIsOn(a->GetIdx()) && _interGroups[i].second.BitIsOn(b->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(a->GetIdx()) && _interGroups[i].second.BitIsSet(b->GetIdx()))
             validEle = true;
-          if (_interGroups[i].first.BitIsOn(b->GetIdx()) && _interGroups[i].second.BitIsOn(a->GetIdx()))
+          if (_interGroups[i].first.BitIsSet(b->GetIdx()) && _interGroups[i].second.BitIsSet(a->GetIdx()))
             validEle = true;
         }
 
@@ -1660,7 +1718,7 @@ namespace OpenBabel {
         }
         else {
           delete sp;
-          sp = NULL;
+          sp = nullptr;
           obErrorLog.ThrowError(__FUNCTION__, " Could not parse atom type table from UFF.prm", obInfo);
           return false;
         }
@@ -1766,7 +1824,7 @@ namespace OpenBabel {
         return &parameter[idx];
       }
     }
-    return NULL;
+    return nullptr;
   }
 
   bool OBForceFieldUFF::ValidateGradients ()

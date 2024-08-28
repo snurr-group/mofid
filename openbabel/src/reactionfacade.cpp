@@ -18,12 +18,18 @@ GNU General Public License for more details.
 ***********************************************************************/
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/obiter.h>
+#include <openbabel/generic.h>
+#include <openbabel/oberror.h>
 #include <openbabel/reactionfacade.h>
 
 #include <set>
 
 namespace OpenBabel
 {
+  extern OBMessageHandler obErrorLog;
+
   class OBReactionFacadePrivate
   {
   public:
@@ -177,7 +183,7 @@ namespace OpenBabel
     case NO_REACTIONROLE:
       return &_unassigned_components;
     }
-    return (std::vector<unsigned int>*)0;
+    return nullptr;
   }
 
   int OBReactionFacadePrivate::GetId(const char* idtype, OBAtom *atom)

@@ -21,20 +21,18 @@ GNU General Public License for more details.
 
 #include <vector>
 #include <string>
-#include <map>
 
-#include <list>
-#include <set>
 #include <openbabel/babelconfig.h>
-#include <openbabel/base.h>
-#include <openbabel/mol.h>
+#include <openbabel/mol.h>  // TODO: Move OBMol code out of the header (use OBMol*)
+#include <openbabel/atom.h> // TODO: Move OBAtom code out of the header
 #include <openbabel/plugin.h>
-#include <openbabel/grid.h>
-#include <openbabel/griddata.h>
+#include <openbabel/bitvec.h>
 #include <float.h>
 
 namespace OpenBabel
 {
+  class OBGridData;
+
   // log levels
 #define OBFF_LOGLVL_NONE	0   //!< no output
 #define OBFF_LOGLVL_LOW		1   //!< SteepestDescent progress... (no output from Energy())
@@ -66,7 +64,8 @@ namespace OpenBabel
 #define OBFF_NUMERICAL_GRADIENT  	(1 << 0)  //!< use numerical gradients
 #define OBFF_ANALYTICAL_GRADIENT	(1 << 1)  //!< use analytical gradients
 
-#define KCAL_TO_KJ	4.1868
+const double KCAL_TO_KJ = 4.1868;
+const double GAS_CONSTANT = 8.31446261815324e-3 / KCAL_TO_KJ;  //!< kcal mol^-1 K^-1 (2018 CODATA recommended value)
 
   // inline if statements for logging.
 #define IF_OBFF_LOGLVL_LOW    if(_loglvl >= OBFF_LOGLVL_LOW)
@@ -247,7 +246,7 @@ namespace OpenBabel
     //! Constructor
     OBFFConstraint()
       {
-        a = b = c = d = NULL;
+        a = b = c = d = nullptr;
         ia = ib = ic = id = 0;
         constraint_value = 0.0;
         factor = 0.0;
@@ -528,7 +527,7 @@ namespace OpenBabel
     OBMol 	_mol; //!< Molecule to be evaluated or minimized
     bool 	_init; //!< Used to make sure we only parse the parameter file once, when needed
     std::string	_parFile; //! < parameter file name
-    bool 	_validSetup; //!< was the last call to Setup succesfull
+    bool 	_validSetup; //!< was the last call to Setup successful
     double	*_gradientPtr; //!< pointer to the gradients (used by AddGradient(), minimization functions, ...)
     // logging variables
     std::ostream* _logos; //!< Output for logfile
@@ -556,6 +555,7 @@ namespace OpenBabel
     bool 	_cutoff; //!< true = cut-off enabled
     double 	_rvdw; //!< VDW cut-off distance
     double 	_rele; //!< Electrostatic cut-off distance
+    double _epsilon; //!< Dielectric constant for electrostatics
     OBBitVec	_vdwpairs; //!< VDW pairs that should be calculated
     OBBitVec	_elepairs; //!< Electrostatic pairs that should be calculated
     int 	_pairfreq; //!< The frequence to update non-bonded pairs
@@ -573,13 +573,13 @@ namespace OpenBabel
     //! Destructor
     virtual ~OBForceField()
     {
-      if (_grad1 != NULL) {
+      if (_grad1 != nullptr) {
         delete [] _grad1;
-        _grad1 = NULL;
+        _grad1 = nullptr;
       }
-      if (_gradientPtr != NULL) {
+      if (_gradientPtr != nullptr) {
         delete [] _gradientPtr;
-	_gradientPtr = NULL;
+	_gradientPtr = nullptr;
       }
     }
 
@@ -623,13 +623,13 @@ namespace OpenBabel
     virtual bool HasAnalyticalGradients() { return false; }
     /*! Setup the forcefield for mol (assigns atom types, charges, etc.). Keep current constraints.
      *  \param mol The OBMol object that contains the atoms and bonds.
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool Setup(OBMol &mol);
     /*! Setup the forcefield for mol (assigns atom types, charges, etc.). Use new constraints.
      *  \param mol The OBMol object that contains the atoms and bonds.
      *  \param constraints The OBFFConstraints object that contains the constraints.
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool Setup(OBMol &mol, OBFFConstraints &constraints);
     /*! Load the parameters (this function is overloaded by the individual forcefields,
@@ -706,26 +706,26 @@ namespace OpenBabel
 
     /*! Get coordinates for current conformer and attach OBConformerData with energies, forces, ... to mol.
      *  \param mol The OBMol object to copy the coordinates to (from OBForceField::_mol).
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool GetCoordinates(OBMol &mol);
     //! \deprecated Use GetCooordinates instead.
     bool UpdateCoordinates(OBMol &mol) {return GetCoordinates(mol); }
     /*! Get coordinates for all conformers and attach OBConformerData with energies, forces, ... to mol.
      *  \param mol The OBMol object to copy the coordinates to (from OBForceField::_mol).
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool GetConformers(OBMol &mol);
     //! \deprecated Use GetConformers instead.
     bool UpdateConformers(OBMol &mol) { return GetConformers(mol); }
     /*! Set coordinates for current conformer.
      *  \param mol the OBMol object to copy the coordinates from (to OBForceField::_mol).
-     *  \return true if succesfull.
+     *  \return true if successful.
      */
     bool SetCoordinates(OBMol &mol);
     /*! Set coordinates for all conformers.
      *  \param mol The OBMol object to copy the coordinates from (to OBForceField::_mol).
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool SetConformers(OBMol &mol);
     /*! Create a grid with spacing @p step and @p padding. Place a probe atom of type probe at every grid point,
@@ -819,6 +819,20 @@ namespace OpenBabel
     {
       return _rele;
     }
+    /*! Set the dielectric constant for electrostatic SetupCalculations
+     * \param epsilon The relative permittivity to use (default = 1.0)
+     */
+     void SetDielectricConstant(double epsilon)
+     {
+       _epsilon = epsilon;
+     }
+     /* Get the dielectric permittivity used for electrostatic calculations
+     * \rreturn The current relative permittivity
+     */
+     double GetDielectricConstant()
+     {
+       return _epsilon;
+     }
     /*! Set the frequency by which non-bonded pairs are updated. Values from 10 to 20
      *  are recommended. Too low will decrease performance, too high will cause
      *  non-bonded interactions within cut-off not to be calculated.
@@ -969,7 +983,7 @@ namespace OpenBabel
     void PrintVelocities();
     /*! Set the stream for logging (can also be &cout for logging to screen).
      *  \param pos Stream (when pos is 0, std::cout wil be used).
-     *  \return True if succesfull.
+     *  \return True if successful.
      */
     bool SetLogFile(std::ostream *pos);
     /*! Set the log level (OBFF_LOGLVL_NONE, OBFF_LOGLVL_LOW, OBFF_LOGLVL_MEDIUM, OBFF_LOGLVL_HIGH).
@@ -1370,7 +1384,7 @@ namespace OpenBabel
      *  \code
      *        3N
      *       ----
-     *  0.5  \    m_i * v_i^2 = 0.5 * Ndf * kB * T = E_kin
+     *  0.5  \    m_i * v_i^2 = 0.5 * Ndf * R * T = E_kin
      *       /
      *       ----
      *       i=1
@@ -1379,7 +1393,7 @@ namespace OpenBabel
      *  m_i : mass of atom i
      *  v_i : velocity of atom i
      *  Ndf : number of degrees of freedom (3 * number of atoms)
-     *  kB : Boltzmann's constant
+     *  R : gas constant
      *  T : temperature
      *  \endcode
      *

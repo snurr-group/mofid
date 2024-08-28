@@ -15,7 +15,13 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/obmolecformat.h>
+#include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/elements.h>
+#include <openbabel/generic.h>
+#include <openbabel/internalcoord.h>
 #include <openbabel/math/matrix3x3.h>
+#include <cstdlib>
 
 using namespace std;
 namespace OpenBabel
@@ -65,7 +71,7 @@ namespace OpenBabel
   {
 
     OBMol* pmol = pOb->CastAndClear<OBMol>();
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -156,7 +162,7 @@ namespace OpenBabel
   bool CacaoFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -211,7 +217,7 @@ namespace OpenBabel
     OBAtom *atom,*a1,*a2,*ref;
     vector<OBAtom*>::iterator ai;
 
-    vit.push_back((OBInternalCoord*)NULL);
+    vit.push_back(nullptr);
     for (atom = mol.BeginAtom(ai);atom;atom = mol.NextAtom(ai))
       vit.push_back(new OBInternalCoord (atom));
 
@@ -228,7 +234,7 @@ namespace OpenBabel
     unsigned int i,j;
     for (i = 2;i <= mol.NumAtoms();i++)
       {
-        ref = (OBAtom*)NULL;
+        ref = nullptr;
         a1 = mol.GetAtom(i);
         sum = 100.0;
         for (j = 1;j < i;j++)
@@ -313,7 +319,7 @@ namespace OpenBabel
   bool CacaoInternalFormat::WriteMolecule(OBBase* pOb, OBConversion* pConv)
   {
     OBMol* pmol = dynamic_cast<OBMol*>(pOb);
-    if(pmol==NULL)
+    if (pmol == nullptr)
       return false;
 
     //Define some references so we can use the old parameter names
@@ -362,7 +368,7 @@ namespace OpenBabel
       if (*j)
         {
           delete *j;
-          *j = NULL;
+          *j = nullptr;
         }
 
     return(true);

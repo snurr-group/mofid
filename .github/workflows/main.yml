@@ -1,0 +1,44 @@
+name: run_tests
+on:
+  push:
+    paths:
+      - "**.py"
+      - "Makefile"
+      - "openbabel/**"
+      - "eigen/**"
+      - "src/**"
+  pull_request:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install colordiff
+        run: |
+          sudo apt-get update
+          sudo apt-get install colordiff 
+      - name: Build Project 
+        run: |
+          mkdir Output
+          make test
+      - name: Run Unit Tests
+        run: make unittest
+      - name: Run Intermediate Tests
+        run : make intermediatetest
+      - name: Archive Mismatch Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mismatch
+          path: Mismatch
+          if-no-files-found: ignore
+          retention-days: 1
+      - name: Run Integration Tests
+        run: |
+          python set_paths.py
+          pip install .
+          make pytest

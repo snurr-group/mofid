@@ -1,6 +1,8 @@
 #include "obtest.h"
 #include <openbabel/mol.h>
 #include <openbabel/obconversion.h>
+#include <openbabel/obiter.h>
+#include <openbabel/atom.h>
 
 #include <openbabel/graphsym.h>
 #include <openbabel/stereo/tetrahedral.h>
@@ -44,7 +46,7 @@ void compareMolecules(OBMol *mol1, OBMol *mol2)
     cout << unique1 << " == " << unique2 << endl;
 
   FOR_ATOMS_OF_MOL (a1, mol1) {
-    OBAtom *a2 = 0;
+    OBAtom *a2 = nullptr;
     unsigned int symClass1 = symclasses1.at(a1->GetIndex());
     for (unsigned int i = 0; i < symclasses2.size(); ++i)
       if (symclasses2.at(i) == symClass1) {
@@ -56,9 +58,9 @@ void compareMolecules(OBMol *mol1, OBMol *mol2)
       continue;
 
     OB_ASSERT( a1->GetAtomicNum() == a2->GetAtomicNum() );
-    OB_ASSERT( a1->GetValence() == a2->GetValence() );
-    OB_ASSERT( a1->GetHvyValence() == a2->GetHvyValence() );
-    OB_ASSERT( a1->GetHeteroValence() == a2->GetHeteroValence() );
+    OB_ASSERT( a1->GetExplicitDegree() == a2->GetExplicitDegree() );
+    OB_ASSERT( a1->GetHvyDegree() == a2->GetHvyDegree() );
+    OB_ASSERT( a1->GetHeteroDegree() == a2->GetHeteroDegree() );
     OB_ASSERT( a1->GetImplicitHCount() == a2->GetImplicitHCount() );
   }
 

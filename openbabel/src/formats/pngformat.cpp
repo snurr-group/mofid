@@ -137,7 +137,7 @@ public:
 
   virtual bool ReadChemObject(OBConversion* pConv)
   {
-    bool ret = ReadMolecule(NULL, pConv);
+    bool ret = ReadMolecule(nullptr, pConv);
     pConv->GetChemObject(); //increments output index
     return ret;
   };
@@ -172,7 +172,7 @@ virtual bool WriteMolecule(OBBase* pOb, OBConversion* pConv);
 private:
   int _count; //number of chemical objects converted
   vector<char> CopyOfInput;
-  unsigned bytesToIEND; //number of bytes upto but not including the IEND chunk.
+  unsigned bytesToIEND; //number of bytes up to but not including the IEND chunk.
   unsigned origBytesToIEND; //saved between WriteMolecule calls
   bool _hasInputPngFile;
 

@@ -31,6 +31,7 @@ Compile with tools/obabel.cpp rather than tools/babel.cpp
 #include <stdio.h>
 #include <openbabel/op.h>
 #include <openbabel/mol.h>
+#include <openbabel/bond.h>
 #include <openbabel/forcefield.h>
 #include <openbabel/conformersearch.h>
 #include <openbabel/generic.h>
@@ -83,7 +84,7 @@ namespace OpenBabel
 
       virtual bool WorksWith(OBBase* pOb) const
       {
-        return dynamic_cast<OBMol*>(pOb) != NULL;
+        return dynamic_cast<OBMol*>(pOb) != nullptr;
       }
       virtual bool Do(OBBase* pOb, const char* OptionText, OpMap* pmap, OBConversion*);
   };

@@ -19,7 +19,14 @@ GNU General Public License for more details.
 #include <openbabel/babelconfig.h>
 
 #include <openbabel/mol.h>
+#include <openbabel/atom.h>
+#include <openbabel/bond.h>
+#include <openbabel/typer.h>
+#include <openbabel/obiter.h>
+#include <openbabel/oberror.h>
 #include <openbabel/phmodel.h>
+
+#include <cstdlib>
 
 // private data header with default parameters
 #include "phmodeldata.h"
@@ -34,8 +41,7 @@ namespace OpenBabel
 {
 
   // Global OBPhModel for assigning formal charges and hydrogen addition rules
-  OBPhModel phmodel;
-  extern OBAtomTyper atomtyper;
+  THREAD_LOCAL OBPhModel phmodel;
 
   OBPhModel::OBPhModel()
   {
@@ -79,7 +85,7 @@ namespace OpenBabel
         if (!tsfm->Init(vs[1],vs[3]))
           {
             delete tsfm;
-            tsfm = NULL;
+            tsfm = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
           }
@@ -100,7 +106,7 @@ namespace OpenBabel
         if (!sp->Init(vs[1]) || (vs.size()-2) != sp->NumAtoms())
           {
             delete sp;
-            sp = NULL;
+            sp = nullptr;
             obErrorLog.ThrowError(__FUNCTION__, " Could not parse line in phmodel table from phmodel.txt", obInfo);
             return;
           }

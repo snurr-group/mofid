@@ -102,17 +102,17 @@ OBPlugin* OBPlugin::BaseFindType(PluginMapType& Map, const char* ID)
   }
 
   if(!ID || !*ID)
-    return NULL;
+    return nullptr;
   PluginMapType::iterator itr = Map.find(ID);
   if(itr==Map.end())
-    return NULL;
+    return nullptr;
   else
     return itr->second;
 }
 
 OBPlugin* OBPlugin::GetPlugin(const char* Type, const char* ID)
 {
-  if(Type!=NULL)
+  if (Type != nullptr)
     return BaseFindType(GetTypeMap(Type), ID);
 
   // Make sure the plugins are loaded
@@ -128,7 +128,7 @@ OBPlugin* OBPlugin::GetPlugin(const char* Type, const char* ID)
     if(result)
       return result;
   }
-  return NULL; //not found
+  return nullptr; //not found
 }
 
 bool OBPlugin::ListAsVector(const char* PluginID, const char* param, vector<string>& vlist)
@@ -149,7 +149,7 @@ bool OBPlugin::ListAsVector(const char* PluginID, const char* param, vector<stri
       itr = PluginMap().find(PluginID);
       if(itr!=PluginMap().end())
       {
-        bool onlyIDs = param!=NULL && strstr(param,"ids")!=NULL;
+        bool onlyIDs = param != nullptr && strstr(param, "ids") != nullptr;
         //Get map of plugin type (like OBFingerprint) and output its contents
         PluginMapType Map = itr->second->GetMap();
         for(itr=Map.begin(); itr!=Map.end(); ++itr)
@@ -460,12 +460,12 @@ std::vector<std::string> EnableStaticPlugins()
  There are two levels of plugin. The top layer (at the time of writing) are:
   formats descriptors fingerprints forcefields charges ops loaders
  but additional types can be added without disturbing the main API. At runtime
-   babel -L
+   obabel -L
  will list the top level of plugins. They typically are abstract classes with
  virtual functions that define an interface for that type. Classes derived
  from these are the second layer of plugins, and can be listed at runtime like,
  for instance:
-   babel -L formats cml
+   obabel -L formats cml
  where formats is the top level of plugin and cml is the id of a derived class
  of this type.
 
