@@ -10,15 +10,29 @@ cmake_minimum_required(VERSION 3.11)
 
 # Name of your project
 project(sbu)
+
+# This block prints the compiler version to the output logs so you can debug issues.
+message(STATUS "-----------------------------------------------------------")
+message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "  Binary:   ${CMAKE_CXX_COMPILER}")
+message(STATUS "-----------------------------------------------------------")
+
+# Optional: Warn if the compiler is too old (e.g., older than GCC 9)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    message(WARNING "You are using an older GCC version (${CMAKE_CXX_COMPILER_VERSION}). Recommended: GCC 9+")
+endif()
+
+# Require C++17 across all platforms (Linux, Windows, Mac)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Enable compiler-specific extensions (e.g., gnu++17 on Linux)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 # Create a list of source files (easier to maintain)
 # set(sources sbu.cpp)
 # Set the name for the executable
 # set(executable_target sbu)
 # Use a loop like openbabel/tools/CMakeLists.txt
-
-# GoogleTest requires at least C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (BUILD_TESTING)
     enable_testing()
