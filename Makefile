@@ -59,7 +59,7 @@ test:
 	cd $(mofid-dir); \
 	mkdir bin; \
 	cd bin; \
-	cmake -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DOpenBabel3_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
+	cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_CXX_COMPILER=$(CXX) -DOpenBabel3_DIR=../openbabel/build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON ../src/; \
 	make -j$$(nproc); \
 
 unittest:
